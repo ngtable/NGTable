@@ -1,0 +1,523 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld of %lld stars" : {
+      "comment" : "VoiceOver: a rating in a cell, e.g. 3 of 5 stars.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld из %2$lld звёзд"
+          }
+        }
+      }
+    },
+    "All" : {
+      "comment" : "Print panel summary: all the rows shown print.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Все"
+          }
+        }
+      }
+    },
+    "ascending" : {
+      "comment" : "VoiceOver: a column sorted in ascending order.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "по возрастанию"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "comment" : "Save view dialog: cancels.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменить"
+          }
+        }
+      }
+    },
+    "checked" : {
+      "comment" : "VoiceOver: a check box cell that is on.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "отмечено"
+          }
+        }
+      }
+    },
+    "Clear Filter" : {
+      "comment" : "Column filter: shows every row again.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить фильтр"
+          }
+        }
+      }
+    },
+    "Collapse All Groups" : {
+      "comment" : "Group header context menu.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свернуть все группы"
+          }
+        }
+      }
+    },
+    "Collapse Group" : {
+      "comment" : "Group header context menu.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свернуть группу"
+          }
+        }
+      }
+    },
+    "CSV (Comma-Separated Values)" : {
+      "comment" : "Export: the .csv format.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CSV (значения через запятую)"
+          }
+        }
+      }
+    },
+    "Delete View" : {
+      "comment" : "Header menu: deletes a named view.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить вид"
+          }
+        }
+      }
+    },
+    "descending" : {
+      "comment" : "VoiceOver: a column sorted in descending order.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "по убыванию"
+          }
+        }
+      }
+    },
+    "Edit Cell" : {
+      "comment" : "Undo menu: a cell's value changed.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменение ячейки"
+          }
+        }
+      }
+    },
+    "Excel Workbook" : {
+      "comment" : "Export: the .xlsx format.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Книга Excel"
+          }
+        }
+      }
+    },
+    "Expand All Groups" : {
+      "comment" : "Group header context menu.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Развернуть все группы"
+          }
+        }
+      }
+    },
+    "Expand Group" : {
+      "comment" : "Group header context menu.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Развернуть группу"
+          }
+        }
+      }
+    },
+    "Format:" : {
+      "comment" : "Export: the label of the file format menu.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Формат:"
+          }
+        }
+      }
+    },
+    "From" : {
+      "comment" : "Column filter: the smallest number shown.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "От"
+          }
+        }
+      }
+    },
+    "Group by “%@”" : {
+      "comment" : "Header menu: groups the rows by the column's values.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Группировать по «%@»"
+          }
+        }
+      }
+    },
+    "No Value" : {
+      "comment" : "Group header for rows without a value in the grouping column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Без значения"
+          }
+        }
+      }
+    },
+    "in progress" : {
+      "comment" : "VoiceOver: an indeterminate progress bar in a cell.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "выполняется"
+          }
+        }
+      }
+    },
+    "not checked" : {
+      "comment" : "VoiceOver: a check box cell that is off.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "не отмечено"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "comment" : "Print panel summary: the summary row doesn't print.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выкл."
+          }
+        }
+      }
+    },
+    "On" : {
+      "comment" : "Print panel summary: the summary row prints.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вкл."
+          }
+        }
+      }
+    },
+    "Pin to the Left Edge" : {
+      "comment" : "Header menu: freezes the column at the leading edge.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрепить слева"
+          }
+        }
+      }
+    },
+    "Pin to the Right Edge" : {
+      "comment" : "Header menu: freezes the column at the leading edge.\nHeader menu: freezes the column at the trailing edge.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрепить справа"
+          }
+        }
+      }
+    },
+    "Rows" : {
+      "comment" : "Print panel summary: which rows print.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Строки"
+          }
+        }
+      }
+    },
+    "Save" : {
+      "comment" : "Save view dialog: the default button.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить"
+          }
+        }
+      }
+    },
+    "Save View" : {
+      "comment" : "Save view dialog: title.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить вид"
+          }
+        }
+      }
+    },
+    "Save View…" : {
+      "comment" : "Header menu: saves the columns as a named view.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить вид…"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "comment" : "Column filter: narrows the list of values.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поиск"
+          }
+        }
+      }
+    },
+    "Select All" : {
+      "comment" : "Column filter: checks every value.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать все"
+          }
+        }
+      }
+    },
+    "Selected" : {
+      "comment" : "Print panel summary: only the selected rows print.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выделенные"
+          }
+        }
+      }
+    },
+    "Selected rows only" : {
+      "comment" : "Print panel: prints only the selected rows.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Только выделенные строки"
+          }
+        }
+      }
+    },
+    "Summarize All Except Selected" : {
+      "comment" : "Summary row context menu: selected rows are subtracted from the total.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Итог по всем, кроме выделенных"
+          }
+        }
+      }
+    },
+    "Summarize All Rows" : {
+      "comment" : "Summary row context menu: totals over all rows.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Итог по всем строкам"
+          }
+        }
+      }
+    },
+    "Summarize Selected Rows" : {
+      "comment" : "Summary row context menu: totals over the selected rows only.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Итог по выделенным строкам"
+          }
+        }
+      }
+    },
+    "Summary" : {
+      "comment" : "VoiceOver: the summary row's name.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Итоги"
+          }
+        }
+      }
+    },
+    "Summary row" : {
+      "comment" : "Print panel: prints the summary row at the end.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Строка итогов"
+          }
+        }
+      }
+    },
+    "Table" : {
+      "comment" : "Export: the file name when the table has none.\nPrint panel: the title of the table's options.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Таблица"
+          }
+        }
+      }
+    },
+    "The columns, sort, filters and grouping are saved under this name." : {
+      "comment" : "Save view dialog: what is saved.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Колонки, сортировка, фильтры и группировка сохранятся под этим именем."
+          }
+        }
+      }
+    },
+    "Then Group by “%@”" : {
+      "comment" : "Header menu: adds a grouping level by the column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Затем группировать по «%@»"
+          }
+        }
+      }
+    },
+    "To" : {
+      "comment" : "Column filter: the largest number shown.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "До"
+          }
+        }
+      }
+    },
+    "Ungroup" : {
+      "comment" : "Header menu: shows the rows without groups.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Разгруппировать"
+          }
+        }
+      }
+    },
+    "Unpin" : {
+      "comment" : "Header menu: lets a frozen column scroll again.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открепить"
+          }
+        }
+      }
+    },
+    "Views" : {
+      "comment" : "Header menu: the named views.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Виды"
+          }
+        }
+      }
+    },
+    "trend: last %@, lowest %@, highest %@" : {
+      "comment" : "VoiceOver: a sparkline (a small chart in a cell): its last, lowest and highest values.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "тренд: последнее %1$@, минимум %2$@, максимум %3$@"
+          }
+        }
+      }
+    },
+    "trend: no values" : {
+      "comment" : "VoiceOver: a sparkline without values.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "тренд: нет значений"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

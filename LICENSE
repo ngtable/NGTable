@@ -1,0 +1,22 @@
+NGTable
+Copyright © 2026 Dalis Polikhranidi
+
+NGTable is source-available, not open source. It is licensed under two
+licenses, and you use it under one of them:
+
+- The PolyForm Noncommercial License 1.0.0 (LICENSE-NONCOMMERCIAL.md), for
+  noncommercial use: personal projects, study and research, and use by
+  charitable organizations, educational institutions, public research
+  organizations, public safety or health organizations, environmental
+  protection organizations and government institutions.
+
+- A commercial license, for any other use, including use within a business
+  (internal tools too). Commercial use without one is not permitted. To get
+  one, write to d.polikhranidi+ngtable@gmail.com; see LICENSING.md.
+
+Vendor/CollationICU is not covered by these licenses: it is ICU (the Unicode
+license) and code of swift-foundation-icu (the Apache License 2.0), with the
+changes Scripts/vendor-icu.py makes, under the licenses in
+Vendor/CollationICU/LICENSE.md.
+
+Required Notice: Copyright © 2026 Dalis Polikhranidi (https://github.com/ngtable/NGTable)
