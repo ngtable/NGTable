@@ -1,11 +1,20 @@
 # Builds NGTable, NGTableICU, the tests and the comparison app with the
 # oldest and the newest Xcode 26 (Swift 6.2 and later), the oldest NGTable
-# supports.
+# supports. Runs when the code on main changes (not for tags, other
+# branches or documentation), and by hand ("Run workflow", or
+# `gh workflow run build.yml --ref <branch>`).
 name: Build
 
 on:
   push:
-  pull_request:
+    branches: [main]
+    paths:
+      - "Package.swift"
+      - "Sources/**"
+      - "Tests/**"
+      - "Vendor/**"
+      - "Comparison/**"
+      - ".github/workflows/build.yml"
   workflow_dispatch:
 
 jobs:
