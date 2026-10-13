@@ -36,32 +36,32 @@ final class NGTableDemoData: NGTableViewDataSource {
     static let columns: [NGColumnItem] = [
         // Untitled, fixed and frozen first: the campaign's mark.
         .column(NGTableColumn("mark", title: "", width: 30, alignment: .center, isResizable: false,
-                              isMovable: false, showsHeaderDivider: false, pin: .leading, toolTip: "Метка")),
-        .column(NGTableColumn("name", title: "Менеджер", width: 150, isHideable: false, pin: .leading)),
-        .column(NGTableColumn("city", title: "Город", width: 110, pin: .leading)),
-        .group(NGColumnGroup("income", title: "Доход", columns: (1...storeCount).map { index in
-            NGTableColumn("store\(index)", title: "Магазин \(index)", width: 130, format: .currency(code: "EUR"), summary: .aggregate(.sum))
+                              isMovable: false, showsHeaderDivider: false, pin: .leading, toolTip: "Mark")),
+        .column(NGTableColumn("name", title: "Manager", width: 150, isHideable: false, pin: .leading)),
+        .column(NGTableColumn("city", title: "City", width: 110, pin: .leading)),
+        .group(NGColumnGroup("income", title: "Income", columns: (1...storeCount).map { index in
+            NGTableColumn("store\(index)", title: "Store \(index)", width: 130, format: .currency(code: "EUR"), summary: .aggregate(.sum))
         })),
-        .group(NGColumnGroup("expenses", title: "Расход", columns: [
-            NGTableColumn("rent", title: "Аренда", width: 100, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
-            NGTableColumn("salary", title: "Зарплата", width: 100, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
-            NGTableColumn("logistics", title: "Логистика", width: 100, format: .currency(code: "EUR"), summary: .aggregate(.average), toolTip: "Среднее значение по строкам"),
+        .group(NGColumnGroup("expenses", title: "Expenses", columns: [
+            NGTableColumn("rent", title: "Rent", width: 100, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
+            NGTableColumn("salary", title: "Salaries", width: 100, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
+            NGTableColumn("logistics", title: "Logistics", width: 100, format: .currency(code: "EUR"), summary: .aggregate(.average), toolTip: "The average of the rows"),
         ])),
-        .group(NGColumnGroup("ads", title: "Реклама", columns: [
-            NGTableColumn("adSpend", title: "Расход", width: 120, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
-            NGTableColumn("adRevenue", title: "Выручка", width: 120, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
+        .group(NGColumnGroup("ads", title: "Ads", columns: [
+            NGTableColumn("adSpend", title: "Spend", width: 120, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
+            NGTableColumn("adRevenue", title: "Revenue", width: 120, format: .currency(code: "EUR"), summary: .aggregate(.sum)),
             NGTableColumn("roi", title: "ROI %", width: 90, format: .percent(fractionDigits: 1), summary: .formula(roiFormula),
-                          toolTip: "Итог: (Σ выручки − Σ расхода) / Σ расхода"),
+                          toolTip: "Total: (Σ revenue − Σ spend) / Σ spend"),
         ])),
-        .column(NGTableColumn("total", title: "Итого", width: 120, format: .currency(code: "EUR"), summary: .aggregate(.sum), pin: .trailing, toolTip: "Доход минус расход")),
+        .column(NGTableColumn("total", title: "Total", width: 120, format: .currency(code: "EUR"), summary: .aggregate(.sum), pin: .trailing, toolTip: "Income minus expenses")),
     ]
 
     static let sampleMarks: [NGMark?] = [
-        NGMark("hand.thumbsup.fill", color: .green, label: "Рекомендована"),
-        NGMark("star.fill", color: .yellow, label: "Избранная"),
+        NGMark("hand.thumbsup.fill", color: .green, label: "Recommended"),
+        NGMark("star.fill", color: .yellow, label: "Favorite"),
         nil,
-        NGMark("percent", color: .blue, label: "Скидка"),
-        NGMark("flame.fill", color: .orange, label: "Горячая"),
+        NGMark("percent", color: .blue, label: "Discount"),
+        NGMark("flame.fill", color: .orange, label: "Hot"),
     ]
 
     private(set) var rows: [Row]
@@ -76,7 +76,7 @@ final class NGTableDemoData: NGTableViewDataSource {
             let unit = Double(seed >> 11) / Double(1 << 53)
             return (range.lowerBound + unit * (range.upperBound - range.lowerBound)).rounded()
         }
-        let names = ["Анна", "Борис", "Виктор", "Галина", "Дмитрий", "Елена", "Жанна", "Игорь"]
+        let names = ["Anna", "Ben", "Clara", "David", "Emma", "Felix", "Grace", "Henry"]
         let cities = ["Berlin", "München", "Hamburg", "Köln", "Leipzig"]
         originalRows = (0..<count).map { index in
             Row(
@@ -145,7 +145,7 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
     private var data = NGTableDemoData()
     private let table = NGTableView(frame: .zero)
     private let scopeControl = NSSegmentedControl(
-        labels: ["Все строки", "Только выделенные", "Все, кроме выделенных"],
+        labels: ["All Rows", "Selected Rows", "All but Selected"],
         trackingMode: .selectOne,
         target: nil,
         action: nil
@@ -158,7 +158,7 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
     )
 
     private let searchField = NSSearchField()
-    private let profitableOnly = NSButton(checkboxWithTitle: "Только прибыльные", target: nil, action: nil)
+    private let profitableOnly = NSButton(checkboxWithTitle: "Profitable Only", target: nil, action: nil)
 
     override func loadView() {
         let root = NSView(frame: NSRect(x: 0, y: 0, width: 1000, height: 560))
@@ -170,9 +170,9 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
         rowCountControl.target = self
         rowCountControl.action = #selector(rowCountChanged(_:))
         rowCountControl.selectedSegment = Self.rowCounts.firstIndex(of: data.rows.count) ?? 0
-        rowCountControl.toolTip = "Количество строк"
+        rowCountControl.toolTip = "Number of rows"
 
-        searchField.placeholderString = "Поиск"
+        searchField.placeholderString = "Search"
         searchField.target = self
         searchField.action = #selector(filterChanged(_:))
         searchField.widthAnchor.constraint(equalToConstant: 180).isActive = true
@@ -187,7 +187,7 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
         table.columns = NGTableDemoData.columns
         // Column order, widths and hidden columns survive relaunches.
         table.autosaveName = "NGTableDemo.4"
-        table.emptyStateText = "Нет кампаний за выбранный период"
+        table.emptyStateText = "No campaigns in this period"
         // Not a shown column: the data source answers "id" like any other.
         // The selection follows the same campaigns when rows are sorted or reloaded.
         table.rowIdentifierColumnID = "id"
@@ -214,7 +214,7 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
             filter.isIncluded = { [weak self] row in (self?.data.rows[row].roi ?? 0) > 0 }
         }
         table.rowFilter = filter
-        table.emptyStateText = table.rowFilter?.isEmpty == false ? "Ничего не найдено" : "Нет кампаний за выбранный период"
+        table.emptyStateText = table.rowFilter?.isEmpty == false ? "No matches" : "No campaigns in this period"
     }
 
     @objc private func scopeChanged(_ sender: NSSegmentedControl) {
@@ -225,7 +225,7 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
         let count = Self.rowCounts[sender.selectedSegment]
         // Like loading another period from a server: the table fades and
         // ignores the user until the data is there.
-        table.dataUpdateText = "Загрузка \(count.formatted()) кампаний…"
+        table.dataUpdateText = "Loading \(count.formatted()) campaigns…"
         Task {
             await table.updatingData {
                 try? await Task.sleep(for: .milliseconds(800))
@@ -269,12 +269,12 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
         guard !rows.isEmpty else { return nil }
         let menu = NSMenu()
         let names = rows.prefix(3).map { data.rows[$0].name }.joined(separator: ", ")
-        let title = rows.count > 3 ? "\(names) и ещё \(rows.count - 3)" : names
+        let title = rows.count > 3 ? "\(names) and \(rows.count - 3) more" : names
         let header = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
         menu.addItem(.separator())
-        let copy = NSMenuItem(title: "Скопировать", action: #selector(copyRows(_:)), keyEquivalent: "")
+        let copy = NSMenuItem(title: "Copy", action: #selector(copyRows(_:)), keyEquivalent: "")
         copy.target = self
         copy.representedObject = rows
         menu.addItem(copy)
