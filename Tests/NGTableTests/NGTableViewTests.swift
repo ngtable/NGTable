@@ -966,7 +966,7 @@ struct NGTableViewTests {
         let mark = table.geometry.center.columns.first { $0.column.id == "mark" }!
         let point = NSPoint(x: mark.x + 10, y: table.rowHeight * 2.5)
         #expect(table.cellToolTipFrame(at: point, in: table.regions[1])
-            == NSRect(x: mark.x, y: table.rowHeight * 2, width: mark.width, height: table.rowHeight))
+            == NSRect(x: CGFloat(mark.x), y: table.rowHeight * CGFloat(2), width: CGFloat(mark.width), height: table.rowHeight))
         #expect(table.cellToolTipFrame(at: NSPoint(x: mark.x - 50, y: point.y), in: table.regions[1]) == nil)
 
         let y = table.headerRowHeight / 2

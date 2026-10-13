@@ -1,7 +1,7 @@
 # NGTable
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
-![Swift 6.4](https://img.shields.io/badge/Swift-6.4-orange)
+![Swift 6.2+](https://img.shields.io/badge/Swift-6.2%2B-orange)
 ![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%20%2B%20commercial-lightgrey)
 
@@ -114,7 +114,7 @@ NGDataTable(campaigns, selection: $selection) {
 ## Requirements
 
 - macOS 14 or later (Liquid Glass on macOS 26 and later)
-- Swift 6.4 tools (Xcode 27 or later)
+- Swift 6.2 or later (Xcode 26 or later)
 
 ## Installation
 

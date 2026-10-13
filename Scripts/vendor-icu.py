@@ -23,6 +23,8 @@ import os, re, shutil, struct, subprocess, sys, tempfile
 REVISION = "f986d0728da0766cf81f371521b909d4a11681d2"   # swift-6.4.0-RELEASE: ICU 76.1
 URL = "https://github.com/swiftlang/swift-foundation-icu.git"
 DATA = "icudt76l-collation.dat"
+DATA_SOURCE = "icu_collation_data.c"
+ENTRY_POINT = "icudt76_dat"   # U_ICUDATA_ENTRY_POINT of ICU 76
 MODULE = "_NGCollationICU"
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -118,23 +120,29 @@ def main():
             os.chmod(os.path.join(folder, file), 0o644)
     open(os.path.join(sources, "common", DATA), "wb").write(package(header, collation))
 
-    # The data from the file, not from the four generated headers.
+    # The data from the file, not from the four generated headers, in a C
+    # file: Xcode 26.0's clang gives #embed's bytes the type char, which C++
+    # won't narrow to uint8_t (C converts them).
     path = os.path.join(sources, "common", "icu_packaged_data.cpp")
     code = open(path).read()
     start, end = code.index('#include "icu_packaged_main_data.0.inc.h"'), code.index("#endif", code.index("U_ICUDATA_ENTRY_POINT[]"))
-    code = code[:start] + f'''#include <stdint.h>
-#include <_foundation_unicode/utypes.h>
+    code = code[:start] + f"// Changed by NGTable's Scripts/vendor-icu.py: the data ({ENTRY_POINT}) is in {DATA_SOURCE}.\n\n" + code[end:]
+    open(path, "w").write(code)
+    open(os.path.join(sources, "common", DATA_SOURCE), "w").write(f"""// Made by NGTable's Scripts/vendor-icu.py: ICU's common data, only collation's,
+// embedded from {DATA} (ICU finds it as U_ICUDATA_ENTRY_POINT). In C, not C++:
+// Xcode 26.0's clang gives #embed's bytes the type char, which C++ won't narrow.
 
-// Changed by NGTable's Scripts/vendor-icu.py: only collation's data, from a file.
+#include <stdint.h>
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc23-extensions"
-extern "C" U_EXPORT uint8_t const U_ICUDATA_ENTRY_POINT[] __attribute__ ((aligned (16))) = {{
+#pragma clang diagnostic ignored "-Wconstant-conversion"
+__attribute__((visibility("default"), aligned(16)))
+const uint8_t {ENTRY_POINT}[] = {{
 #embed "{DATA}"
 }};
 #pragma clang diagnostic pop
-
-''' + code[end:]
-    open(path, "w").write(code)
+""")
 
     modulemap = os.path.join(sources, "include", "_foundation_unicode", "module.modulemap")
     text = open(modulemap).read()

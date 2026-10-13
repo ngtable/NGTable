@@ -29,7 +29,7 @@ extension NGTableView {
         let columns0 = navigableColumns
         guard !columns0.isEmpty, numberOfRows > 0 else { return false }
         var columnIndex = focusedCell.flatMap { cell in columns0.firstIndex { $0.id == cell.columnID } } ?? 0
-        var displayRow = focusedCell.flatMap { displayRow(forSourceRow: $0.row) } ?? cursorRow ?? 0
+        var displayRow = focusedCell.flatMap { self.displayRow(forSourceRow: $0.row) } ?? cursorRow ?? 0
         columnIndex = min(max(columnIndex + columns, 0), columns0.count - 1)
         displayRow = min(max(displayRow + rows, 0), numberOfRows - 1)
         // Group headers have no cells: step over them.
@@ -226,8 +226,7 @@ extension NGTableView {
         // that is gone isn't touched, nor another data source's.
         let identifier = identifier(forSourceRow: row)
         let ref = rowRef(ofRow: row)
-        weak let source = dataSource as AnyObject
-        undoManager?.registerUndo(withTarget: self) { table in
+        undoManager?.registerUndo(withTarget: self) { [weak source = dataSource as AnyObject] table in
             guard let source, table.dataSource as AnyObject === source else { return }
             var current = table.row(of: ref)
             if current < 0, ref.epoch != table.rowHandles.epoch, let identifier { current = table.row(forIdentifier: identifier) }

@@ -76,7 +76,6 @@ private final class LegacyPeople: NSObject, NSTableViewDataSource {
 
 /// A data source from before pasteboard writers: it writes all the rows
 /// dragged at once (the deprecated `tableView(_:writeRowsWith:to:)`).
-@MainActor
 private final class OldDragger: NSObject, NSTableViewDataSource {
     let names = ["Mei", "Juan", "Gita", "Ana"]
     var written: [[Int]] = []

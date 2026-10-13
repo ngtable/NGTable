@@ -124,7 +124,7 @@ public final class NGTableView: NSView {
             // Its record's identity, read while the data is the one shown: a
             // reload finds the record by it (the data has changed by then).
             guard focusedHandleCell?.ref != oldValue?.ref else { return }
-            let row = focusedHandleCell.map { row(of: $0.ref) } ?? -1
+            let row = focusedHandleCell.map { self.row(of: $0.ref) } ?? -1
             focusedIdentity = row >= 0 ? identifier(forSourceRow: row) : nil
         }
     }

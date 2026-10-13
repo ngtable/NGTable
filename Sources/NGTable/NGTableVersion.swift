@@ -12,10 +12,10 @@ import Foundation
 extension NGTableView {
     /// NGTable's version, e.g. "1.0.0" (semantic versioning: a new major
     /// version for changes that break the API).
-    public nonisolated static let version = "1.0.0"
+    public nonisolated static let version = "1.0.1"
 
     /// NGTable and its version as a string an app's binary keeps (the name of
     /// the Metal renderer's command queue, seen in a GPU frame capture).
-    nonisolated static let binaryMarker = "NGTable 1.0.0 Metal renderer"
+    nonisolated static let binaryMarker = "NGTable 1.0.1 Metal renderer"
 }
 #endif

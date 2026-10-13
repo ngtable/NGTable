@@ -491,7 +491,7 @@ extension NGTableView {
             return .mark(Self.checkBoxMark(flag),
                          alignment: column.alignment.textAlignment(isNumeric: false, layoutDirection: contentLayoutDirection))
         case .number(let number):
-            let formatID = ordinal.map { formatID(ofColumn: column, ordinal: $0) } ?? NGFormatIDs.id(of: column.format, locale: locale)
+            let formatID = ordinal.map { self.formatID(ofColumn: column, ordinal: $0) } ?? NGFormatIDs.id(of: column.format, locale: locale)
             return .number(NGFormattedNumber(value: number, format: column.format, formatID: formatID),
                            alignment: column.alignment.textAlignment(isNumeric: true, layoutDirection: contentLayoutDirection))
         default:

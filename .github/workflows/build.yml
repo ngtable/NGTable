@@ -1,0 +1,28 @@
+# Builds NGTable, NGTableICU, the tests and the comparison app with the
+# oldest and the newest Xcode 26 (Swift 6.2 and later), the oldest NGTable
+# supports.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Xcode ${{ matrix.xcode }}
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        xcode: ["26.0.1", "26.6"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
+      - name: Swift version
+        run: swift --version
+      - name: Build the libraries and the tests
+        run: swift build --build-tests
+      - name: Build the comparison app
+        run: swift build --package-path Comparison

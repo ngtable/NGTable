@@ -62,7 +62,7 @@ extension NGTableView: NSDraggingSource {
     /// adapter of an `NSTableViewDataSource` with `writeRowsWith`).
     func draggingItems(forRows rows: IndexSet, dataSource: NGTableViewDataSource) -> [NSDraggingItem] {
         let columns = columnLayout.allColumns
-        let width = min(bounds.width, columns.reduce(0) { $0 + CGFloat(width(ofColumnID: $1.id) ?? $1.width) })
+        let width = min(bounds.width, columns.reduce(0) { $0 + CGFloat(self.width(ofColumnID: $1.id) ?? $1.width) })
         if let writesAtOnce = dataSource as? NGRowsPasteboardWriting, writesAtOnce.writesRowsAtOnce,
            let first = rows.first, let writer = writesAtOnce.pasteboardWriter(forRows: rows, in: self) {
             let item = NSDraggingItem(pasteboardWriter: writer)

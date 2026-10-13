@@ -12,15 +12,6 @@
 
 #if USE_PACKAGE_DATA
 
-#include <stdint.h>
-#include <_foundation_unicode/utypes.h>
-
-// Changed by NGTable's Scripts/vendor-icu.py: only collation's data, from a file.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc23-extensions"
-extern "C" U_EXPORT uint8_t const U_ICUDATA_ENTRY_POINT[] __attribute__ ((aligned (16))) = {
-#embed "icudt76l-collation.dat"
-};
-#pragma clang diagnostic pop
+// Changed by NGTable's Scripts/vendor-icu.py: the data (icudt76_dat) is in icu_collation_data.c.
 
 #endif

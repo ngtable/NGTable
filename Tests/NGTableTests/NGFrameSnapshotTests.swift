@@ -210,7 +210,11 @@ struct NGFrameSnapshotTests {
             case 3: return [5, 5, 5, 5, 5, 5]                      // Flat.
             case 4: return [3, .nan, 7, 2, .nan, .nan, 9, 4]       // Gaps, 9 alone after them... and 4.
             case 5: return [.nan, .nan, 6, .nan, .nan]             // A value alone.
-            default: return (0..<24).map { sin(Double($0 + row * 3) / 3) * 10 + Double($0) / 2 - 3 }
+            default:
+                return (0..<24).map { (index: Int) -> Double in
+                    let wave: Double = sin(Double(index + row * 3) / 3) * 10
+                    return wave + Double(index) / 2 - 3
+                }
             }
         }
 
