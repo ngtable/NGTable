@@ -48,7 +48,7 @@ public enum NGSorting {
         let keys = NGSortKeys(keys: sorts.map(\.key), ascending: sorts.map(\.ascending), comparisons: sorts.map(\.comparison),
                               values: sorts.map { sort in rows.map { value(sort.key, $0) } })
         // Ties in row order: the rows' handles are their indexes.
-        return NGTableView.sortedRows(rows, keys: keys, order: NGRowHandles(count: rows.count), keyProvider: nil)
+        return NGRowSort.sortedRows(rows, keys: keys, order: NGRowHandles(count: rows.count), keyProvider: nil)
     }
 
     /// For `NGTableView.reorderRows(fromOldIndexes:)`: the row each row of

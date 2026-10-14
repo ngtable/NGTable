@@ -91,6 +91,9 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [
         .macOS(.v14),
+        // The core (values, formats, summaries, sorting, grouping, the Metal
+        // renderer) and NGTableICU; the table view is macOS's for now.
+        .iOS(.v17),
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.

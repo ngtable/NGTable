@@ -1,5 +1,8 @@
-#if os(macOS)
+#if canImport(AppKit)
 import AppKit
+#else
+import UIKit
+#endif
 import Metal
 
 // Text drawn on the GPU from a glyph atlas. Core Text still lays the text out
@@ -756,4 +759,3 @@ final class NGTextShaper {
         return shaped
     }
 }
-#endif

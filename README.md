@@ -114,6 +114,8 @@ NGDataTable(campaigns, selection: $selection) {
 ## Requirements
 
 - macOS 14 or later (Liquid Glass on macOS 26 and later)
+- iPadOS 17 or later builds the core (values, formats, summaries, sorting,
+  grouping, the renderer) and NGTableICU; the table view for iPad is coming
 - Swift 6.2 or later (Xcode 26 or later)
 
 ## Installation

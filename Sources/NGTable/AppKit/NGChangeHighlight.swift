@@ -10,15 +10,6 @@ import AppKit
 // record when the sort or other rows move it, and is drawn by the Metal
 // renderer under the cell's content while a display link animates it.
 
-/// How a column shows that a targeted update changed a cell's value.
-public enum NGChangeHighlight: Sendable, Hashable {
-    /// A flash of the accent color that fades.
-    case flash
-    /// Numbers that went up flash green, those that went down red (like a
-    /// trading screen); other values flash the accent color.
-    case direction
-}
-
 /// A cell's flash: when it started and its color.
 struct NGChangeFlash {
     enum Kind { case changed, up, down }

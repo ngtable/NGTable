@@ -1,5 +1,8 @@
-#if os(macOS)
+#if canImport(AppKit)
 import AppKit
+#else
+import UIKit
+#endif
 import AVFoundation
 import CryptoKit
 import ImageIO
@@ -371,7 +374,9 @@ public final class NGMediaCache {
         failures.removeAll()
         pending.removeAll()
         lastAsked.removeAll()
+        #if os(macOS)
         NGMediaPlayer.recentGIFs.removeAll()
+        #endif
         recent.removeAll()
         cost = 0
         fileNames.removeAll()
@@ -465,4 +470,3 @@ public final class NGMediaCache {
         return texture
     }
 }
-#endif

@@ -1,6 +1,6 @@
 # Builds NGTable, NGTableICU, the tests and the comparison app with the
 # oldest and the newest Xcode 26 (Swift 6.2 and later), the oldest NGTable
-# supports. Runs when the code on main changes (not for tags, other
+# supports, and the libraries for iPadOS (the core and NGTableICU). Runs when the code on main changes (not for tags, other
 # branches or documentation), and by hand ("Run workflow", or
 # `gh workflow run build.yml --ref <branch>`).
 name: Build
@@ -25,6 +25,10 @@ jobs:
       fail-fast: false
       matrix:
         xcode: ["26.0.1", "26.6"]
+        # The runners have the iOS platform for the newest Xcode only.
+        include:
+          - xcode: "26.6"
+            ipados: true
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode
@@ -35,3 +39,9 @@ jobs:
         run: swift build --build-tests
       - name: Build the comparison app
         run: swift build --package-path Comparison
+      - name: Build the libraries for iPadOS
+        if: matrix.ipados
+        run: |
+          for scheme in NGTable NGTableICU; do
+            xcodebuild -scheme $scheme -destination "generic/platform=iOS Simulator" -quiet build
+          done

@@ -16,7 +16,7 @@ build=$here/build
 ngtable=${NGTABLE_XCFRAMEWORK:-$here/../build/NGTable.xcframework}
 cd $here
 
-version=$(sed -n 's/.*public nonisolated static let version = "\(.*\)"/\1/p' $here/../../Sources/NGTable/NGTableVersion.swift)
+version=$(sed -n 's/.*nonisolated static let version = "\(.*\)"/\1/p' $here/../../Sources/NGTable/NGTableVersion.swift)
 [[ $version == <->.<->.<-> ]] || { echo "No version in NGTableVersion.swift" >&2; exit 1 }
 
 rm -rf $build NGTableICU.xcodeproj

@@ -14,7 +14,7 @@ build=$here/build
 cd $here
 
 # The framework's version is NGTableView.version.
-version=$(sed -n 's/.*public nonisolated static let version = "\(.*\)"/\1/p' $here/../Sources/NGTable/NGTableVersion.swift)
+version=$(sed -n 's/.*nonisolated static let version = "\(.*\)"/\1/p' $here/../Sources/NGTable/NGTableVersion.swift)
 [[ $version == <->.<->.<-> ]] || { echo "No version in NGTableVersion.swift" >&2; exit 1 }
 
 rm -rf $build NGTable.xcodeproj

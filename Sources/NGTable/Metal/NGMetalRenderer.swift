@@ -1,5 +1,8 @@
-#if os(macOS)
+#if canImport(AppKit)
 import AppKit
+#else
+import UIKit
+#endif
 import Metal
 import os
 
@@ -63,7 +66,11 @@ final class NGMetalRenderer {
     /// is light work; the default device would switch the Mac to the discrete
     /// one and drain its battery), else the default.
     static func preferredDevice() -> MTLDevice? {
+        #if os(macOS)
         MTLCopyAllDevices().first { $0.isLowPower && !$0.isRemovable } ?? MTLCreateSystemDefaultDevice()
+        #else
+        MTLCreateSystemDefaultDevice()
+        #endif
     }
 
     /// The renderer tables share (`nil` without Metal): one set of shaders and
@@ -73,7 +80,7 @@ final class NGMetalRenderer {
     /// - Parameter atlasSize: The glyph atlas's starting size in pixels (tests make it small to fill it).
     init?(device: MTLDevice? = NGMetalRenderer.preferredDevice(), atlasSize: Int = 2048) {
         guard let device, let queue = device.makeCommandQueue(), let atlas = NGGlyphAtlas(device: device, size: atlasSize) else { return nil }
-        queue.label = NGTableView.binaryMarker
+        queue.label = NGTableRelease.binaryMarker
         // Compiled at run time: SwiftPM doesn't build .metal files.
         let library: MTLLibrary
         do {
@@ -249,7 +256,7 @@ final class NGMetalRenderer {
         case .center: NGMetrics.cellPadding + ((available - shaped.width) / 2)
         default: NGMetrics.cellPadding
         }
-        let top = ((cell.height - NGLineHeights.height(of: font as NSFont)) / 2).rounded()
+        let top = ((cell.height - NGLineHeights.height(of: font as NGPlatformFont)) / 2).rounded()
         appendGlyphs(shaped, font: font, x: cell.minX + x, baseline: cell.minY + top + CTFontGetAscent(font),
                      clip: clip ?? cell, scale: scale, color: color, to: &quads)
     }
@@ -367,12 +374,14 @@ final class NGMetalRenderer {
         SIMD4(Float(rect.minX * scale), Float(rect.minY * scale), Float(rect.maxX * scale), Float(rect.maxY * scale))
     }
 
+    #if os(macOS)
     /// A color as the shaders take it: premultiplied, in sRGB.
     static func premultiplied(_ color: NSColor) -> SIMD4<Float> {
         let rgb = color.usingColorSpace(.sRGB) ?? color
         let alpha = Float(rgb.alphaComponent)
         return SIMD4(Float(rgb.redComponent) * alpha, Float(rgb.greenComponent) * alpha, Float(rgb.blueComponent) * alpha, alpha)
     }
+    #endif
 
     /// The same for a resolved Core Graphics color.
     static func premultiplied(_ color: CGColor) -> SIMD4<Float> {
@@ -487,5 +496,3 @@ final class NGMetalRenderer {
     }
     """
 }
-
-#endif

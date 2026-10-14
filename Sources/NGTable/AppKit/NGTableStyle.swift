@@ -56,24 +56,6 @@ public enum NGTableDensity: Sendable, Hashable, CaseIterable {
     }
 }
 
-/// Single-line heights of fonts, as AppKit lays a line out (measured once
-/// per font: no formula of the font's metrics gives AppKit's).
-@MainActor
-enum NGLineHeights {
-    private static var heights: [NSFont: CGFloat] = [:]
-    /// The font asked last: a frame asks for the same few fonts cell after
-    /// cell, and hashing an `NSFont` costs more than comparing pointers.
-    private static var last: (font: NSFont, height: CGFloat)?
-
-    static func height(of font: NSFont) -> CGFloat {
-        if let last, last.font === font { return last.height }
-        let height = heights[font] ?? ceil(NSAttributedString(string: "Xg", attributes: [.font: font]).size().height)
-        heights[font] = height
-        last = (font, height)
-        return height
-    }
-}
-
 extension NGTableView {
     /// The fonts and colors the renderer draws this table with.
     var metalStyle: MetalStyle {

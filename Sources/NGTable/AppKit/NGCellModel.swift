@@ -332,19 +332,9 @@ final class NGCellPalette: @unchecked Sendable {
 
 /// Fonts, shapes and measuring of default cells.
 @MainActor
-enum NGCellDrawing {
+extension NGCellDrawing {
     static let tagFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium)
 
-    nonisolated static let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-
-    /// A bitmap context for glyphs and icons, transparent like the atlas (so
-    /// without font smoothing).
-    nonisolated static func makeBitmapContext(width: Int, height: Int, colorSpace: CGColorSpace) -> CGContext? {
-        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                                space: colorSpace, bitmapInfo: bitmapInfo)
-        context?.setAllowsFontSmoothing(false)
-        return context
-    }
 
     /// A disclosure chevron like an outline view's: pointing to the trailing
     /// side when collapsed, down when expanded (in a context whose y axis points down).
@@ -430,9 +420,4 @@ enum NGCellDrawing {
     }
 }
 
-/// A value handed to other threads by code that guarantees exclusive access.
-struct NGUncheckedSendable<Value>: @unchecked Sendable {
-    let value: Value
-    init(_ value: Value) { self.value = value }
-}
 #endif
