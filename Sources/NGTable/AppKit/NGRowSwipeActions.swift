@@ -184,7 +184,8 @@ extension NGTableView {
             return
         }
         let container = rowActionButtons ?? makeRowActionButtons(swipe)
-        let rowFrame = convert(NSRect(x: 0, y: CGFloat(displayRow) * rowHeight, width: 1, height: rowHeight), from: centerRegion.canvas)
+        let rowHeight = rowGeometry.height(of: displayRow)
+        let rowFrame = convert(NSRect(x: 0, y: rowGeometry.top(of: displayRow), width: 1, height: rowHeight), from: centerRegion.canvas)
         let revealed = abs(swipe.offset)
         container.frame = NSRect(x: buttonsOnRight(swipe.edge) ? bounds.width - revealed : 0, y: rowFrame.minY,
                                  width: revealed, height: rowHeight)

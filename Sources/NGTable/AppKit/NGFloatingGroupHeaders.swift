@@ -19,7 +19,8 @@ extension NGTableView {
     func floatingGroupHeaders(atOffset top: CGFloat) -> [(row: Int, y: CGFloat)] {
         guard floatsGroupRows, let display = groupedDisplay, rowHeight > 0 else { return [] }
         guard top > 0 else { return [] }
-        let first = Int(top / rowHeight)
+        let rowLayout = rowGeometry
+        let first = Int(rowLayout.position(atY: top))
         guard first < display.count else { return [] }
         // The group of the row at the top, and the groups around it.
         let entry = display[first]
@@ -32,9 +33,10 @@ extension NGTableView {
         chain.reverse()
         guard !chain.isEmpty, chain.allSatisfy({ $0 < groupHeaderDisplayRows.count && groupHeaderDisplayRows[$0] >= 0 }) else { return [] }
         // Each level under the one above, pushed up by the end of its group;
-        // a parent stays above its pushed child.
+        // a parent stays above its pushed child. Group header rows are
+        // `rowHeight` high whatever the other rows' heights.
         var ys = chain.enumerated().map { level, node in
-            min(top + CGFloat(level) * rowHeight, CGFloat(groupDisplayEnds[node]) * rowHeight - rowHeight)
+            min(top + CGFloat(level) * rowHeight, rowLayout.top(of: groupDisplayEnds[node]) - rowHeight)
         }
         if ys.count > 1 {
             for level in stride(from: ys.count - 2, through: 0, by: -1) {
@@ -45,7 +47,7 @@ extension NGTableView {
         for (level, node) in chain.enumerated() {
             let row = groupHeaderDisplayRows[node]
             // In its place already: it and the levels within don't float.
-            guard CGFloat(row) * rowHeight < ys[level] else { break }
+            guard rowLayout.top(of: row) < ys[level] else { break }
             result.append((row, ys[level]))
         }
         return result

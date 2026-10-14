@@ -405,8 +405,8 @@ extension NGTableView {
                 clip = clip.intersection(CGRect(x: clip.minX, y: rowsTop, width: clip.width, height: max(0, clip.maxY - rowsTop)))
                 guard !clip.isEmpty else { continue }
                 for (displayRow, y) in floating {
-                    let dy = y - CGFloat(displayRow) * rowHeight
-                    let band = CGRect(x: clip.minX, y: origin.y + y, width: clip.width, height: rowHeight)
+                    let dy = y - rowGeometry.top(of: displayRow)
+                    let band = CGRect(x: clip.minX, y: origin.y + y, width: clip.width, height: rowGeometry.height(of: displayRow))
                     quads.append(NGMetalRenderer.rectangle(band, scale: scale, color: SIMD4(base.x, base.y, base.z, 1), clip: clip))
                     for (row, rowIndex) in rowsByRegion[region.pin] ?? [] where rowIndex == displayRow {
                         appendRow(row, origin: CGPoint(x: origin.x, y: origin.y + dy), clip: clip, scale: scale, style: style, to: &quads)

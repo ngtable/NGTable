@@ -451,10 +451,10 @@ extension NGTableView {
     }
 
     func accessibilityScreenFrame(forRow row: Int, columnRange: ClosedRange<CGFloat>?) -> NSRect {
-        let y = headerHeight + CGFloat(row) * rowHeight - renderedOffsetY
+        let y = headerHeight + rowGeometry.top(of: row) - renderedOffsetY
         let minX = columnRange?.lowerBound ?? 0
         let maxX = columnRange?.upperBound ?? bounds.width
-        return accessibilityScreenRect(NSRect(x: minX, y: y, width: maxX - minX, height: rowHeight))
+        return accessibilityScreenRect(NSRect(x: minX, y: y, width: maxX - minX, height: rowGeometry.height(of: row)))
     }
 
     /// Row elements are created lazily and cached until the next reload.
@@ -475,8 +475,9 @@ extension NGTableView {
     var visibleRowRange: Range<Int> {
         guard rowHeight > 0, numberOfRows > 0 else { return 0..<0 }
         let metrics = layoutMetrics
-        let first = max(0, Int(floor(renderedOffsetY / rowHeight)))
-        let last = min(numberOfRows, Int(ceil((renderedOffsetY + metrics.bodyHeight - metrics.bottomInset) / rowHeight)))
+        let rowLayout = rowGeometry
+        let first = max(0, Int(floor(rowLayout.position(atY: renderedOffsetY))))
+        let last = min(numberOfRows, Int(ceil(rowLayout.position(atY: renderedOffsetY + metrics.bodyHeight - metrics.bottomInset))))
         return first..<max(first, last)
     }
 
@@ -615,7 +616,7 @@ extension NGTableView {
         if showsSummaryBar, summaryBar.frame.contains(local) {
             return accessibilitySummaryElement
         }
-        let row = Int(floor((local.y - headerHeight + renderedOffsetY) / rowHeight))
+        let row = Int(floor(rowGeometry.position(atY: local.y - headerHeight + renderedOffsetY)))
         guard row >= 0, row < numberOfRows else { return self }
         let rowElement = accessibilityRowElement(row)
         let cells = rowElement.accessibilityChildren() as? [NGAccessibilityCell] ?? []

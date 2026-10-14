@@ -864,14 +864,14 @@ extension NGTableView {
                     let key = NGCellKey(row: row, column: span.ordinal)
                     guard needed.insert(key).inserted else { continue }
                     placeGroupCell(key, content: groupTitleContent(ofNode: index),
-                                   frame: NSRect(x: span.x, y: CGFloat(row) * rowHeight, width: span.width, height: rowHeight),
+                                   frame: NSRect(x: span.x, y: rowGeometry.top(of: row), width: span.width, height: rowHeight),
                                    in: region.canvas)
                 } else if let text = subtotals[id] {
                     let key = NGCellKey(row: row, column: column.ordinal)
                     needed.insert(key)
                     let alignment = column.frame.column.alignment.textAlignment(isNumeric: true, layoutDirection: contentLayoutDirection)
                     placeGroupCell(key, content: .subtotal(text, alignment: alignment),
-                                   frame: NSRect(x: column.x, y: CGFloat(row) * rowHeight, width: CGFloat(column.frame.width), height: rowHeight),
+                                   frame: NSRect(x: column.x, y: rowGeometry.top(of: row), width: CGFloat(column.frame.width), height: rowHeight),
                                    in: region.canvas)
                 }
             }

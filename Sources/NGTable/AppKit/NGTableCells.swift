@@ -57,9 +57,10 @@ extension NGTableView {
         guard rowHeight > 0 else { return }
 
         // Include the rows scrolled underneath the translucent header.
-        let firstRow = max(0, Int(floor((renderedOffsetY - metrics.headerHeight) / rowHeight)))
+        let rowLayout = rowGeometry
+        let firstRow = max(0, Int(floor(rowLayout.position(atY: renderedOffsetY - metrics.headerHeight))))
         // Rows past the data keep the stripe pattern, like NSTableView.
-        let lastRow = Int(ceil((renderedOffsetY + metrics.bodyHeight) / rowHeight)) - 1
+        let lastRow = Int(ceil(rowLayout.position(atY: renderedOffsetY + metrics.bodyHeight))) - 1
         let centerMinX = Double(metrics.leadingWidth + physicalOffsetX)
         let centerColumns = geometry.center.columns(intersecting: centerMinX, centerMinX + Double(metrics.centerWidth))
 
@@ -277,7 +278,7 @@ extension NGTableView {
     /// of a cell too narrow for it (like NSTableView's expansion tool tips).
     func cellToolTip(at point: NSPoint, in region: NGRegionView) -> String? {
         guard let (cell, column) = cellUnderPoint(point, in: region) else { return nil }
-        let row = Int(floor(point.y / rowHeight))
+        let row = Int(floor(rowGeometry.position(atY: point.y)))
         let source = sourceRow(row)
         if source >= 0, let text = delegate?.tableView(self, toolTipForRow: source, column: column) {
             return text.isEmpty ? nil : text
@@ -302,7 +303,7 @@ extension NGTableView {
     private func cellUnderPoint(_ point: NSPoint, in region: NGRegionView) -> (NGDrawnCell, NGTableColumn)? {
         // Canvas coordinates are the geometry's (scrolling columns start after the leading region).
         guard rowHeight > 0, let columnFrame = geometry[region.pin].column(atX: Double(point.x)) else { return nil }
-        let row = Int(floor(point.y / rowHeight))
+        let row = Int(floor(rowGeometry.position(atY: point.y)))
         guard let cell = visibleCells[NGCellKey(row: row, column: columnOrdinal(of: columnFrame.column.id))], !cell.isHidden
         else { return nil }
         return (cell, columnFrame.column)
@@ -328,9 +329,9 @@ extension NGTableView {
 
         var frame = NSRect(
             x: region.pin == .none ? layoutMetrics.leadingWidth : 0,
-            y: CGFloat(row) * rowHeight,
+            y: rowGeometry.top(of: row),
             width: region.pin == .none ? centerCanvasWidth - layoutMetrics.leadingWidth : region.canvas.frame.width,
-            height: rowHeight
+            height: rowGeometry.height(of: row)
         )
         var corners: CACornerMask = []
         let isOuterLeading = region.pin == .leading || (region.pin == .none && geometry.leading.isEmpty)
@@ -401,7 +402,7 @@ extension NGTableView {
     private func placeCell(row: Int, column: PlacedColumn, in canvas: NGCanvasView) {
         let key = NGCellKey(row: row, column: column.ordinal)
         let cell = visibleCells[key] ?? makeCell(for: column.frame.column, ordinal: column.ordinal, row: row, readsValue: false)
-        let cellFrame = NSRect(x: column.x, y: CGFloat(row) * rowHeight, width: CGFloat(column.frame.width), height: rowHeight)
+        let cellFrame = NSRect(x: column.x, y: rowGeometry.top(of: row), width: CGFloat(column.frame.width), height: rowGeometry.height(of: row))
         cell.regionPin = canvas.region?.pin
         cell.cellFrame = cellFrame
         cell.showsChoiceChevron = Self.showsChoiceChevron(column.frame.column)

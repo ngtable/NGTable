@@ -74,7 +74,7 @@ extension NGTableView {
         let rest = 1 - (progress ?? rowAnimationProgress)
         if rowAnimation.appearing.contains(row), case .slide(let dx, let dy) = rowAnimation.effect {
             // Moving that way: it starts on the other side.
-            return CGPoint(x: -dx * bounds.width * rest, y: -dy * rowHeight * rest)
+            return CGPoint(x: -dx * bounds.width * rest, y: -dy * rowGeometry.height(of: row) * rest)
         }
         return CGPoint(x: 0, y: (rowAnimation.offsets[row] ?? 0) * rest)
     }
@@ -106,8 +106,9 @@ extension NGTableView {
     func startRowAnimation(moves: [Int: Int], appearing: Set<Int>, disappearing: [NGDrawnCell], effect: NGRowAnimation.Effect = .fade) {
         finishRowAnimation()
         var offsets: [Int: CGFloat] = [:]
+        let rowLayout = rowGeometry
         for (old, new) in moves where old != new {
-            offsets[new] = CGFloat(old - new) * rowHeight
+            offsets[new] = rowLayout.offset(from: old, to: new)
         }
         // Out of a window a display link doesn't run (and would keep the
         // table alive): everything is at its place at once.

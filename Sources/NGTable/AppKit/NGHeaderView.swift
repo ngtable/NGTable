@@ -210,12 +210,13 @@ extension NGTableView {
             // for the snapshot are recycled after that.
             var drawnCells: [(cell: NGDrawnCell, frame: CGRect)] = []
             var madeCells: [NGDrawnCell] = []
-            let firstRow = max(0, Int(floor(renderedOffsetY / rowHeight)))
-            let lastRow = Int(ceil((renderedOffsetY + metrics.bodyHeight) / rowHeight))
+            let rowLayout = rowGeometry
+            let firstRow = max(0, Int(floor(rowLayout.position(atY: renderedOffsetY))))
+            let lastRow = Int(ceil(rowLayout.position(atY: renderedOffsetY + metrics.bodyHeight)))
             for row in firstRow..<max(firstRow, lastRow) {
-                let y = bodyTop + CGFloat(row) * rowHeight - renderedOffsetY
+                let y = bodyTop + rowLayout.top(of: row) - renderedOffsetY
                 rowColor(row).setFill()
-                NSRect(x: rect.minX, y: y, width: rect.width, height: rowHeight).fill()
+                NSRect(x: rect.minX, y: y, width: rect.width, height: rowLayout.height(of: row)).fill()
                 guard row < numberOfRows else { continue }
                 for frame in frames {
                     // Visible cells are drawn as they are (no data source calls).
@@ -228,7 +229,7 @@ extension NGTableView {
                     }
                     resolveContent(of: cell)
                     let cellFrame = NSRect(x: origin + CGFloat(frame.x) - body.minX, y: y - body.minY,
-                                           width: CGFloat(frame.width), height: rowHeight)
+                                           width: CGFloat(frame.width), height: rowLayout.height(of: row))
                     drawnCells.append((cell, cellFrame))
                 }
             }

@@ -286,6 +286,9 @@ public final class NGTableView: NSView {
         }
     }
 
+    /// Where the display rows are: their tops and heights, the row at a y.
+    var rowGeometry: NGRowGeometry { NGRowGeometry(rowHeight: rowHeight, count: numberOfRows) }
+
     /// Height of the summary row.
     public var summaryRowHeight: CGFloat = 30 {
         didSet { needsLayout = true }
@@ -2680,8 +2683,9 @@ public final class NGTableView: NSView {
         guard row >= 0, row < numberOfRows else { return }
         let metrics = layoutMetrics
         let visibleHeight = metrics.bodyHeight - metrics.bottomInset
-        let rowMinY = CGFloat(row) * rowHeight
-        let rowMaxY = rowMinY + rowHeight
+        let rowLayout = rowGeometry
+        let rowMinY = rowLayout.top(of: row)
+        let rowMaxY = rowMinY + rowLayout.height(of: row)
         var y = contentOffset.y
         if rowMinY < y + floatingHeadersCover(atOffset: y, except: row) {
             // Up: the row goes just below the headers that float there, which
@@ -2737,8 +2741,8 @@ public final class NGTableView: NSView {
         guard let displayRow = displayRow(forSourceRow: row), displayRow < numberOfRows else { return nil }
         for (pin, region) in [(NGColumnPin.leading, leadingRegion), (.none, centerRegion), (.trailing, trailingRegion)] {
             guard let column = geometry[pin].columns.first(where: { $0.column.id == columnID }) else { continue }
-            let inCanvas = NSRect(x: CGFloat(column.x) + slideOffset(forColumnID: columnID), y: CGFloat(displayRow) * rowHeight,
-                                  width: CGFloat(column.width), height: rowHeight)
+            let inCanvas = NSRect(x: CGFloat(column.x) + slideOffset(forColumnID: columnID), y: rowGeometry.top(of: displayRow),
+                                  width: CGFloat(column.width), height: rowGeometry.height(of: displayRow))
             let frame = convert(inCanvas, from: region.canvas)
             let metrics = layoutMetrics
             // Below the group headers floating at the top (other than its own).

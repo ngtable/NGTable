@@ -50,7 +50,7 @@ extension NGTableView {
     /// Opens a row's menu for VoiceOver, at the row.
     func showAccessibilityMenu(forDisplayRow row: Int) -> Bool {
         guard let menu = accessibilityMenu(forDisplayRow: row) else { return false }
-        let frame = convert(NSRect(x: 0, y: CGFloat(row) * rowHeight, width: 1, height: rowHeight), from: centerRegion.canvas)
+        let frame = convert(NSRect(x: 0, y: rowGeometry.top(of: row), width: 1, height: rowGeometry.height(of: row)), from: centerRegion.canvas)
         menu.popUp(positioning: nil, at: NSPoint(x: frame.minX + 20, y: frame.midY), in: self)
         rowsMenuDidClose()
         return true
@@ -78,12 +78,12 @@ extension NGTableView {
         let inset = selectionHighlightStyle == .rounded ? NGMetrics.selectionInset : 0
         outline.cornerRadius = selectionHighlightStyle == .rounded ? NGMetrics.selectionCornerRadius : 0
         outline.roundedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-        let y = pixelAligned(metrics.headerHeight - renderedOffsetY) + CGFloat(row) * rowHeight
+        let y = pixelAligned(metrics.headerHeight - renderedOffsetY) + rowGeometry.top(of: row)
         // The columns' span, whichever side the frozen regions are on.
         let left = min(metrics.leadingX, metrics.trailingX, metrics.centerX)
         let right = max(metrics.leadingX + metrics.leadingWidth, metrics.trailingX + metrics.trailingWidth,
                         metrics.centerX + metrics.centerWidth)
-        outline.frame = NSRect(x: left + inset, y: y, width: max(0, right - left - 2 * inset), height: rowHeight)
+        outline.frame = NSRect(x: left + inset, y: y, width: max(0, right - left - 2 * inset), height: rowGeometry.height(of: row))
         // Above the rows, below the header and scrollers.
         if outline.superview !== self {
             addSubview(outline, positioned: .below, relativeTo: headerBackground)

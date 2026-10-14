@@ -78,9 +78,9 @@ extension NGTableView {
     /// (filtered out, hidden, in a collapsed group, out of range).
     public func rect(ofRow row: Int) -> NSRect {
         guard let displayRow = displayRow(forSourceRow: row), displayRow < numberOfRows else { return .zero }
-        let inCanvas = NSRect(x: 0, y: CGFloat(displayRow) * rowHeight, width: 1, height: rowHeight)
+        let inCanvas = NSRect(x: 0, y: rowGeometry.top(of: displayRow), width: 1, height: rowGeometry.height(of: displayRow))
         let frame = convert(inCanvas, from: centerRegion.canvas)
-        return NSRect(x: 0, y: frame.minY, width: bounds.width, height: rowHeight)
+        return NSRect(x: 0, y: frame.minY, width: bounds.width, height: rowGeometry.height(of: displayRow))
     }
 
     /// The frame of a column in the table's coordinates, over the rows area
@@ -108,8 +108,9 @@ extension NGTableView {
     public func rowIndexes(in rect: NSRect) -> IndexSet {
         guard rowHeight > 0, numberOfRows > 0, !rect.isEmpty else { return [] }
         let inCanvas = convert(rect, to: centerRegion.canvas)
-        let first = max(0, Int((inCanvas.minY / rowHeight).rounded(.down)))
-        let end = min(numberOfRows, Int((inCanvas.maxY / rowHeight).rounded(.up)))
+        let rowLayout = rowGeometry
+        let first = max(0, Int(rowLayout.position(atY: inCanvas.minY).rounded(.down)))
+        let end = min(numberOfRows, Int(rowLayout.position(atY: inCanvas.maxY).rounded(.up)))
         guard first < end else { return [] }
         var rows = IndexSet(integersIn: first..<end)
         // Rows whose visible part is all under floating group headers aren't
@@ -118,8 +119,8 @@ extension NGTableView {
             let top = contentOffset.y
             let coverEnd = top + floatingHeadersCover(atOffset: top, except: -1)
             if coverEnd > top {
-                let hidden = Int((top / rowHeight).rounded(.down))..<Int((coverEnd / rowHeight).rounded(.down))
-                for row in hidden where CGFloat(row + 1) * rowHeight > top { rows.remove(row) }
+                let hidden = Int(rowLayout.position(atY: top).rounded(.down))..<Int(rowLayout.position(atY: coverEnd).rounded(.down))
+                for row in hidden where rowLayout.bottom(of: row) > top { rows.remove(row) }
             }
         }
         return sourceRows(forDisplayRows: rows)

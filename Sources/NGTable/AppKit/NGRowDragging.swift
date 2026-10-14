@@ -67,8 +67,8 @@ extension NGTableView: NSDraggingSource {
            let first = rows.first, let writer = writesAtOnce.pasteboardWriter(forRows: rows, in: self) {
             let item = NSDraggingItem(pasteboardWriter: writer)
             let frame = rect(ofRow: first)
-            item.setDraggingFrame(NSRect(x: frame.minX, y: frame.minY, width: width, height: rowHeight),
-                                  contents: rowDragImage(row: first, size: NSSize(width: width, height: rowHeight)))
+            item.setDraggingFrame(NSRect(x: frame.minX, y: frame.minY, width: width, height: frame.height),
+                                  contents: rowDragImage(row: first, size: NSSize(width: width, height: frame.height)))
             return [item]
         }
         var items: [NSDraggingItem] = []
@@ -79,8 +79,8 @@ extension NGTableView: NSDraggingSource {
             guard let writer = dataSource.tableView(self, pasteboardWriterForRow: row) else { continue }
             let item = NSDraggingItem(pasteboardWriter: writer)
             let frame = rect(ofRow: row)
-            let image = items.count < pictured ? rowDragImage(row: row, size: NSSize(width: width, height: rowHeight)) : nil
-            item.setDraggingFrame(NSRect(x: frame.minX, y: frame.minY, width: width, height: rowHeight), contents: image)
+            let image = items.count < pictured ? rowDragImage(row: row, size: NSSize(width: width, height: frame.height)) : nil
+            item.setDraggingFrame(NSRect(x: frame.minX, y: frame.minY, width: width, height: frame.height), contents: image)
             items.append(item)
         }
         return items
@@ -94,7 +94,7 @@ extension NGTableView: NSDraggingSource {
         for (key, cell) in visibleCells where key.row == displayRow {
             let region = regions.first { $0.pin == cell.regionPin } ?? centerRegion
             let frame = convert(cell.cellFrame, from: region.canvas)
-            cells.append((cell, CGRect(x: frame.minX, y: 0, width: frame.width, height: rowHeight)))
+            cells.append((cell, CGRect(x: frame.minX, y: 0, width: frame.width, height: size.height)))
         }
         let scale = window?.backingScaleFactor ?? 2
         let content = metalImage(of: cells, size: size, scale: scale)
@@ -149,7 +149,7 @@ extension NGTableView: NSDraggingSource {
     /// Where a drop at a point goes: above a data source row (or at the end).
     private func dropRow(for info: NSDraggingInfo) -> Int {
         let y = centerRegion.canvas.convert(info.draggingLocation, from: nil).y
-        let displayRow = min(max(Int((y / rowHeight).rounded()), 0), numberOfRows)
+        let displayRow = min(max(Int(rowGeometry.position(atY: y).rounded()), 0), numberOfRows)
         var next = displayRow
         while next < numberOfRows, isGroupRow(next) { next += 1 }
         return next < numberOfRows ? sourceRow(next) : numberOfSourceRows
@@ -158,7 +158,7 @@ extension NGTableView: NSDraggingSource {
     /// Where a drop at a point goes, like NSTableView proposes it: onto a row
     /// over its middle half, else above the row nearest the pointer.
     private func proposedDrop(for info: NSDraggingInfo) -> (row: Int, operation: NSTableView.DropOperation) {
-        let position = centerRegion.canvas.convert(info.draggingLocation, from: nil).y / rowHeight
+        let position = rowGeometry.position(atY: centerRegion.canvas.convert(info.draggingLocation, from: nil).y)
         let displayRow = Int(floor(position))
         let fraction = position - floor(position)
         if displayRow >= 0, displayRow < numberOfRows, !isGroupRow(displayRow), fraction > 0.25, fraction < 0.75 {
@@ -347,16 +347,16 @@ extension NGTableView: NSDraggingSource {
                     quads.append(NGMetalRenderer.rectangle(edge, scale: scale, color: color, clip: rows))
                 }
             } else if let displayRow = displayRow(forSourceRow: row) {
-                let y = convert(NSPoint(x: 0, y: CGFloat(displayRow) * rowHeight), from: centerRegion.canvas).y
+                let y = convert(NSPoint(x: 0, y: rowGeometry.top(of: displayRow)), from: centerRegion.canvas).y
                 let inset = selectionHighlightStyle == .rounded ? NGMetrics.selectionInset : 0
-                let frame = NSRect(x: inset, y: y, width: bounds.width - 2 * inset, height: rowHeight)
+                let frame = NSRect(x: inset, y: y, width: bounds.width - 2 * inset, height: rowGeometry.height(of: displayRow))
                 quads.append(NGMetalRenderer.roundedRectangle(frame, radius: inset > 0 ? NGMetrics.selectionCornerRadius : 0, corners: allCorners,
                                                               scale: scale, color: color * 0.3, clip: frame.intersection(rows)))
             }
             return
         }
         let displayRow = row < numberOfSourceRows ? self.displayRow(forSourceRow: row) ?? numberOfRows : numberOfRows
-        let y = convert(NSPoint(x: 0, y: CGFloat(displayRow) * rowHeight), from: centerRegion.canvas).y
+        let y = convert(NSPoint(x: 0, y: rowGeometry.top(of: displayRow)), from: centerRegion.canvas).y
         quads.append(NGMetalRenderer.roundedRectangle(NSRect(x: 8, y: y - 1, width: bounds.width - 16, height: 2), radius: 1,
                                                       corners: allCorners, scale: scale, color: color))
     }

@@ -326,7 +326,7 @@ extension NGTableView {
     /// a floating group header covers the rows under it.
     func displayRow(atCanvasY y: CGFloat) -> Int {
         if let header = floatingGroupHeader(atCanvasY: y) { return header }
-        return Int(floor(y / rowHeight))
+        return Int(floor(rowGeometry.position(atY: y)))
     }
 
     func rowsMouseDown(_ event: NSEvent, in region: NGRegionView) {

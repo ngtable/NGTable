@@ -86,7 +86,7 @@ extension NGTableView {
         metrics.leadingWidth = CGFloat(geometry.leading.width)
         metrics.trailingWidth = CGFloat(geometry.trailing.width)
         metrics.bodyHeight = max(0, bounds.height - metrics.headerHeight)
-        metrics.contentHeight = CGFloat(numberOfRows) * rowHeight
+        metrics.contentHeight = rowGeometry.totalHeight
         let centerContentWidth = CGFloat(geometry.center.width)
 
         // Legacy scrollers take space; overlay scrollers float over the content.
