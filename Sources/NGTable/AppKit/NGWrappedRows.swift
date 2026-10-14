@@ -40,39 +40,33 @@ extension NGTableView {
             let value = dataSource.tableView(self, valueFor: frame.column, row: row)
             guard case .text(let text, _, let monospacedDigits) = cellContent(for: value, in: frame.column), !text.isEmpty else { continue }
             let font = monospacedDigits ? style.digitFont : style.textFont
-            texts.append(NGWrappedText(text: text, font: font, attributes: shaper.lineAttributes(of: font).value, metrics: shaper.wrapMetrics(of: font),
-                                       width: width, lineLimit: frame.column.lineLimit, lineHeight: NGLineHeights.height(of: font)))
+            texts.append(NGWrappedText(text: text, font: font, width: width, lineLimit: frame.column.lineLimit,
+                                       lineHeight: NGLineHeights.height(of: font)))
         }
         return texts
     }
 
     /// The height a row's wrapped texts need: one line is `rowHeight`, each
-    /// more a line of its font (thread-safe). `nil` if a text has characters
-    /// or pairs whose metrics the shaper hasn't learned yet.
-    nonisolated static func height(of texts: [NGWrappedText], rowHeight: CGFloat) -> CGFloat? {
+    /// more a line of its font, as `shapeLines` draws them (thread-safe).
+    nonisolated static func height(of texts: [NGWrappedText], rowHeight: CGFloat, engine: NGTextEngine) -> CGFloat {
         var height = rowHeight
         for text in texts {
-            let lines: Int
-            switch NGSimpleWrap.lines(of: Array(text.text.utf16), metrics: text.metrics, width: text.width, maximumLines: text.lineLimit) {
-            case .lines(let ranges): lines = max(1, ranges.count)
-            case .notSimple: lines = NGTextShaper.lineCount(of: text.text, attributes: text.attributes, width: text.width, maximumLines: text.lineLimit)
-            case .unknown: return nil
-            }
+            let lines = engine.lineCount(of: text.text, font: text.font, width: text.width, maximumLines: text.lineLimit)
             height = max(height, rowHeight + CGFloat(lines - 1) * text.lineHeight)
         }
         return height
     }
 
     /// The heights of many rows' wrapped texts, on all cores.
-    nonisolated static func heights(of rows: [[NGWrappedText]], rowHeight: CGFloat) -> [CGFloat?] {
-        var heights = [CGFloat?](repeating: rowHeight, count: rows.count)
+    nonisolated static func heights(of rows: [[NGWrappedText]], rowHeight: CGFloat, engine: NGTextEngine) -> [CGFloat] {
+        var heights = [CGFloat](repeating: rowHeight, count: rows.count)
         let input = NGUncheckedSendable(rows)
         heights.withUnsafeMutableBufferPointer { buffer in
             let output = NGUncheckedSendable(buffer)
             let chunks = min(rows.count, ProcessInfo.processInfo.activeProcessorCount * 2)
             DispatchQueue.concurrentPerform(iterations: chunks) { chunk in
                 for index in stride(from: chunk, to: input.value.count, by: chunks) {
-                    output.value[index] = height(of: input.value[index], rowHeight: rowHeight)
+                    output.value[index] = height(of: input.value[index], rowHeight: rowHeight, engine: engine)
                 }
             }
         }
@@ -80,12 +74,8 @@ extension NGTableView {
     }
 
     private func measuredHeight(ofSourceRow row: Int, columns: [NGColumnFrame], shaper: NGTextShaper, style: MetalStyle) -> CGFloat {
-        var height = rowHeight
-        for text in wrappedTexts(ofSourceRow: row, columns: columns, shaper: shaper, style: style) {
-            let lines = shaper.lineCount(of: text.text, font: text.font, width: text.width, maximumLines: text.lineLimit)
-            height = max(height, rowHeight + CGFloat(lines - 1) * text.lineHeight)
-        }
-        return height
+        Self.height(of: wrappedTexts(ofSourceRow: row, columns: columns, shaper: shaper, style: style), rowHeight: rowHeight,
+                    engine: shaper.engine)
     }
 
     /// What measured heights depend on: the wrapping columns' widths and line
@@ -196,13 +186,11 @@ extension NGTableView {
 
 // MARK: Measuring in the background
 
-/// A wrapped cell's text to measure (thread-safe: its font and attributes
-/// are immutable Core Foundation objects).
+/// A wrapped cell's text to measure (thread-safe: its font is an immutable
+/// Core Foundation object).
 struct NGWrappedText: @unchecked Sendable {
     let text: String
     let font: CTFont
-    let attributes: CFDictionary
-    let metrics: NGWrapMetrics
     let width: CGFloat
     let lineLimit: Int
     let lineHeight: CGFloat
@@ -252,8 +240,9 @@ extension NGTableView {
                 table.measuringForgotten = []
                 table.measuringSliceWasReadForTesting?()
                 let rowHeight = table.rowHeight
+                let engine = shaper.engine
                 let heights = await Task.detached(priority: .utility) {
-                    NGTableView.heights(of: texts, rowHeight: rowHeight)
+                    NGTableView.heights(of: texts, rowHeight: rowHeight, engine: engine)
                 }.value
                 guard !Task.isCancelled, let table = self else { return }
                 table.putMeasuredHeights(heights, of: handles, generation: generation)
@@ -289,25 +278,17 @@ extension NGTableView {
 
     /// Puts in heights measured in the background (but not of rows reloaded
     /// or reused since they were read), keeping the top row in place.
-    private func putMeasuredHeights(_ heights: [CGFloat?], of handles: [Int], generation: Int) {
+    private func putMeasuredHeights(_ heights: [CGFloat], of handles: [Int], generation: Int) {
         let forgotten = measuringForgotten
         measuringForgotten = []
         // (Getting ready forgets every height if the widths changed.)
-        let prepared = prepareMeasuring()
+        _ = prepareMeasuring()
         guard measuringGeneration == generation else { return }
-        let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
         let changed = keepingTopRowInPlace {
             var changed = false
             for (index, handle) in handles.enumerated() where handle < rowHeightsByHandle.count
                 && rowHeightsByHandle[handle].isNaN && !forgotten.contains(handle) {
-                var height = heights[index]
-                // Text with metrics not learned yet is measured here (the
-                // shaper learns them), as time allows; the rest next pass.
-                if height == nil, let (columns, shaper, style, _) = prepared, ContinuousClock.now < deadline {
-                    let row = row(ofHandle: handle)
-                    if row >= 0 { height = measuredHeight(ofSourceRow: row, columns: columns, shaper: shaper, style: style) }
-                }
-                guard let height else { continue }
+                let height = heights[index]
                 rowHeightsByHandle[handle] = height
                 if height != rowHeight { changed = true }
             }

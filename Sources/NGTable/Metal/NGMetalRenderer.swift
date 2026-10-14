@@ -79,7 +79,7 @@ final class NGMetalRenderer {
 
     /// - Parameter atlasSize: The glyph atlas's starting size in pixels (tests make it small to fill it).
     init?(device: MTLDevice? = NGMetalRenderer.preferredDevice(), atlasSize: Int = 2048) {
-        guard let device, let queue = device.makeCommandQueue(), let atlas = NGGlyphAtlas(device: device, size: atlasSize) else { return nil }
+        guard let device, let queue = device.makeCommandQueue(), let atlas = NGGlyphAtlas(device: device, size: atlasSize, fonts: NGFontRegistry()) else { return nil }
         queue.label = NGTableRelease.binaryMarker
         // Compiled at run time: SwiftPM doesn't build .metal files.
         let library: MTLLibrary
@@ -104,7 +104,7 @@ final class NGMetalRenderer {
         self.device = device
         self.queue = queue
         self.atlas = atlas
-        self.shaper = NGTextShaper(atlas: atlas)
+        self.shaper = NGTextShaper(engine: NGTextEngine(fonts: atlas.fonts))
         self.pipeline = pipeline
     }
 

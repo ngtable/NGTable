@@ -5,8 +5,8 @@ import UIKit
 #endif
 import Metal
 
-// Text drawn on the GPU from a glyph atlas. Core Text still lays the text out
-// (kerning, ligatures, fallback fonts, truncation); each glyph is rasterized
+// Text drawn on the GPU from a glyph atlas. The text is laid out by
+// NGTextEngine.swift (Core Text for what only it does right); each glyph is rasterized
 // once, the way Core Graphics draws text into a bitmap (no font smoothing,
 // positions quantized to a quarter pixel), and placed by the GPU wherever it
 // appears.
@@ -101,9 +101,9 @@ final class NGGlyphAtlas {
     private(set) var size: Int
     static let maximumSize = 4096
     private var tables: [TableKey: GlyphTable] = [:]
-    /// Fonts by identity, numbered for the keys (CTFont isn't cheap to hash).
-    private var fontIDs: [String: Int] = [:]
-    private var fonts: [CTFont] = []
+    /// Fonts by identity, numbered for the keys (CTFont isn't cheap to hash),
+    /// shared with the text engine.
+    let fonts: NGFontRegistry
     // Shelf packing: glyphs fill rows left to right; a row is as tall as its tallest glyph.
     private var cursorX = 0, cursorY = 0, shelfHeight = 0
     /// Glyphs rasterized so far (for tests and statistics).
@@ -111,8 +111,9 @@ final class NGGlyphAtlas {
     /// The atlas filled up and started over (glyphs are rasterized again).
     private(set) var resetCount = 0
 
-    init?(device: MTLDevice, size: Int = 2048) {
+    init?(device: MTLDevice, size: Int = 2048, fonts: NGFontRegistry = NGFontRegistry()) {
         guard let texture = Self.makeTexture(device: device, size: size) else { return nil }
+        self.fonts = fonts
         self.device = device
         self.texture = texture
         self.size = size
@@ -126,37 +127,9 @@ final class NGGlyphAtlas {
     }
 
     /// A number for a font, to key glyphs by.
-    func fontID(of font: CTFont) -> Int {
-        // The table's few fonts are the same objects every time: found without
-        // making their name. (Fallback fonts are new objects in every line.)
-        if let recent = recentFonts.first(where: { $0.font === font }) { return recent.id }
-        // Feature settings too: the monospaced digit system font has the
-        // system font's name and size. So do variations (a weight between
-        // styles) and a matrix (a skew).
-        let features = (CTFontCopyFeatureSettings(font) as? [Any]).map { "\($0)" } ?? ""
-        let variation = (CTFontCopyVariation(font) as? [AnyHashable: Any]).map { variation in
-            variation.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
-        } ?? ""
-        let matrix = CTFontGetMatrix(font)
-        let skew = matrix.isIdentity ? "" : "\(matrix.a),\(matrix.b),\(matrix.c),\(matrix.d)"
-        let identity = "\(CTFontCopyPostScriptName(font) as String) \(CTFontGetSize(font)) \(features) \(variation) \(skew)"
-        let id: Int
-        if let known = fontIDs[identity] {
-            id = known
-        } else {
-            id = fonts.count
-            fontIDs[identity] = id
-            fonts.append(font)
-        }
-        if recentFonts.count == 16 { recentFonts.removeFirst() }
-        recentFonts.append((font, id))
-        return id
-    }
+    func fontID(of font: CTFont) -> Int { fonts.id(of: font) }
 
-    /// Fonts looked up last, by identity (kept, so their identity isn't reused).
-    private var recentFonts: [(font: CTFont, id: Int)] = []
-
-    func font(_ id: Int) -> CTFont { fonts[id] }
+    func font(_ id: Int) -> CTFont { fonts.font(id) }
 
     /// The glyphs of a font at a baseline offset below a whole pixel
     /// (0 ..< `rises`) and a scale.
@@ -179,7 +152,7 @@ final class NGGlyphAtlas {
         let page = Int(glyph) / GlyphTable.pageGlyphs
         let index = (Int(glyph) % GlyphTable.pageGlyphs) * Self.phases + phase
         if page < table.pages.count, let entries = table.pages[page], let entry = entries[index] { return entry }
-        guard let entry = rasterize(font: fonts[table.font], glyph: glyph, phase: phase, rise: table.rise, scale: table.scale) else {
+        guard let entry = rasterize(font: fonts.font(table.font), glyph: glyph, phase: phase, rise: table.rise, scale: table.scale) else {
             return nil
         }
         // Rasterizing may have started the atlas over.
@@ -301,21 +274,8 @@ final class NGGlyphAtlas {
     }
 }
 
-/// Text laid out by Core Text: the glyphs and their pen positions.
-struct NGShapedText {
-    struct Glyph {
-        let font: Int
-        let glyph: CGGlyph
-        /// From the start of the line, in points.
-        let x: CGFloat
-    }
-
-    var glyphs: [Glyph] = []
-    var width: CGFloat = 0
-}
-
-/// Lays text out with Core Text, truncated with "…" to a width, and keeps
-/// recent results (the same values appear in many cells).
+/// Lays text out (see NGTextEngine.swift), truncated with "…" to a width,
+/// and keeps recent results (the same values appear in many cells).
 ///
 /// A frame full of new text (a fast flick) lays it out on all cores: the
 /// frame is built collecting the text that isn't laid out yet
@@ -330,62 +290,31 @@ final class NGTextShaper {
         let width: Int
     }
 
-    private struct Request {
+    private struct Request: Sendable {
         let text: String
-        let style: Style
+        let style: NGTextStyle
         let width: CGFloat
     }
 
-    /// What lines of one font are made with, made once: attributed strings
-    /// from a ready dictionary skip AppKit's attribute uniquing, a lock all
-    /// threads would wait for.
-    private final class Style: @unchecked Sendable {
-        let font: CTFont
-        let attributes: CFDictionary
-        let ellipsis: CTLine
-
-        init(font: CTFont) {
-            self.font = font
-            attributes = [kCTFontAttributeName: font] as CFDictionary
-            ellipsis = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, "…" as CFString, attributes))
-        }
-    }
-
-    private var styles: [Int: Style] = [:]
-
-    private func style(of font: CTFont, id: Int) -> Style {
-        if let style = styles[id] { return style }
-        let style = Style(font: font)
-        styles[id] = style
-        return style
-    }
-
-    /// A line as Core Text laid it out, before its fonts get atlas ids.
-    private struct Line {
-        var width: CGFloat = 0
-        var runs: [(font: CTFont, glyphs: [CGGlyph], x: [CGFloat])] = []
-    }
-
-    /// The whole line, and the truncated one if it doesn't fit its width.
-    private struct LaidOut {
-        var full = Line()
-        var truncated: Line?
-    }
+    /// The layout itself, thread-safe (shared with the atlas's font ids).
+    let engine: NGTextEngine
 
     /// Text asked for during a collecting pass and not laid out yet.
     private var misses: [Key: Request]?
     /// Counts the misses, so callers can tell whether some text they asked for is missing.
     private(set) var missCount = 0
 
-    private let atlas: NGGlyphAtlas
     private var cache: [Key: NGShapedText] = [:]
     private var order: [Key] = []
     private var orderStart = 0
     private let limit = 20_000
 
-    init(atlas: NGGlyphAtlas) {
-        self.atlas = atlas
+    init(engine: NGTextEngine) {
+        self.engine = engine
     }
+
+    /// Characters simple lines take (see `NGSimpleText`).
+    nonisolated static var simpleCharacters: [ClosedRange<UInt16>] { NGSimpleText.characters }
 
     func shape(_ text: String, font: CTFont, width: CGFloat) -> NGShapedText {
         let fontID = fontID(of: font)
@@ -393,20 +322,26 @@ final class NGTextShaper {
         // is the same in every column. Only text that doesn't is truncated.
         let fullKey = Key(text: text, font: fontID, width: Int.max)
         var full = cache[fullKey]
-        if full == nil, let simple = simpleLine(text, font: font, fontID: fontID) {
-            insert(simple, for: fullKey)
-            full = simple
+        var units: [UInt16]?
+        if full == nil {
+            let textUnits = Array(text.utf16)
+            units = textUnits
+            if let simple = engine.simpleLine(textUnits, font: font, fontID: fontID) {
+                simpleLineCount += 1
+                insert(simple, for: fullKey)
+                full = simple
+            }
         }
         if let full, width >= 100_000 || full.width <= width { return full }
         let key = Key(text: text, font: fontID, width: width < 100_000 ? Int((width * 4).rounded(.down)) : Int.max)
         if let full {
             if let truncated = cache[key] { return truncated }
-            if let truncated = simpleTruncated(full, of: text, font: font, fontID: fontID, width: width) {
+            if let truncated = engine.simpleTruncated(full, of: units ?? Array(text.utf16), font: font, fontID: fontID, width: width) {
                 insert(truncated, for: key)
                 return truncated
             }
         }
-        let request = Request(text: text, style: style(of: font, id: fontID), width: width)
+        let request = Request(text: text, style: engine.style(of: font, id: fontID), width: width)
         if misses != nil {
             misses?[key] = request
             missCount += 1
@@ -435,295 +370,75 @@ final class NGTextShaper {
         if let cached = wrapped[key] { return cached }
         // Simple text: wrapped like rows are measured (see NGSimpleWrap.swift).
         let units = Array(text.utf16)
-        if case .lines(let ranges) = simpleWrap(units, font: font, fontID: fontID, width: width, maximumLines: maximumLines) {
-            let lines = ranges.enumerated().map { index, range in
+        let lines: [NGShapedText]
+        if case .lines(let ranges) = engine.simpleWrap(units, font: font, fontID: fontID, width: width, maximumLines: maximumLines) {
+            lines = ranges.enumerated().map { index, range in
                 var end = range.upperBound
                 // Spaces at the end hang: not drawn, nor counted for the alignment.
                 while end > range.lowerBound, units[end - 1] == 0x20 { end -= 1 }
                 let line = String(utf16CodeUnits: Array(units[range.lowerBound..<end]), count: end - range.lowerBound)
-                // The last line truncated if text remains; the others are
-                // drawn whole (a colon's glyph may differ by a hair).
-                let truncates = index == ranges.count - 1 && range.upperBound == units.count && index == maximumLines - 1
-                return shape(line, font: font, width: truncates ? width : .greatestFiniteMagnitude)
+                // The last line allowed truncated if text remains; the others
+                // are drawn whole (a colon's glyph may differ by a hair).
+                return shape(line, font: font, width: index == maximumLines - 1 ? width : .greatestFiniteMagnitude)
             }
-            if wrapped.count > 2_000 { wrapped.removeAll() }
-            wrapped[key] = lines
-            return lines
-        }
-        let style = style(of: font, id: fontID)
-        let attributed = CFAttributedStringCreate(nil, text as CFString, style.attributes)!
-        let typesetter = CTTypesetterCreateWithAttributedString(attributed)
-        let length = CFAttributedStringGetLength(attributed)
-        var lines: [NGShapedText] = []
-        var start = 0
-        while start < length, lines.count < maximumLines {
-            let count = max(1, CTTypesetterSuggestLineBreak(typesetter, start, Double(width)))
-            if lines.count == maximumLines - 1, start + count < length {
-                // The last line takes the rest, truncated.
-                let rest = CTTypesetterCreateLine(typesetter, CFRange(location: start, length: length - start))
-                let line = CTLineCreateTruncatedLine(rest, Double(width), .end, style.ellipsis) ?? rest
-                lines.append(shaped(Self.runs(of: line, font: font)))
-                break
-            }
-            lines.append(shaped(Self.runs(of: CTTypesetterCreateLine(typesetter, CFRange(location: start, length: count)), font: font)))
-            start += count
+        } else {
+            lines = engine.coreTextLines(text, font: font, fontID: fontID, width: width, maximumLines: maximumLines)
         }
         if wrapped.count > 2_000 { wrapped.removeAll() }
         wrapped[key] = lines
         return lines
     }
 
-    /// Wraps simple text, learning the advances and kerning it needs first:
-    /// `.notSimple` for text Core Text wraps.
-    private func simpleWrap(_ units: [UInt16], font: CTFont, fontID: Int, width: CGFloat, maximumLines: Int) -> NGSimpleWrap.Lines {
-        guard units.allSatisfy(NGSimpleWrap.isWrappable) else { return .notSimple }
-        let simple = simpleFont(fontID)
-        var previous: UInt16?
-        for unit in units {
-            guard glyph(of: unit, in: simple, font: font) != nil else { return .notSimple }
-            if let previous { _ = kerning(previous, unit, in: simple, font: font) }
-            previous = unit
-        }
-        return NGSimpleWrap.lines(of: units, metrics: simple.wrap, width: width, maximumLines: maximumLines)
-    }
-
-    /// What wrapping a font's simple text needs, as learned so far (for other threads).
-    func wrapMetrics(of font: CTFont) -> NGWrapMetrics {
-        simpleFont(fontID(of: font)).wrap
-    }
-
     /// How many lines `shapeLines` wraps text onto, without laying out glyphs.
     func lineCount(of text: String, font: CTFont, width: CGFloat, maximumLines: Int) -> Int {
-        guard maximumLines > 1, !text.isEmpty else { return 1 }
-        let fontID = fontID(of: font)
-        if case .lines(let ranges) = simpleWrap(Array(text.utf16), font: font, fontID: fontID, width: width, maximumLines: maximumLines) {
-            return max(1, ranges.count)
-        }
-        return Self.lineCount(of: text, attributes: style(of: font, id: fontID).attributes, width: width, maximumLines: maximumLines)
+        engine.lineCount(of: text, font: font, width: width, maximumLines: maximumLines)
     }
 
-    /// The attributes `shapeLines` lays text of a font out with, for
-    /// `lineCount(of:attributes:width:maximumLines:)` on other threads.
-    func lineAttributes(of font: CTFont) -> NGUncheckedSendable<CFDictionary> {
-        NGUncheckedSendable(style(of: font, id: fontID(of: font)).attributes)
-    }
-
-    /// How many lines Core Text's typesetter wraps text onto, as
-    /// `shapeLines` does text that isn't simple (thread-safe).
+    /// How many lines Core Text's typesetter wraps text onto (thread-safe).
     nonisolated static func lineCount(of text: String, attributes: CFDictionary, width: CGFloat, maximumLines: Int) -> Int {
-        guard maximumLines > 1, !text.isEmpty else { return 1 }
-        let attributed = CFAttributedStringCreate(nil, text as CFString, attributes)!
-        let typesetter = CTTypesetterCreateWithAttributedString(attributed)
-        let length = CFAttributedStringGetLength(attributed)
-        var lines = 0
-        var start = 0
-        while start < length, lines < maximumLines {
-            let count = max(1, CTTypesetterSuggestLineBreak(typesetter, start, Double(width)))
-            lines += 1
-            start += count
-        }
-        return max(1, lines)
+        NGTextEngine.coreTextLineCount(of: text, attributes: attributes, width: width, maximumLines: maximumLines)
+    }
+
+    /// The attributes text of a font is laid out with.
+    func lineAttributes(of font: CTFont) -> NGUncheckedSendable<CFDictionary> {
+        NGUncheckedSendable(engine.style(of: font, id: fontID(of: font)).attributes)
     }
 
     // MARK: Simple lines
 
-    /// Characters of simple lines: formatted numbers, and Latin and Cyrillic
-    /// text with common punctuation. Lines of only these, in fonts that lay
-    /// each pair out as its two glyphs (kerned or not), are their glyphs'
-    /// advances and kerning added up: made without Core Text, whose line
-    /// layout barely gets faster on more threads (about 8 µs a line).
-    /// Characters Core Text may change by their context (the colon between
-    /// digits, ligature-prone or combining marks) aren't simple.
-    nonisolated static func isSimple(_ unit: UInt16) -> Bool {
-        Int(unit) < simpleTable.count && simpleTable[Int(unit)]
-    }
-
-    /// `simpleCharacters` as a lookup table (one load per character).
-    private nonisolated static let simpleTable: [Bool] = {
-        var table = [Bool](repeating: false, count: Int(simpleCharacters.map(\.upperBound).max() ?? 0) + 1)
-        for range in simpleCharacters { for unit in range { table[Int(unit)] = true } }
-        return table
-    }()
-
-    /// Characters simple lines take: scripts laid out a character at a time
-    /// (one glyph each, kerned by pairs), without combining marks, which
-    /// Core Text positions on the letter before. The colon is left out: the
-    /// system font raises it between digits (a contextual form, beyond a
-    /// pair). Characters the font has no glyph for still go to Core Text.
-    nonisolated static let simpleCharacters: [ClosedRange<UInt16>] = [
-        0x0020...0x0039, 0x003B...0x007E,   // ASCII without the colon.
-        0x00A0...0x00AC, 0x00AE...0x024F,   // Latin-1 (no soft hyphen), Latin Extended-A and -B.
-        0x0386...0x0386, 0x0388...0x03CE,   // Greek.
-        0x0400...0x0482, 0x048A...0x052F,   // Cyrillic without its combining marks.
-        0x2010...0x2027, 0x2030...0x2043,   // Punctuation (up to the fraction slash).
-        0x202F...0x202F, 0x20A0...0x20C0,   // Narrow no-break space, currencies.
-        0x2116...0x2116, 0x2122...0x2122, 0x2190...0x2193, 0x2212...0x2212,   // №, ™, arrows, minus.
-    ]
-
-    /// What simple lines of a font are made of: each character's glyph and
-    /// advance, and how Core Text lays out each pair: as just the two glyphs,
-    /// kerned by some amount (no ligatures or contextual forms), checked once
-    /// per pair; NaN for pairs it lays out otherwise.
-    private final class SimpleFont {
-        var glyphs: [UInt16: (glyph: CGGlyph, advance: CGFloat)] = [:]
-        var kerning: [UInt32: CGFloat] = [:]
-        /// The advances and kerning learned, for wrapping (see NGSimpleWrap.swift).
-        var wrap = NGWrapMetrics()
-    }
-
-    private var simpleFonts: [Int: SimpleFont] = [:]
     /// Lines made without Core Text (for tests and statistics).
     private(set) var simpleLineCount = 0
 
     /// Core Text's layout of a line, truncated to `width` if it doesn't fit,
     /// bypassing the cache and the simple lines (for tests).
     func coreTextLine(_ text: String, font: CTFont, width: CGFloat = .greatestFiniteMagnitude) -> NGShapedText {
-        let laidOut = Self.layOut(Request(text: text, style: Style(font: font), width: width))
-        return shaped(laidOut.truncated ?? laidOut.full)
+        let laidOut = NGTextEngine.layOut(text, style: NGTextStyle(font: font), width: width)
+        return engine.shaped(laidOut.truncated ?? laidOut.full)
     }
 
     /// A simple line truncated to `width`, bypassing the cache (whose keys
     /// round widths to quarter points), or `nil` if it isn't simple (for tests).
     func simpleLine(_ text: String, font: CTFont, width: CGFloat) -> NGShapedText? {
         let fontID = fontID(of: font)
-        guard let full = simpleLine(text, font: font, fontID: fontID) else { return nil }
-        return full.width <= width ? full : simpleTruncated(full, of: text, font: font, fontID: fontID, width: width)
-    }
-
-    private func simpleFont(_ fontID: Int) -> SimpleFont {
-        if let simple = simpleFonts[fontID] { return simple }
-        let simple = SimpleFont()
-        simpleFonts[fontID] = simple
-        return simple
-    }
-
-    private func simpleLine(_ text: String, font: CTFont, fontID: Int) -> NGShapedText? {
-        let units = text.utf16
-        guard !units.isEmpty, units.count <= 256 else { return nil }
-        for unit in units where !Self.isSimple(unit) { return nil }
-        let simple = simpleFont(fontID)
-        var shaped = NGShapedText()
-        shaped.glyphs.reserveCapacity(units.count)
-        var x: CGFloat = 0
-        var previous: UInt16?
-        for unit in units {
-            guard let glyph = glyph(of: unit, in: simple, font: font) else { return nil }
-            if let previous {
-                let kerning = kerning(previous, unit, in: simple, font: font)
-                guard !kerning.isNaN else { return nil }
-                x += kerning
-            }
-            shaped.glyphs.append(.init(font: fontID, glyph: glyph.glyph, x: x))
-            x += glyph.advance
-            previous = unit
-        }
-        shaped.width = x
-        simpleLineCount += 1
-        return shaped
-    }
-
-    /// A simple line truncated with "…" to `width` like Core Text truncates
-    /// its end: the most characters for which the ellipsis, put where the
-    /// next character starts in the whole line (kerned to it, not to the
-    /// ellipsis), fits; spaces before the ellipsis go. `nil` if the result
-    /// can't be told without Core Text.
-    private func simpleTruncated(_ full: NGShapedText, of text: String, font: CTFont, fontID: Int, width: CGFloat) -> NGShapedText? {
-        let simple = simpleFont(fontID)
         let units = Array(text.utf16)
-        guard let ellipsis = glyph(of: 0x2026, in: simple, font: font), full.glyphs.count == units.count else { return nil }
-        for unit in units where !Self.isSimple(unit) { return nil }
-        // Narrower than the ellipsis: nothing, whatever would fit.
-        guard width >= ellipsis.advance else { return NGShapedText() }
-        // Spaces at the end hang: they don't count for what fits, and a line
-        // that fits without them loses them instead of being truncated.
-        var trailing = units.count
-        while trailing > 0, Self.isSpace(units[trailing - 1]) { trailing -= 1 }
-        let hanging = trailing < units.count ? full.width - full.glyphs[trailing].x : 0
-        if trailing > 0, trailing < units.count, full.glyphs[trailing].x <= width {
-            var shaped = NGShapedText()
-            shaped.glyphs = Array(full.glyphs.prefix(trailing))
-            shaped.width = full.glyphs[trailing].x
-            return shaped
-        }
-        // Core Text lets the ellipsis end up to 0.0002 past the width (measured on a
-        // fine grid of widths around each cut).
-        let available = width + hanging + 0.0002
-        // Keeping `kept` characters puts the ellipsis where character `kept` starts.
-        var kept = units.count - 1
-        while kept > 0, full.glyphs[kept].x + ellipsis.advance > available { kept -= 1 }
-        guard full.glyphs[kept].x + ellipsis.advance <= available else { return NGShapedText() }
-        while kept > 0, Self.isSpace(units[kept - 1]) { kept -= 1 }
-        let x = full.glyphs[kept].x
-        var shaped = NGShapedText()
-        shaped.glyphs = Array(full.glyphs.prefix(kept))
-        shaped.glyphs.append(.init(font: fontID, glyph: ellipsis.glyph, x: x))
-        shaped.width = x + ellipsis.advance
-        return shaped
-    }
-
-    /// Spaces Core Text drops before an ellipsis.
-    private static func isSpace(_ unit: UInt16) -> Bool {
-        unit == 0x20 || unit == 0xA0 || unit == 0x202F
-    }
-
-    /// A character's glyph and advance as Core Text lays it out alone (with
-    /// the font's features, e.g. tabular digits, which the character map
-    /// doesn't apply).
-    private func glyph(of unit: UInt16, in simple: SimpleFont, font: CTFont) -> (glyph: CGGlyph, advance: CGFloat)? {
-        if let known = simple.glyphs[unit] { return known.glyph == 0 ? nil : known }
-        let text = String(utf16CodeUnits: [unit], count: 1)
-        let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, text as CFString, [kCTFontAttributeName: font] as CFDictionary))
-        let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
-        var glyph: CGGlyph = 0
-        // One glyph of this font, or the character needs a fallback font or more glyphs.
-        if runs.count == 1, CTRunGetGlyphCount(runs[0]) == 1,
-           let runFont = (CTRunGetAttributes(runs[0]) as NSDictionary)[kCTFontAttributeName], CFEqual(runFont as CFTypeRef, font) {
-            CTRunGetGlyphs(runs[0], CFRange(location: 0, length: 1), &glyph)
-        }
-        let advance = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
-        simple.glyphs[unit] = (glyph, advance)
-        if glyph == 0 { simple.wrap.missing.insert(unit) } else { simple.wrap.advances[unit] = advance }
-        return glyph == 0 ? nil : (glyph, advance)
-    }
-
-    /// How Core Text kerns a pair laid out as its two glyphs (NaN: it lays
-    /// the pair out otherwise), checked once per pair.
-    private func kerning(_ first: UInt16, _ second: UInt16, in simple: SimpleFont, font: CTFont) -> CGFloat {
-        let pair = UInt32(first) << 16 | UInt32(second)
-        if let known = simple.kerning[pair] { return known }
-        var kerning = CGFloat.nan
-        if let a = glyph(of: first, in: simple, font: font), let b = glyph(of: second, in: simple, font: font) {
-            let text = String(utf16CodeUnits: [first, second], count: 2)
-            let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, text as CFString, [kCTFontAttributeName: font] as CFDictionary))
-            let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
-            if runs.count == 1, CTRunGetGlyphCount(runs[0]) == 2 {
-                var glyphs = [CGGlyph](repeating: 0, count: 2)
-                var positions = [CGPoint](repeating: .zero, count: 2)
-                CTRunGetGlyphs(runs[0], CFRange(location: 0, length: 2), &glyphs)
-                CTRunGetPositions(runs[0], CFRange(location: 0, length: 2), &positions)
-                let kern = positions[1].x - a.advance
-                if glyphs == [a.glyph, b.glyph], positions[0].x == 0,
-                   abs(CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)) - (a.advance + b.advance + kern)) < 0.0001 {
-                    kerning = kern
-                }
-            }
-        }
-        simple.kerning[pair] = kerning
-        simple.wrap.kerning[pair] = kerning
-        return kerning
+        guard let full = engine.simpleLine(units, font: font, fontID: fontID) else { return nil }
+        return full.width <= width ? full : engine.simpleTruncated(full, of: units, font: font, fontID: fontID, width: width)
     }
 
     /// The fonts the shaper is asked for are the same few objects every time:
-    /// their ids, found by identity (kept, so the identities aren't reused).
+    /// their ids, found by identity without a lock (kept, so the identities
+    /// aren't reused).
     private var fontIDsByObject: [ObjectIdentifier: (font: CTFont, id: Int)] = [:]
 
     private func fontID(of font: CTFont) -> Int {
         if let known = fontIDsByObject[ObjectIdentifier(font)] { return known.id }
-        let id = atlas.fontID(of: font)
+        let id = engine.fonts.id(of: font)
         if fontIDsByObject.count > 64 { fontIDsByObject.removeAll() }
         fontIDsByObject[ObjectIdentifier(font)] = (font, id)
         return id
     }
+
+    // MARK: A frame's misses
 
     /// Text asked for from now on comes back empty if it isn't laid out yet,
     /// and is noted for `layOutCollectedMisses()`.
@@ -741,7 +456,7 @@ final class NGTextShaper {
         }
         self.misses = nil
         let requests = Array(misses.values)
-        var lines = [LaidOut](repeating: LaidOut(), count: requests.count)
+        var lines = [NGTextEngine.LaidOut](repeating: NGTextEngine.LaidOut(), count: requests.count)
         if requests.count < 8 {
             for (index, request) in requests.enumerated() {
                 lines[index] = Self.layOut(request)
@@ -764,30 +479,21 @@ final class NGTextShaper {
         return true
     }
 
+    private nonisolated static func layOut(_ request: Request) -> NGTextEngine.LaidOut {
+        NGTextEngine.layOut(request.text, style: request.style, width: request.width)
+    }
+
     /// Caches a laid out line (and its truncated version) and returns the
     /// one for the request's width.
     @discardableResult
-    private func insert(_ laidOut: LaidOut, for request: Request, fontID: Int) -> NGShapedText {
+    private func insert(_ laidOut: NGTextEngine.LaidOut, for request: Request, fontID: Int) -> NGShapedText {
         let fullKey = Key(text: request.text, font: fontID, width: Int.max)
-        let full = cache[fullKey] ?? shaped(laidOut.full)
+        let full = cache[fullKey] ?? engine.shaped(laidOut.full)
         insert(full, for: fullKey)
         guard let truncated = laidOut.truncated else { return full }
-        let shapedTruncated = shaped(truncated)
+        let shapedTruncated = engine.shaped(truncated)
         insert(shapedTruncated, for: Key(text: request.text, font: fontID, width: Int((request.width * 4).rounded(.down))))
         return shapedTruncated
-    }
-
-    /// Glyph runs with atlas font ids.
-    private func shaped(_ line: Line) -> NGShapedText {
-        var shaped = NGShapedText(width: line.width)
-        shaped.glyphs.reserveCapacity(line.runs.reduce(0) { $0 + $1.glyphs.count })
-        for run in line.runs {
-            let fontID = atlas.fontID(of: run.font)
-            for index in run.glyphs.indices {
-                shaped.glyphs.append(.init(font: fontID, glyph: run.glyphs[index], x: run.x[index]))
-            }
-        }
-        return shaped
     }
 
     private func insert(_ shaped: NGShapedText, for key: Key) {
@@ -801,34 +507,5 @@ final class NGTextShaper {
             order.removeFirst(orderStart)
             orderStart = 0
         }
-    }
-
-    /// Core Text's layout of a line, truncated if it doesn't fit (thread-safe:
-    /// called on worker threads).
-    private nonisolated static func layOut(_ request: Request) -> LaidOut {
-        let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, request.text as CFString, request.style.attributes))
-        var laidOut = LaidOut(full: runs(of: line, font: request.style.font))
-        if laidOut.full.width > request.width {
-            // A line too narrow even for "…" is empty.
-            laidOut.truncated = CTLineCreateTruncatedLine(line, Double(request.width), .end, request.style.ellipsis)
-                .map { runs(of: $0, font: request.style.font) } ?? Line()
-        }
-        return laidOut
-    }
-
-    private nonisolated static func runs(of line: CTLine, font: CTFont) -> Line {
-        var shaped = Line(width: CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
-        for run in CTLineGetGlyphRuns(line) as? [CTRun] ?? [] {
-            // Core Text picks fallback fonts for characters the font lacks.
-            let attributes = CTRunGetAttributes(run) as NSDictionary
-            let runFont = attributes[kCTFontAttributeName] as! CTFont? ?? font
-            let count = CTRunGetGlyphCount(run)
-            var glyphs = [CGGlyph](repeating: 0, count: count)
-            var positions = [CGPoint](repeating: .zero, count: count)
-            CTRunGetGlyphs(run, CFRange(location: 0, length: count), &glyphs)
-            CTRunGetPositions(run, CFRange(location: 0, length: count), &positions)
-            shaped.runs.append((runFont, glyphs, positions.map(\.x)))
-        }
-        return shaped
     }
 }

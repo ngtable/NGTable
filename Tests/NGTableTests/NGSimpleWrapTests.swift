@@ -50,25 +50,56 @@ struct NGSimpleWrapTests {
             let limit = index % 5 == 0 ? 3 : .max
             let drawn = shaper.shapeLines(text, font: font, width: width, maximumLines: limit).count
             #expect(shaper.lineCount(of: text, font: font, width: width, maximumLines: limit) == drawn, "\(text) at \(width)")
-            let wrapped = NGWrappedText(text: text, font: font, attributes: shaper.lineAttributes(of: font).value,
-                                        metrics: shaper.wrapMetrics(of: font), width: width, lineLimit: limit, lineHeight: lineHeight)
-            let measured = await Task.detached { NGTableView.height(of: [wrapped], rowHeight: 24) }.value
+            let wrapped = NGWrappedText(text: text, font: font, width: width, lineLimit: limit, lineHeight: lineHeight)
+            let engine = shaper.engine
+            let measured = await Task.detached { NGTableView.height(of: [wrapped], rowHeight: 24, engine: engine) }.value
             #expect(measured == 24 + CGFloat(drawn - 1) * lineHeight, "\(text) at \(width)")
         }
     }
 
-    /// Metrics not learned yet: other threads leave the row to the main actor.
-    @Test func unknownMetricsAreLeftToTheMainActor() throws {
+    /// Metrics not learned yet are told apart from text that isn't simple.
+    @Test func unknownMetricsAndRules() throws {
         let units = Array("zebra quartz".utf16)
-        #expect(NGSimpleWrap.lines(of: units, metrics: NGWrapMetrics(), width: 100, maximumLines: .max) == .unknown)
-        #expect(NGSimpleWrap.lines(of: Array("🌞 sun".utf16), metrics: NGWrapMetrics(), width: 100, maximumLines: .max) == .notSimple)
+        #expect(NGSimpleWrap.lines(of: units, metrics: NGSimpleFontMetrics(), width: 100, maximumLines: .max) == .unknown)
+        #expect(NGSimpleWrap.lines(of: Array("🌞 sun".utf16), metrics: NGSimpleFontMetrics(), width: 100, maximumLines: .max) == .notSimple)
         // A word wider than the line breaks inside it; spaces hang.
-        var metrics = NGWrapMetrics()
-        for unit in Array("ab ".utf16) { metrics.advances[unit] = 10 }
+        var metrics = NGSimpleFontMetrics()
+        for unit in Array("ab ".utf16) { metrics.glyphs[unit] = NGSimpleGlyph(glyph: 1, advance: 10) }
         for first in Array("ab ".utf16) { for second in Array("ab ".utf16) { metrics.kerning[UInt32(first) << 16 | UInt32(second)] = 0 } }
         #expect(NGSimpleWrap.lines(of: Array("aaaaa".utf16), metrics: metrics, width: 25, maximumLines: .max) == .lines([0..<2, 2..<4, 4..<5]))
         #expect(NGSimpleWrap.lines(of: Array("ab ab".utf16), metrics: metrics, width: 20, maximumLines: .max) == .lines([0..<3, 3..<5]))
         #expect(NGSimpleWrap.lines(of: Array("ab ab ab".utf16), metrics: metrics, width: 20, maximumLines: 2) == .lines([0..<3, 3..<8]))
+    }
+
+    /// The engine from many threads at once, learning as it goes: the same
+    /// lines and counts as one thread laying the text out alone.
+    @Test func manyThreadsLayOutLikeOne() async throws {
+        let font = CTFontCreateWithName("Helvetica" as CFString, 13, nil)
+        let texts = randomTexts(600, seed: 9, extra: ["12:03:04", "look-alike", "🌞", "東京", "Ŧœur", "„Zitat“"])
+        let reference = NGTextEngine()
+        let expected = texts.enumerated().map { index, text in
+            (reference.shape(text, font: font, width: CGFloat(60 + index % 200)).glyphs.map(\.glyph),
+             reference.lineCount(of: text, font: font, width: CGFloat(40 + index % 300), maximumLines: index % 4 == 0 ? 2 : .max))
+        }
+        let engine = NGTextEngine()
+        let results = NGUncheckedSendable(UnsafeMutableBufferPointer<([CGGlyph], Int)>.allocate(capacity: texts.count))
+        defer { results.value.deallocate() }
+        let input = NGUncheckedSendable((texts, font))
+        await Task.detached {
+            DispatchQueue.concurrentPerform(iterations: 16) { chunk in
+                for index in stride(from: chunk, to: input.value.0.count, by: 16) {
+                    let text = input.value.0[index]
+                    let glyphs = engine.shape(text, font: input.value.1, width: CGFloat(60 + index % 200)).glyphs.map(\.glyph)
+                    let lines = engine.lineCount(of: text, font: input.value.1, width: CGFloat(40 + index % 300),
+                                                 maximumLines: index % 4 == 0 ? 2 : .max)
+                    (results.value.baseAddress! + index).initialize(to: (glyphs, lines))
+                }
+            }
+        }.value
+        for index in texts.indices {
+            #expect(results.value[index].0 == expected[index].0, "\(texts[index])")
+            #expect(results.value[index].1 == expected[index].1, "\(texts[index])")
+        }
     }
 }
 #endif
