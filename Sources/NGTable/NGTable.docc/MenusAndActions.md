@@ -199,7 +199,11 @@ Excel reads any language. The workbook keeps numbers, dates and check marks
 as values, in number formats like the columns' (currency, percent, fraction
 digits), with a bold header row that stays in view and the columns' widths.
 Values are read in slices, keeping the app responsive (``NGTableView/isExporting``),
-and the file is written off the main thread: 200,000 rows of 3 columns take
-about 0.3 s as CSV and 0.6 s as a workbook, of 10 columns about 2 s (the time
-grows with the cells). The summary row is the table's, in its summary scope,
-also when only the selected rows are exported.
+and written into the file as they come, formatted (and for a workbook,
+compressed) on all cores: an export holds a chunk of rows, not the file, and
+the file appears when it is done. A million rows of 20 columns take about
+3.5 s as a workbook and 10 s as CSV (formatting numbers as displayed costs
+most), with about 50–110 MB more memory meanwhile. `exportedData(as:options:)`
+builds the file in memory: for large tables write it with `export(to:as:options:)`.
+The summary row is the table's, in its summary scope, also when only the
+selected rows are exported.

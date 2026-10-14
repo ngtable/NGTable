@@ -627,7 +627,7 @@ extension NGTableView {
                 if let text = copyTextOfCellRange() { putOnPasteboard(text) }
                 return
             }
-            copyInBackground(columns: block.columns) { $0.cellBlockToCopy()?.rows ?? [] }
+            copyInBackground(columns: block.columns) { $0.rowHandles.refs(atIndexes: $0.cellBlockToCopy()?.rows ?? []) }
             return
         }
         guard !displaySelection.isEmpty else { return }
@@ -638,7 +638,7 @@ extension NGTableView {
             putOnPasteboard(copyText(forRows: rows))
             return
         }
-        copyInBackground(columns: columns) { $0.inDisplayOrder($0.selectedRowIndexes) }
+        copyInBackground(columns: columns) { $0.rowHandles.refs(atIndexes: $0.inDisplayOrder($0.selectedRowIndexes)) }
     }
 
     private func putOnPasteboard(_ text: String) {
@@ -652,7 +652,7 @@ extension NGTableView {
     /// slices of a few milliseconds, then formats them on all cores. Rows
     /// are followed by reference (`NGRowRef`), so rows that a live feed moves
     /// meanwhile are still the selected records; removed ones are left out.
-    private func copyInBackground(columns: [NGTableColumn], rows: @escaping (NGTableView) -> [Int]) {
+    private func copyInBackground(columns: [NGTableColumn], rows: @escaping (NGTableView) -> [NGRowRef]) {
         cancelCopy()
         let formats = columns.map(\.format)
         // Number styles made once on the main actor; the cores format with copies.
@@ -681,41 +681,78 @@ extension NGTableView {
     }
 
     /// The values of some rows' cells, row after row, read on the main actor
-    /// in slices of a few milliseconds (for Copy and Export). Rows are kept
-    /// by reference, so a live feed may move them meanwhile and removed ones
-    /// are left out. If the table reloads its data in the meantime (the
-    /// records may be others), it reads the rows `rows` gives again, up to
-    /// three times, then reads them all at once. `nil` if the task is
-    /// cancelled or the data source goes.
-    func readValues(columns: [NGTableColumn], rows: (NGTableView) -> [Int]) async -> [NGCellValue]? {
+    /// in slices of a few milliseconds (for Copy). `nil` if the task is
+    /// cancelled or the data source goes. See `readValues(columns:rows:chunkRows:into:)`.
+    func readValues(columns: [NGTableColumn], rows: (NGTableView) -> [NGRowRef]) async -> [NGCellValue]? {
+        var values: [NGCellValue] = []
+        let read = await readValues(columns: columns, rows: rows, chunkRows: .max) { chunk in
+            switch chunk {
+            case .restart: values = []
+            case .values(let chunk): if values.isEmpty { values = chunk } else { values += chunk }
+            }
+            return true
+        }
+        return read ? values : nil
+    }
+
+    /// The values of some rows' cells, row after row, read on the main actor
+    /// in slices of a few milliseconds and handed on in chunks of
+    /// `chunkRows` rows (for Export, which writes one while the next is
+    /// read). Rows are kept by reference (`rows` gives them in the order to
+    /// read), so a live feed may move them
+    /// meanwhile and removed ones are left out. If the table reloads its
+    /// data in the meantime (the records may be others), it starts over
+    /// (`.restart`) with the rows `rows` gives, up to three times, then
+    /// reads them all at once. `false` if the task is cancelled, the data
+    /// source goes, or `handOn` says to stop.
+    func readValues(columns: [NGTableColumn], rows: (NGTableView) -> [NGRowRef], chunkRows: Int,
+                    into handOn: (NGReadChunk) async -> Bool) async -> Bool {
         var attempts = 0
         start: while true {
             attempts += 1
+            if attempts > 1 { guard await handOn(.restart) else { return false } }
             let epoch = rowHandles.epoch
-            let refs = rows(self).map(rowRef(ofRow:))
+            let refs = rows(self)
             var values: [NGCellValue] = []
-            values.reserveCapacity(refs.count * columns.count)
+            values.reserveCapacity(min(refs.count, chunkRows) * columns.count)
             var next = 0
+            var rowsInChunk = 0
             while next < refs.count {
-                guard !Task.isCancelled, let dataSource else { return nil }
+                guard !Task.isCancelled, let dataSource else { return false }
                 if rowHandles.epoch != epoch {
                     if attempts < 3 { continue start }
                     // Reloaded again and again: the rows are read at once,
                     // without a turn in which another reload could come.
-                    return rows(self).flatMap { row in columns.map { dataSource.tableView(self, valueFor: $0, row: row) } }
+                    guard await handOn(.restart) else { return false }
+                    var values: [NGCellValue] = []
+                    for ref in rows(self) {
+                        let row = row(of: ref)
+                        guard row >= 0 else { continue }
+                        for column in columns { values.append(dataSource.tableView(self, valueFor: column, row: row)) }
+                    }
+                    return await handOn(.values(consume values))
                 }
                 let deadline = NGBackgroundSlices.deadline()
-                while next < refs.count, ContinuousClock.now < deadline {
-                    for index in next..<min(refs.count, next + 256) {
+                while next < refs.count, rowsInChunk < chunkRows, ContinuousClock.now < deadline {
+                    let end = min(refs.count, next + min(256, chunkRows - rowsInChunk))
+                    for index in next..<end {
                         let row = row(of: refs[index])
                         guard row >= 0 else { continue }   // Removed meanwhile.
                         for column in columns { values.append(dataSource.tableView(self, valueFor: column, row: row)) }
                     }
-                    next = min(refs.count, next + 256)
+                    rowsInChunk += end - next
+                    next = end
+                }
+                if rowsInChunk == chunkRows, next < refs.count {
+                    // Moved on: the chunk is freed where it's written, not here.
+                    guard await handOn(.values(consume values)) else { return false }
+                    values = []
+                    values.reserveCapacity(min(refs.count - next, chunkRows) * columns.count)
+                    rowsInChunk = 0
                 }
                 if next < refs.count { await NGBackgroundSlices.nextSlice() }
             }
-            return values
+            return await handOn(.values(consume values))
         }
     }
 

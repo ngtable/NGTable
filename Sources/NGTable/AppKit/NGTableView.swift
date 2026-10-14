@@ -1288,6 +1288,16 @@ public final class NGTableView: NSView {
     /// The data source row of a kept record, or -1 if it is gone.
     func row(of ref: NGRowRef) -> Int { rowHandles.index(of: ref) }
 
+    /// References to the data source rows shown, in display order (group
+    /// headers left out): what Export reads. From the display's handles in
+    /// one pass (a lookup per row held the main thread 36 ms for 300,000).
+    func shownRowRefs() -> [NGRowRef] {
+        if let groupedDisplay { return rowHandles.refs(ofHandles: groupedDisplay.lazy.filter { $0 >= 0 }) }
+        if let sorted = sortedDisplay { return rowHandles.refs(ofHandles: sorted.integerElements) }
+        if let rowMap { return rowHandles.refs(ofHandles: rowMap) }
+        return rowHandles.refs(atIndexes: 0..<rowHandles.count)
+    }
+
     /// Data source rows in the order shown (those not shown after them, in
     /// their order): what Copy and Export list.
     func inDisplayOrder(_ rows: IndexSet) -> [Int] {
@@ -2526,6 +2536,8 @@ public final class NGTableView: NSView {
     nonisolated static let backgroundSlice: Duration = .milliseconds(5)
     /// Rows a sheet of an exported workbook holds (Excel's limit; smaller in tests).
     var exportMaxRowsPerSheet = 1_048_576
+    /// Cells an export reads before handing them to its writer (fewer in tests).
+    var exportChunkCells = 400_000
     /// The ids of the columns defined (see `rebuildColumns`).
     var definedColumnIDs: Set<String> = []
 
