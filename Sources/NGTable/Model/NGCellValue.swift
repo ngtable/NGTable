@@ -476,26 +476,54 @@ public enum NGValueFormat: Sendable, Hashable {
 /// The number style of a value format, made once: making the style for
 /// every number cost about a fifth of formatting it. A value (`Sendable`),
 /// so the table makes it on the main actor and formats with copies of it on
-/// every core, without a lock. Gives the text of `NGValueFormat.string(for:locale:)`.
+/// every core, without a lock. Gives the text of `NGValueFormat.string(for:locale:)`:
+/// FormatStyle's, written by a template learned from it (NGNumberTemplate.swift)
+/// where one reproduces it, about five times faster.
 struct NGNumberStyle: Sendable {
     private enum Style: Sendable {
         case number(FloatingPointFormatStyle<Double>)
         case currency(FloatingPointFormatStyle<Double>.Currency)
         case percent(FloatingPointFormatStyle<Double>.Percent)
-    }
 
-    private let style: Style
+        init(_ format: NGValueFormat, locale: Locale) {
+            self = switch format {
+            case .number(let digits): .number(FloatingPointFormatStyle<Double>(locale: locale).precision(.fractionLength(digits)))
+            case .currency(let code): .currency(FloatingPointFormatStyle<Double>.Currency(code: code, locale: locale))
+            case .percent(let digits): .percent(FloatingPointFormatStyle<Double>.Percent(locale: locale).precision(.fractionLength(digits)))
+            case .automatic, .date: .number(FloatingPointFormatStyle<Double>(locale: locale))
+            }
+        }
 
-    init(_ format: NGValueFormat, locale: Locale = .current) {
-        style = switch format {
-        case .number(let digits): .number(FloatingPointFormatStyle<Double>(locale: locale).precision(.fractionLength(digits)))
-        case .currency(let code): .currency(FloatingPointFormatStyle<Double>.Currency(code: code, locale: locale))
-        case .percent(let digits): .percent(FloatingPointFormatStyle<Double>.Percent(locale: locale).precision(.fractionLength(digits)))
-        case .automatic, .date: .number(FloatingPointFormatStyle<Double>(locale: locale))
+        func format(_ number: Double) -> String {
+            switch self {
+            case .number(let style): style.format(number)
+            case .currency(let style): style.format(number)
+            case .percent(let style): style.format(number)
+            }
         }
     }
 
+    private let format: NGValueFormat
+    private let locale: Locale
+    private let template: NGNumberTemplate?
+    /// FormatStyle, made when there's no template.
+    private let style: Style?
+
+    init(_ format: NGValueFormat, locale: Locale = .current) {
+        self.format = format
+        self.locale = locale
+        template = NGNumberTemplate.template(for: format, locale: locale) {
+            let style = Style(format, locale: locale)
+            let fixed = if case .automatic = format { false } else if case .date = format { false } else { true }
+            let scale = if case .percent = format { 2 } else { 0 }
+            return NGNumberTemplate(fixedFraction: fixed, scale: scale, locale: locale, format: style.format)
+        }
+        style = template == nil ? Style(format, locale: locale) : nil
+    }
+
     func string(for number: Double) -> String {
+        // (A template writes a negative number that rounds to zero as zero itself.)
+        if let template, let text = template.string(for: number) { return text }
         let text = formatted(number)
         // A negative number that rounds to zero (or -0) shows as zero: "-0",
         // "-0.00%" and "-$0.00" say nothing more, and look like a sign error.
@@ -504,11 +532,11 @@ struct NGNumberStyle: Sendable {
         return formatted(0)
     }
 
+    /// Whether a template writes the numbers (for tests).
+    var usesTemplate: Bool { template != nil }
+
+    /// FormatStyle's text (NaN and infinity, or no template).
     private func formatted(_ number: Double) -> String {
-        switch style {
-        case .number(let style): style.format(number)
-        case .currency(let style): style.format(number)
-        case .percent(let style): style.format(number)
-        }
+        (style ?? Style(format, locale: locale)).format(number)
     }
 }

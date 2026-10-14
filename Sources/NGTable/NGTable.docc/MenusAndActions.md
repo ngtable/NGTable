@@ -202,8 +202,7 @@ Values are read in slices, keeping the app responsive (``NGTableView/isExporting
 and written into the file as they come, formatted (and for a workbook,
 compressed) on all cores: an export holds a chunk of rows, not the file, and
 the file appears when it is done. A million rows of 20 columns take about
-3.5 s as a workbook and 10 s as CSV (formatting numbers as displayed costs
-most), with about 50–110 MB more memory meanwhile. `exportedData(as:options:)`
+3.5 s as a workbook or as CSV, with about 50–110 MB more memory meanwhile. `exportedData(as:options:)`
 builds the file in memory: for large tables write it with `export(to:as:options:)`.
 The summary row is the table's, in its summary scope, also when only the
 selected rows are exported.

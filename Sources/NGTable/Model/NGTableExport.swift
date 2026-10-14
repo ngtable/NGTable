@@ -138,7 +138,7 @@ enum NGTableExport {
 
     /// The results of `body` for consecutive ranges of `count` rows (at
     /// least `minimumRows` each, a few for each core), made on all cores.
-    static func inPieces<Piece>(_ count: Int, minimumRows: Int = 256, _ body: (Range<Int>) -> Piece) -> [Piece] {
+    static func inPieces<Piece>(_ count: Int, minimumRows: Int = 256, _ body: @Sendable (Range<Int>) -> Piece) -> [Piece] {
         guard count > 0 else { return [] }
         let pieceCount = max(1, min(count / minimumRows, ProcessInfo.processInfo.activeProcessorCount * 2))
         if pieceCount == 1 { return [body(0..<count)] }
