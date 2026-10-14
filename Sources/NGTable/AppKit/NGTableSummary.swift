@@ -272,7 +272,7 @@ extension NGTableView {
         }
         summaryTask = Task { [weak self] in
             while true {
-                await Task.yield()
+                await NGBackgroundSlices.nextSlice()
                 guard !Task.isCancelled, let table = self, table.summaryGeneration == generation else { return }
                 guard let done = table.readSummarySlice(dataGeneration: dataGeneration) else {
                     // The data changed without a reload (or the data source is gone):
@@ -298,6 +298,8 @@ extension NGTableView {
                 }
                 return calculators
             }.value
+            // Put in in a turn of the run loop of its own.
+            await NGBackgroundSlices.turnOfItsOwn()
             // An open batch (one can span an `await`) finishes the summaries at its end.
             while self.map({ $0.summaryGeneration == generation && $0.rowUpdateBatch?.displayIsStale == true }) == true {
                 try? await Task.sleep(for: .milliseconds(5))
@@ -344,7 +346,7 @@ extension NGTableView {
             build.values.append(contentsOf: repeatElement(.nan, count: capacity - build.values.count))
             build.read.append(contentsOf: repeatElement(false, count: capacity - build.read.count))
         }
-        let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
+        let deadline = NGBackgroundSlices.deadline()
         while let column = build.columns.first, ContinuousClock.now < deadline {
             var next = build.read.firstIndex(of: false) ?? capacity
             // Handles that are the row indexes read in large slices at once,

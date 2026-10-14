@@ -61,7 +61,7 @@ extension NGTableView {
         isGroupingRows = true
         groupingTask = Task { [weak self] in
             while true {
-                await Task.yield()
+                await NGBackgroundSlices.nextSlice()
                 guard !Task.isCancelled, let table = self, table.groupingJob != nil else { return }
                 guard let done = table.readGroupingSlice() else {
                     // The data changed without telling the table: the reload starts over.
@@ -69,6 +69,8 @@ extension NGTableView {
                     return
                 }
                 guard done else { continue }
+                // Grouped in a turn of the run loop of its own.
+                await NGBackgroundSlices.turnOfItsOwn()
                 // The rows are laid out again between batches.
                 while self?.rowUpdateDepth ?? 0 > 0 { try? await Task.sleep(for: .milliseconds(2)) }
                 guard !Task.isCancelled, let table = self else { return }
@@ -92,7 +94,7 @@ extension NGTableView {
             job.keys.ids[level].append(contentsOf: repeatElement(-1, count: capacity - job.keys.ids[level].count))
         }
         let columns = job.keys.columnIDs.map(summaryColumn)
-        let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
+        let deadline = NGBackgroundSlices.deadline()
         var next = job.read[job.firstUnread...].firstIndex(of: false) ?? capacity
         while next < capacity, ContinuousClock.now < deadline {
             let end = min(capacity, next + 256)

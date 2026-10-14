@@ -26,6 +26,23 @@ struct NGColumnFilterTests {
         (0..<table.numberOfRows).map(table.sourceRow)
     }
 
+    /// A large table checks every row on all cores (no condition of the
+    /// app's): the same rows as checking them one by one.
+    @Test func largeTablesFilterOnAllCores() throws {
+        let records = Records(count: NGTableView.parallelFilterRows + 10_000)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        table.synchronousSearchLimit = .max
+        table.hideRows(at: [5, 10, 15, 100])
+        table.columnFilters = ["status": .values(["Active"])]
+        table.rowFilter = NGRowFilter(searchText: "campaign 1")
+        let expected = records.records.indices.filter { row in
+            ![5, 10, 15, 100].contains(row) && records.records[row].status == "Active" && String(records.records[row].id).hasPrefix("1")
+        }
+        #expect(!expected.isEmpty)
+        #expect(shown(table) == expected)
+    }
+
     @Test func valuesRangesAndText() {
         let records = Records(count: 300)
         let table = makeTable(records)

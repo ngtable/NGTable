@@ -230,7 +230,7 @@ extension NGTableView {
         measuringTask = Task { [weak self] in
             var foundInPass = false
             while true {
-                await Task.yield()
+                await NGBackgroundSlices.nextSlice()
                 guard !Task.isCancelled, let table = self else { return }
                 guard table.measuresRowHeights, table.numberOfSourceRows > Self.measuredAtOnceLimit else {
                     table.measuringTask = nil
@@ -274,7 +274,7 @@ extension NGTableView {
     private func readRowsToMeasure(columns: [NGColumnFrame], shaper: NGTextShaper, style: MetalStyle)
         -> (handles: [Int], texts: [[NGWrappedText]], wrapped: Bool) {
         let capacity = min(rowHandles.capacity, rowHeightsByHandle.count)
-        let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
+        let deadline = NGBackgroundSlices.deadline()
         var handles: [Int] = [], texts: [[NGWrappedText]] = []
         var handle = min(measuringNext, capacity)
         while handle < capacity, handles.count < Self.measuringSliceRows {

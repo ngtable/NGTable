@@ -1654,6 +1654,8 @@ public final class NGTableView: NSView {
     private func startSearchBuild(_ index: NGSearchIndex) {
         cancelSearchBuild()
         searchBuild = (index, [Bool](repeating: false, count: index.rowCount))
+        // (Grown row by row it was copied again and again.)
+        searchBuildTexts.reserveCapacity(index.rowCount)
         isSearchingRows = true
         searchBuildTask = Task { [weak self] in
             var next = 0
@@ -1661,6 +1663,8 @@ public final class NGTableView: NSView {
             // after it (a feed changed them) are split at once, so a feed that
             // never pauses doesn't keep it from finishing.
             var isFirstPass = true
+            // Every row read once: the filter applies in a turn of its own.
+            var waitedForATurn = false
             while true {
                 // Every row read: their texts are split into words off the
                 // main thread, on all cores (most of the work), then indexed.
@@ -1669,16 +1673,30 @@ public final class NGTableView: NSView {
                     let texts = table.searchBuildTexts
                     table.searchBuildTexts = []
                     let words = await Task.detached(priority: .userInitiated) { NGRowFilter.words(of: texts) }.value
-                    guard !Task.isCancelled, let table = self, var build = table.searchBuild.take() else { return }
-                    for (position, entry) in texts.enumerated() {
-                        let handle = Int(entry.handle)
-                        // Rows marked unread meanwhile are read again.
-                        guard handle < build.read.count, build.read[handle], table.row(ofHandle: handle) >= 0 else { continue }
-                        build.index.set(words[position], textColumns: entry.textColumns, row: handle)
+                    // Into the index in slices too (a million rows' words
+                    // held the main thread ~60 ms).
+                    var position = 0
+                    while position < texts.count {
+                        guard !Task.isCancelled, let table = self, var build = table.searchBuild.take() else { return }
+                        let deadline = NGBackgroundSlices.deadline()
+                        while position < texts.count {
+                            let entry = texts[position]
+                            let handle = Int(entry.handle)
+                            // Rows marked unread meanwhile are read again.
+                            if handle < build.read.count, build.read[handle], table.row(ofHandle: handle) >= 0 {
+                                build.index.set(words[position], textColumns: entry.textColumns, row: handle)
+                            }
+                            position += 1
+                            if position.isMultiple(of: 1_024), ContinuousClock.now >= deadline { break }
+                        }
+                        table.searchBuild = build
+                        if position < texts.count { await NGBackgroundSlices.nextSlice() }
                     }
-                    table.searchBuild = build
+                    // A million rows' texts freed on another thread (~35 ms here).
+                    NGTableView.releaseInBackground(consume texts)
+                    NGTableView.releaseInBackground(consume words)
                 }
-                await Task.yield()
+                await NGBackgroundSlices.nextSlice()
                 guard !Task.isCancelled, let table = self, let dataSource = table.dataSource else { return }
                 guard var build = table.searchBuild.take() else { return }
                 guard table.rowUpdateBatch != nil || table.numberOfSourceRows == dataSource.numberOfRows(in: table) else {
@@ -1686,7 +1704,7 @@ public final class NGTableView: NSView {
                     table.cancelSearchBuild()
                     return
                 }
-                let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
+                let deadline = NGBackgroundSlices.deadline()
                 // By handle; rows changed or inserted since were marked unread.
                 next = build.read.firstIndex(of: false) ?? build.read.count
                 while next < build.read.count, ContinuousClock.now < deadline {
@@ -1708,6 +1726,12 @@ public final class NGTableView: NSView {
                 }
                 guard next >= build.read.count, build.read.firstIndex(of: false) == nil, table.searchBuildTexts.isEmpty else {
                     table.searchBuild = build
+                    continue
+                }
+                if !waitedForATurn {
+                    waitedForATurn = true
+                    table.searchBuild = build
+                    await NGBackgroundSlices.turnOfItsOwn()
                     continue
                 }
                 table.searchIndex = build.index
@@ -1847,13 +1871,64 @@ public final class NGTableView: NSView {
             return
         }
         var all = [Bool](repeating: false, count: capacity)
-        for handle in allRowHandles { all[handle] = matches(handle) }
+        if filter.isIncluded == nil, numberOfSourceRows >= Self.parallelFilterRows {
+            // Every row against the words and column filters, on all cores
+            // (a million rows held the main thread ~50 ms); the app's own
+            // condition, if any, is asked on the main actor as before.
+            all = Self.matchesOnAllCores(allRowHandles, capacity: capacity, hidden: hidesRows ? hiddenRowHandles : [],
+                                         columnPasses: columnPasses, index: index, words: words)
+        } else {
+            for handle in allRowHandles { all[handle] = matches(handle) }
+        }
         filterMatches = all
         filterFlippedRows = nil
         filterEvaluations += 1
         filterNeedsFullEvaluation = false
         filteredRows = nil
         updateFilteredRows(placing: [])
+    }
+
+    /// Lets go of a large value (a million rows' words or keys) on another
+    /// thread: its last release frees millions of objects, ~6 ms of a reload.
+    nonisolated static func releaseInBackground<Value>(_ value: Value?) {
+        guard let value else { return }
+        let box = NGUncheckedSendable(value)
+        DispatchQueue.global(qos: .utility).async { withExtendedLifetime(box) {} }
+    }
+
+    /// The rows of an order below a count (a closure made here would check
+    /// the main actor on every row: a million rows' reload paid ~8 ms).
+    nonisolated static func rows(_ order: [Int], below count: Int) -> [Int] {
+        order.filter { $0 < count }
+    }
+
+    /// From this many rows, a filter without the app's condition checks every
+    /// row on all cores.
+    static let parallelFilterRows = 50_000
+
+    /// Whether each row (handle) passes the hidden rows, the column filters
+    /// and the search words, checked on all cores.
+    nonisolated static func matchesOnAllCores(_ handles: [Int], capacity: Int, hidden: Set<Int>, columnPasses: [[Bool]],
+                                             index: NGSearchIndex?, words: [String]) -> [Bool] {
+        var all = [Bool](repeating: false, count: capacity)
+        let input = NGUncheckedSendable((handles, hidden, columnPasses, index, words))
+        all.withUnsafeMutableBufferPointer { buffer in
+            let output = NGUncheckedSendable(buffer)
+            let chunks = max(1, min(handles.count / 4_096, ProcessInfo.processInfo.activeProcessorCount * 4))
+            DispatchQueue.concurrentPerform(iterations: chunks) { chunk in
+                let (handles, hidden, columnPasses, index, words) = input.value
+                let start = handles.count * chunk / chunks, end = handles.count * (chunk + 1) / chunks
+                for handle in handles[start..<end] {
+                    var match = !hidden.contains(handle)
+                    if match {
+                        for passes in columnPasses where handle >= passes.count || !passes[handle] { match = false; break }
+                    }
+                    if match, let index, !NGRowFilter.matches(searchWords: words, rowWords: index.words(ofRow: handle)) { match = false }
+                    output.value[handle] = match
+                }
+            }
+        }
+        return all
     }
 
     /// The filtered rows in step with rows an open batch inserted, removed or
@@ -2738,7 +2813,7 @@ public final class NGTableView: NSView {
         // start over as the row indexes).
         hiddenRowHandles = Set(Self.clamped(hiddenRows, to: numberOfSourceRows))
         allRowHandlesCache = nil
-        searchIndex = nil
+        Self.releaseInBackground(searchIndex.take())
         cancelSearchBuild()
         // The previous matches show while a large table reads its words again
         // (if the rows are as many); every row is evaluated again.
@@ -2747,7 +2822,7 @@ public final class NGTableView: NSView {
         rowMapNeedsRebuild = true
         filteredRows = nil
         filteredRowsToPlace = []
-        groupKeys = nil
+        Self.releaseInBackground(groupKeys.take())
         groupKeysToRead = []
         cancelGroupingJob()
         // Everything is read again: what an open batch noted is done.
@@ -2764,12 +2839,12 @@ public final class NGTableView: NSView {
         // (`sortedOrder`, now handles of the same rows) while it sorts them
         // in the background.
         cancelBackgroundSort()
-        sortKeys = nil
+        Self.releaseInBackground(sortKeys.take())
         sortKeysToRead = []
         sortRowsToPlace = []
         let rowCount = numberOfSourceRows
         cancelSortSettle()
-        sortedOrder = previousOrder.map { NGHandleSequence.changingOrder($0.filter { $0 < rowCount }, capacity: rowCount) }
+        sortedOrder = previousOrder.map { NGHandleSequence.changingOrder(Self.rows($0, below: rowCount), capacity: rowCount) }
         filteredSortedOrder = nil
         filterFlippedRows = nil
         computeDisplayRows()

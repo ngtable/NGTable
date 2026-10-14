@@ -704,7 +704,7 @@ extension NGTableView {
                     // without a turn in which another reload could come.
                     return rows(self).flatMap { row in columns.map { dataSource.tableView(self, valueFor: $0, row: row) } }
                 }
-                let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
+                let deadline = NGBackgroundSlices.deadline()
                 while next < refs.count, ContinuousClock.now < deadline {
                     for index in next..<min(refs.count, next + 256) {
                         let row = row(of: refs[index])
@@ -713,7 +713,7 @@ extension NGTableView {
                     }
                     next = min(refs.count, next + 256)
                 }
-                if next < refs.count { await Task.yield() }
+                if next < refs.count { await NGBackgroundSlices.nextSlice() }
             }
             return values
         }
