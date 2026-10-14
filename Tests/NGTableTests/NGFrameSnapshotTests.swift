@@ -106,7 +106,7 @@ enum NGSnapshot {
 @MainActor
 struct NGFrameSnapshotTests {
     @MainActor
-    final class Data: NGTableViewDataSource, NGTableViewDelegate {
+    class Data: NGTableViewDataSource, NGTableViewDelegate {
         static let lossTint = NSColor.systemRed.withAlphaComponent(0.14)
         static let names = ["DE Keto Wide", "Кампания «Суставы»", "Office ffi fl", "FR Detox — Push", "Summer sale 🌞"]
         static let statuses = [NGTag("Active", color: .green), NGTag("Paused", color: .orange), NGTag("Finished", color: .gray)]
@@ -186,6 +186,27 @@ struct NGFrameSnapshotTests {
         table.delegate = data
         table.layoutSubtreeIfNeeded()
         return (table, window)
+    }
+
+    /// The same rows, some of them taller (`NGTableViewRowHeights`).
+    final class HeightData: Data, NGTableViewRowHeights {
+        func tableView(_ tableView: NGTableView, heightOfRow row: Int) -> CGFloat {
+            row % 4 == 1 ? 48 : row == 6 ? 36 : tableView.rowHeight
+        }
+    }
+
+    /// Rows of their own heights: backgrounds, stripes, a tinted tall row, a
+    /// selection over tall and short rows, cells centered in their rows.
+    @Test(arguments: Variant.all.filter { ["light-2x-blue", "dark-1x-unemphasized"].contains($0.name) })
+    func heights(_ variant: Variant) throws {
+        let data = HeightData()
+        let (table, window) = makeTable(variant, data: data)
+        defer { withExtendedLifetime((window, data)) {} }
+        #expect(table.rowGeometry.hasRowHeights)
+        table.selectRowIndexes([4, 5, 6, 9], byExtendingSelection: false)
+        table.layoutSubtreeIfNeeded()
+        let image = try #require(table.metalSnapshot())
+        try NGSnapshot.expectMatches(image, named: "heights-" + variant.name)
     }
 
     @Test(arguments: Variant.all)
