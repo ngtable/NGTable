@@ -295,6 +295,11 @@ extension NGTableView {
         default:
             guard let (text, font) = displayedText(of: cell), let shaper = metalRenderer?.shaper else { return nil }
             let available = max(0, cell.cellFrame.width - 2 * NGMetrics.cellPadding)
+            if cell.lineLimit > 1 {
+                // Wrapped: cut only if it takes more lines than the column allows.
+                guard cell.lineLimit < .max else { return nil }
+                return shaper.shapeLines(text, font: font, width: available, maximumLines: cell.lineLimit + 1).count > cell.lineLimit ? text : nil
+            }
             return shaper.shape(text, font: font, width: .greatestFiniteMagnitude).width > available + 0.5 ? text : nil
         }
     }
@@ -406,6 +411,7 @@ extension NGTableView {
         cell.regionPin = canvas.region?.pin
         cell.cellFrame = cellFrame
         cell.showsChoiceChevron = Self.showsChoiceChevron(column.frame.column)
+        cell.lineLimit = column.frame.column.lineLimit
         if cell.unresolvedSource == nil, isShowingRowTree {
             // Kept: its row may have got or lost children since.
             cell.outline = outline(forDisplayRow: row, column: column.frame.column)

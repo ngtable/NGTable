@@ -191,6 +191,11 @@ final class NGDrawnCell {
     var isPressed = false {
         didSet { if isPressed != oldValue { NGFrameModel.noteChange() } }
     }
+    /// The most lines its text shows (1: one line, truncated); from a column
+    /// that wraps text.
+    var lineLimit = 1 {
+        didSet { if lineLimit != oldValue { quadCache = nil; laidOutText = nil; NGFrameModel.noteChange() } }
+    }
     /// In an editable column with choices: the pop-up's chevron at the trailing edge.
     var showsChoiceChevron = false {
         didSet { if showsChoiceChevron != oldValue { quadCache = nil; NGFrameModel.noteChange() } }

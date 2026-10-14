@@ -156,6 +156,12 @@ extension NGTableView {
     /// Moves the canvases to the displayed position: the scroll position plus any
     /// elastic vertical overscroll. All regions move together.
     func applyScrollPosition(relayoutAll: Bool = false) {
+        // Rows of wrapped text coming into view are measured first: the
+        // content gets as high as they are, and the top row stays in place.
+        if !isInLayoutPass, measureRowsInView() {
+            layoutMetrics = computeLayoutMetrics()
+            needsLayout = true
+        }
         // Row 0 starts below the header; rows scrolled past it go underneath.
         // Aligned to device pixels, so text and hairlines stay sharp at
         // fractional trackpad offsets.

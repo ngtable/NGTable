@@ -475,6 +475,29 @@ extension NGTableView {
         }
     }
 
+    /// Text wrapped onto at most `lineLimit` lines, one under another: the
+    /// first where a one-line row puts its text (see `wrappedTextHeight`).
+    private func appendWrappedText(_ text: String, font: NSFont, alignment: NSTextAlignment, lineLimit: Int, in frame: CGRect,
+                                   clip: CGRect, renderer: NGMetalRenderer, scale: CGFloat, color: SIMD4<Float>,
+                                   to quads: inout [NGMetalQuad]) {
+        guard !text.isEmpty else { return }
+        let available = max(0, frame.width - 2 * NGMetrics.cellPadding)
+        let lines = renderer.shaper.shapeLines(text, font: font, width: available, maximumLines: lineLimit)
+        let lineHeight = NGLineHeights.height(of: font)
+        var top = frame.minY + ((min(frame.height, rowHeight) - lineHeight) / 2).rounded()
+        let textClip = clip.intersection(frame)
+        for line in lines {
+            let x: CGFloat = switch alignment {
+            case .right: NGMetrics.cellPadding + available - line.width
+            case .center: NGMetrics.cellPadding + ((available - line.width) / 2)
+            default: NGMetrics.cellPadding
+            }
+            renderer.appendGlyphs(line, font: font, x: frame.minX + x, baseline: top + CTFontGetAscent(font), clip: textClip,
+                                  scale: scale, color: color, to: &quads)
+            top += lineHeight
+        }
+    }
+
     private func appendContentLeftToRight(of cell: NGDrawnCell, in frame: CGRect, clip: CGRect, renderer: NGMetalRenderer,
                                           scale: CGFloat, style: MetalStyle, textColor colorOverride: SIMD4<Float>? = nil,
                                           to quads: inout [NGMetalQuad]) {
@@ -512,6 +535,11 @@ extension NGTableView {
                                            style: style, to: &quads)
             frame.size.width = max(0, frame.width - room)
         }
+        // Rows grown for wrapped text: other cells keep to the top, a
+        // one-line row's height, level with the first line.
+        if wrapsTextInSomeColumn, cell.lineLimit <= 1, frame.height > rowHeight {
+            frame.size.height = rowHeight
+        }
         let textColor = colorOverride ?? (highlighted ? style.highlightedText : style.text)
         // Text: the quads drawn last time when nothing they depend on changed.
         let font: NSFont? = switch cell.content {
@@ -538,6 +566,10 @@ extension NGTableView {
             }
         }
         switch cell.content {
+        case .text(let text, let alignment, let monospacedDigits) where cell.lineLimit > 1:
+            appendWrappedText(text, font: monospacedDigits ? style.digitFont : style.textFont, alignment: alignment,
+                              lineLimit: cell.lineLimit, in: frame, clip: clip, renderer: renderer, scale: scale, color: textColor,
+                              to: &quads)
         case .text(let text, let alignment, let monospacedDigits):
             renderer.appendText(text, font: monospacedDigits ? style.digitFont : style.textFont, alignment: alignment,
                                 in: frame, scale: scale, color: textColor, clip: clip, laidOut: &cell.laidOutText, to: &quads)

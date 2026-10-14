@@ -144,6 +144,9 @@ extension NGTableView {
         defer { if resized { drawMetalFrameIfNeeded() } }
         endColumnDragForResize()
         autoresizeColumns(toWidth: bounds.width)
+        // Rows of wrapped text in view get their heights before the content
+        // height is known.
+        measureRowsInView()
         var metrics = computeLayoutMetrics()
         // Right to left, narrower scrolling columns start at the right: mirrored
         // within the visible width.

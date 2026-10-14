@@ -15,7 +15,7 @@ scroll underneath the summary bar.
 
 | Property | Default | |
 | --- | --- | --- |
-| ``NGTableView/rowHeight`` | 24 | The rows' height, unless the delegate gives rows their own (``NGTableViewRowHeights``). |
+| ``NGTableView/rowHeight`` | 24 | The rows' height, unless the delegate gives rows their own (``NGTableViewRowHeights``) or a column wraps text (then the height of a row of one line). |
 | ``NGTableView/headerRowHeight`` | 28 | The column titles. |
 | ``NGTableView/groupHeaderHeight`` | 24 | The group band, only shown when there are groups. |
 | ``NGTableView/summaryRowHeight`` | 30 | The summary row. |

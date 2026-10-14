@@ -1022,7 +1022,7 @@ extension NGTableView {
         let dirtyListOnly = !readsTreeParents && batch.dirtyRows.isEmpty && batch.pendingDirtyRows.count > 16
         let batchDirtyRows = dirtyListOnly ? IndexSet() : Self.union(batch.dirtyRows, batch.pendingDirtyRows, capacity: rowHandles.capacity)
         // Reloaded rows' heights are asked again.
-        if rowHeightProvider != nil {
+        if rowHeightProvider != nil || wrapsTextInSomeColumn {
             if dirtyListOnly {
                 forgetRowHeights(ofHandles: batch.pendingDirtyRows.lazy.map { Int($0) })
             } else {

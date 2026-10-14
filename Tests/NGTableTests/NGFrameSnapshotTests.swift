@@ -163,7 +163,7 @@ struct NGFrameSnapshotTests {
         }
     }
 
-    private func makeTable(_ variant: Variant, data: Data) -> (NGTableView, NSWindow) {
+    private func makeTable(_ variant: Variant, data: Data, wrapsNames: Bool = false) -> (NGTableView, NSWindow) {
         let frame = NSRect(x: 0, y: 0, width: 620, height: 300)
         let window = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: variant.dark ? .darkAqua : .aqua)
@@ -173,7 +173,8 @@ struct NGFrameSnapshotTests {
         table.accentColorForTesting = variant.accent?.color
         table.columns = [
             .column(NGTableColumn("mark", title: "", width: 28, alignment: .center, pin: .leading)),
-            .column(NGTableColumn("name", title: "Campaign", width: 190, pin: .leading)),
+            .column(wrapsNames ? NGTableColumn("name", title: "Campaign", width: 190, pin: .leading).wrappingText()
+                               : NGTableColumn("name", title: "Campaign", width: 190, pin: .leading)),
             .column(NGTableColumn("spend", title: "Spend", width: 110, alignment: .automatic,
                                   format: .currency(code: "USD"), summary: .aggregate(.sum))),
             .column(NGTableColumn("ctr", title: "CTR", width: 70, alignment: .automatic,
@@ -207,6 +208,30 @@ struct NGFrameSnapshotTests {
         table.layoutSubtreeIfNeeded()
         let image = try #require(table.metalSnapshot())
         try NGSnapshot.expectMatches(image, named: "heights-" + variant.name)
+    }
+
+    /// Some names longer than their column.
+    final class LongNameData: Data {
+        override func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
+            guard column.id == "name", row % 3 == 1 else { return super.tableView(tableView, valueFor: column, row: row) }
+            return .text(row == 4 ? "Кампания «Суставы» — весна, широкая аудитория, ретаргетинг и look-alike #\(row)"
+                                  : "DE Keto Wide, broad audience, two creatives #\(row)")
+        }
+    }
+
+    /// A column that wraps text: rows as high as their names, the other
+    /// cells of a tall row at its top, a selection over tall rows.
+    @Test(arguments: Variant.all.filter { ["light-2x-blue", "dark-1x-unemphasized"].contains($0.name) })
+    func wrappedText(_ variant: Variant) throws {
+        let data = LongNameData()
+        let (table, window) = makeTable(variant, data: data, wrapsNames: true)
+        defer { withExtendedLifetime((window, data)) {} }
+        #expect(table.rowGeometry.height(of: 4) > table.rowGeometry.height(of: 1))
+        #expect(table.rowGeometry.height(of: 1) > table.rowHeight)
+        table.selectRowIndexes([3, 4], byExtendingSelection: false)
+        table.layoutSubtreeIfNeeded()
+        let image = try #require(table.metalSnapshot())
+        try NGSnapshot.expectMatches(image, named: "wrapped-" + variant.name)
     }
 
     @Test(arguments: Variant.all)

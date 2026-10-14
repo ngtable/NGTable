@@ -277,8 +277,10 @@ public final class NGTableView: NSView {
     }
 
     /// Height of every row, in points (at least 1), unless the delegate gives
-    /// rows heights of their own (`NGTableViewRowHeights`); group header rows
-    /// have it in any case.
+    /// rows heights of their own (`NGTableViewRowHeights`) or a column wraps
+    /// text (`NGTableColumn.wrappingText()`: a row of one line has it, each
+    /// line more adds the font's line height); group header rows have it in
+    /// any case.
     public var rowHeight: CGFloat = 24 {
         didSet {
             // Rows are laid out by dividing by the height.
@@ -293,10 +295,11 @@ public final class NGTableView: NSView {
     }
 
     /// Where the display rows are: their tops and heights, the row at a y.
-    /// With a delegate that gives rows their heights (`NGTableViewRowHeights`),
+    /// With a delegate that gives rows their heights (`NGTableViewRowHeights`)
+    /// or a column that wraps text (rows measured, see NGWrappedRows.swift),
     /// built when asked after the rows shown or their heights changed.
     var rowGeometry: NGRowGeometry {
-        guard let rowHeightProvider else { return NGRowGeometry(rowHeight: rowHeight, count: numberOfRows) }
+        guard rowHeightProvider != nil || wrapsTextInSomeColumn else { return NGRowGeometry(rowHeight: rowHeight, count: numberOfRows) }
         if let rowGeometryCache, rowGeometryCache.count == numberOfRows { return rowGeometryCache }
         let geometry = buildRowGeometry(rowHeightProvider)
         rowGeometryCache = geometry
@@ -305,16 +308,19 @@ public final class NGTableView: NSView {
 
     /// The delegate as one that gives rows their heights.
     var rowHeightProvider: NGTableViewRowHeights?
-    /// The rows' heights by handle (NaN: not asked yet); used only with a
-    /// `rowHeightProvider`.
+    /// The rows' heights by handle (NaN: not asked or measured yet); used
+    /// only with a `rowHeightProvider` or a column that wraps text.
     var rowHeightsByHandle: [CGFloat] = []
+    /// What the measured heights were measured for (see `measureRowsInView`).
+    var lastMeasuredRowsKey: [Double] = []
     /// The geometry of rows of their own heights, until the rows shown or
     /// their heights change.
     var rowGeometryCache: NGRowGeometry?
 
     /// The display rows' heights, asking the provider for those it hasn't
-    /// given yet: group header rows have `rowHeight`.
-    private func buildRowGeometry(_ provider: NGTableViewRowHeights) -> NGRowGeometry {
+    /// given yet (without one, rows not measured yet count as `rowHeight`):
+    /// group header rows have `rowHeight`.
+    private func buildRowGeometry(_ provider: NGTableViewRowHeights?) -> NGRowGeometry {
         if rowHeightsByHandle.count < rowHandles.capacity {
             rowHeightsByHandle.append(contentsOf: repeatElement(.nan, count: rowHandles.capacity - rowHeightsByHandle.count))
         }
@@ -322,6 +328,7 @@ public final class NGTableView: NSView {
             guard handle >= 0, handle < rowHeightsByHandle.count else { return rowHeight }
             let known = rowHeightsByHandle[handle]
             if !known.isNaN { return known }
+            guard let provider else { return rowHeight }
             let row = row(ofHandle: handle)
             guard row >= 0 else { return rowHeight }
             let height = max(1, provider.tableView(self, heightOfRow: row))
@@ -347,9 +354,9 @@ public final class NGTableView: NSView {
     }
 
     /// Forgets the heights of rows (handles) the app reloaded: they are
-    /// asked for again.
+    /// asked for (or measured) again.
     func forgetRowHeights(ofHandles handles: some Sequence<Int>) {
-        guard rowHeightProvider != nil else { return }
+        guard rowHeightProvider != nil || wrapsTextInSomeColumn else { return }
         for handle in handles where handle >= 0 && handle < rowHeightsByHandle.count {
             rowHeightsByHandle[handle] = .nan
         }
@@ -537,7 +544,14 @@ public final class NGTableView: NSView {
     ]
 
     /// Resolved column layout of the current `columns`.
-    public internal(set) var columnLayout = NGColumnLayout()
+    public internal(set) var columnLayout = NGColumnLayout() {
+        didSet { wrapsTextInSomeColumn = columnLayout.allColumns.contains { $0.wrapsText } }
+    }
+    /// Whether a shown column wraps text: rows are as high as their text then,
+    /// and the cells of a taller row keep to its top.
+    private(set) var wrapsTextInSomeColumn = false {
+        didSet { if wrapsTextInSomeColumn != oldValue { rowGeometryCache = nil } }
+    }
 
     /// The table's sort, like `NSTableView`'s: the first descriptor decides,
     /// the others order rows it finds equal. Empty: the original order.
@@ -2760,6 +2774,8 @@ public final class NGTableView: NSView {
 
     func scrollDisplayRowToVisible(_ row: Int) {
         guard row >= 0, row < numberOfRows else { return }
+        // Rows of wrapped text not measured yet would put it out of view.
+        if measuresRowHeights { measureRows(around: row) }
         let metrics = layoutMetrics
         let visibleHeight = metrics.bodyHeight - metrics.bottomInset
         let rowLayout = rowGeometry
