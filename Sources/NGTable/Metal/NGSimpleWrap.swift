@@ -3,9 +3,7 @@ import CoreGraphics
 // Wrapping simple text without Core Text. Core Text's typesetter finds line
 // breaks at about 30 µs a line of a log message, and no faster on more
 // threads: a million wrapped rows took half a minute to measure. Text of
-// simple characters (`NGSimpleText.characters`, and the colon: its
-// glyph between digits differs by a hair, which only moves a break by that
-// hair) is wrapped here from the glyph advances and pair kerning learned
+// simple characters (`NGSimpleText.characters`) is wrapped here from the glyph advances and pair kerning learned
 // from Core Text (`NGSimpleMetricsStore`): breaks after spaces (which hang past the width)
 // and after hyphens and dashes before a letter, and inside a word only when
 // it is wider than a line. Drawing (`shapeLines`) and measuring rows use the
@@ -24,7 +22,7 @@ enum NGSimpleWrap {
     }
 
     static func isWrappable(_ unit: UInt16) -> Bool {
-        unit == 0x3A || NGSimpleText.isSimple(unit)
+        NGSimpleText.isSimple(unit)
     }
 
     private static func breaksAfter(_ unit: UInt16) -> Bool {
