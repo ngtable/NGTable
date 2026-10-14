@@ -54,8 +54,7 @@ public final class NGTableView: NSView {
         // Tints and markers come from the delegate.
         didSet {
             rowHeightProvider = delegate as? NGTableViewRowHeights
-            rowHeightsByHandle = []
-            rowGeometryCache = nil
+            forgetAllRowHeights()
             recycleAllCells()
             needsLayout = true
         }
@@ -313,44 +312,82 @@ public final class NGTableView: NSView {
     var rowHeightsByHandle: [CGFloat] = []
     /// What the measured heights were measured for (see `measureRowsInView`).
     var lastMeasuredRowsKey: [Double] = []
+    /// Measuring the rows of a large table in the background (see
+    /// NGWrappedRows.swift): the task, the next handle it looks at, whether
+    /// rows may be left to measure, the handles forgotten while a slice is
+    /// measured, and a count of the times every height was forgotten.
+    var measuringTask: Task<Void, Never>?
+    var measuringNext = 0
+    var rowsLeftToMeasure = false
+    var measuringForgotten = IndexSet()
+    var measuringGeneration = 0
+    /// Tests: called when a slice of rows was read for measuring, before
+    /// their lines are counted.
+    var measuringSliceWasReadForTesting: (() -> Void)?
+
+    /// Forgets every row's height (asked or measured again).
+    func forgetAllRowHeights() {
+        rowHeightsByHandle = []
+        rowGeometryCache = nil
+        measuringGeneration &+= 1
+        measuringNext = 0
+        rowsLeftToMeasure = true
+    }
     /// The geometry of rows of their own heights, until the rows shown or
     /// their heights change.
     var rowGeometryCache: NGRowGeometry?
 
     /// The display rows' heights, asking the provider for those it hasn't
     /// given yet (without one, rows not measured yet count as `rowHeight`):
-    /// group header rows have `rowHeight`.
+    /// group header rows have `rowHeight`. One pass over the rows into their
+    /// tops (a million rows: about a millisecond).
     private func buildRowGeometry(_ provider: NGTableViewRowHeights?) -> NGRowGeometry {
         if rowHeightsByHandle.count < rowHandles.capacity {
             rowHeightsByHandle.append(contentsOf: repeatElement(.nan, count: rowHandles.capacity - rowHeightsByHandle.count))
         }
-        func height(ofHandle handle: Int) -> CGFloat {
-            guard handle >= 0, handle < rowHeightsByHandle.count else { return rowHeight }
-            let known = rowHeightsByHandle[handle]
-            if !known.isNaN { return known }
-            guard let provider else { return rowHeight }
-            let row = row(ofHandle: handle)
-            guard row >= 0 else { return rowHeight }
-            let height = max(1, provider.tableView(self, heightOfRow: row))
-            rowHeightsByHandle[handle] = height
-            return height
-        }
         let count = numberOfRows
-        var heights: [CGFloat] = []
-        heights.reserveCapacity(count)
-        if let groupedDisplay {
-            for entry in groupedDisplay { heights.append(entry < 0 ? rowHeight : height(ofHandle: entry)) }
-        } else if let sorted = sortedDisplay {
-            for handle in sorted.integerElements { heights.append(height(ofHandle: handle)) }
-        } else if let rowMap {
-            for handle in rowMap { heights.append(height(ofHandle: handle)) }
-        } else {
-            for row in 0..<count { heights.append(height(ofHandle: handle(ofRow: row))) }
+        let rowHeight = rowHeight
+        let sorted = groupedDisplay == nil ? sortedDisplay?.integerElements : nil
+        // The display rows' handles (-1: a group header), in order.
+        func forEachHandle(_ body: (Int) -> Void) {
+            if let groupedDisplay {
+                for entry in groupedDisplay.prefix(count) { body(entry) }
+            } else if let sorted {
+                for handle in sorted.prefix(count) { body(handle) }
+            } else if let rowMap {
+                for handle in rowMap.prefix(count) { body(handle) }
+            } else if rowHandles.isIdentity {
+                for row in 0..<min(count, rowHandles.capacity) { body(row) }
+            } else {
+                for row in 0..<count { body(handle(ofRow: row)) }
+            }
+        }
+        if let provider {
+            // Heights not given yet, asked first (in display order).
+            forEachHandle { handle in
+                guard handle >= 0, handle < rowHeightsByHandle.count, rowHeightsByHandle[handle].isNaN else { return }
+                let row = row(ofHandle: handle)
+                guard row >= 0 else { return }
+                rowHeightsByHandle[handle] = max(1, provider.tableView(self, heightOfRow: row))
+            }
+        }
+        var tops: [CGFloat] = []
+        tops.reserveCapacity(count + 1)
+        tops.append(0)
+        var y: CGFloat = 0
+        rowHeightsByHandle.withUnsafeBufferPointer { heights in
+            forEachHandle { handle in
+                let height = handle >= 0 && handle < heights.count ? heights[handle] : rowHeight
+                y += height.isNaN ? rowHeight : height
+                tops.append(y)
+            }
         }
         // In the middle of a batch the orders may not match the count yet.
-        if heights.count > count { heights.removeLast(heights.count - count) }
-        while heights.count < count { heights.append(rowHeight) }
-        return NGRowGeometry(rowHeight: rowHeight, heights: heights)
+        while tops.count < count + 1 {
+            y += rowHeight
+            tops.append(y)
+        }
+        return NGRowGeometry(rowHeight: rowHeight, tops: tops)
     }
 
     /// Forgets the heights of rows (handles) the app reloaded: they are
@@ -359,7 +396,9 @@ public final class NGTableView: NSView {
         guard rowHeightProvider != nil || wrapsTextInSomeColumn else { return }
         for handle in handles where handle >= 0 && handle < rowHeightsByHandle.count {
             rowHeightsByHandle[handle] = .nan
+            if measuringTask != nil { measuringForgotten.insert(handle) }
         }
+        rowsLeftToMeasure = true
         rowGeometryCache = nil
     }
 
@@ -2510,6 +2549,7 @@ public final class NGTableView: NSView {
         summaryTask?.cancel()
         searchBuildTask?.cancel()
         groupingTask?.cancel()
+        measuringTask?.cancel()
         copyTask?.cancel()
     }
 
@@ -2631,7 +2671,7 @@ public final class NGTableView: NSView {
         let (focused, cellRange) = (focusedCell, selectedCellRange)
         numberOfSourceRows = dataSource?.numberOfRows(in: self) ?? 0
         rowHandles.reset(count: numberOfSourceRows)
-        rowHeightsByHandle = []
+        forgetAllRowHeights()
         rowGeometryCache = nil
         sortRowsInserted = []
         // Other records: identities are read again on the next lookup, and

@@ -138,6 +138,95 @@ struct NGWrappedRowsTests {
         #expect(top(table, anchor) - table.contentOffset.y == screenY)
     }
 
+    /// Every row's height as drawn (`shapeLines`), in display order.
+    func expectedHeights(_ table: NGTableView, _ notes: Notes) throws -> [CGFloat] {
+        var byText: [String: CGFloat] = [:]
+        return try (0..<table.numberOfRows).map { row in
+            let text = notes.texts[table.sourceRow(row)]
+            if let height = byText[text] { return height }
+            let height = try expectedHeight(table, text)
+            byText[text] = height
+            return height
+        }
+    }
+
+    static func manyNotes() -> Notes {
+        Notes((0..<NGTableView.measuredAtOnceLimit * 2).map { $0 % 3 == 0 ? "Short \($0)" : Self.long + " \($0)" })
+    }
+
+    /// The rows not in view of a large table are measured in the background:
+    /// the content gets their true height.
+    @Test func aLargeTableMeasuresEveryRowInTheBackground() async throws {
+        let notes = Self.manyNotes()
+        let table = makeTable(notes)
+        #expect(table.isMeasuringRows)
+        #expect(height(table, 3_000) == table.rowHeight)
+        #expect(try await waitWhile { table.isMeasuringRows })
+        table.layoutSubtreeIfNeeded()
+        let expected = try expectedHeights(table, notes)
+        let heights = (0..<table.numberOfRows).map { height(table, $0) }
+        #expect(heights == expected)
+        #expect(table.layoutMetrics.contentHeight == expected.reduce(0, +))
+    }
+
+    /// While rows above the view are measured, the row at its top stays
+    /// where it is on screen.
+    @Test func theTopRowStaysWhileRowsAboveAreMeasured() async throws {
+        let notes = Self.manyNotes()
+        let table = makeTable(notes)
+        table.setContentOffset(CGPoint(x: 0, y: 60_000))
+        table.layoutSubtreeIfNeeded()
+        let anchor = Int(table.rowGeometry.position(atY: table.contentOffset.y))
+        let screenY = top(table, anchor) - table.contentOffset.y
+        #expect(height(table, anchor / 2) == table.rowHeight)   // Not measured yet.
+        #expect(try await waitWhile { table.isMeasuringRows })
+        table.layoutSubtreeIfNeeded()
+        #expect(height(table, anchor / 2) > table.rowHeight)
+        #expect(Int(table.rowGeometry.position(atY: table.contentOffset.y)) == anchor)
+        #expect(top(table, anchor) - table.contentOffset.y == screenY)
+    }
+
+    /// Rows reloaded and a column resized while rows are measured: measured
+    /// with their new text, at the new width.
+    @Test func changesMeanwhileAreMeasured() async throws {
+        let notes = Self.manyNotes()
+        let table = makeTable(notes)
+        // Some rows measured, not all.
+        #expect(try await waitWhile { table.isMeasuringRows && table.measuringNext < 1_000 })
+        #expect(table.isMeasuringRows)
+        for row in 0..<notes.texts.count where row % 2 == 0 { notes.texts[row] = "Short again" }
+        table.reloadData(forRowIndexes: IndexSet(0..<notes.texts.count), columnIndexes: [1])
+        table.setWidth(90, forColumnID: "note")
+        table.layoutSubtreeIfNeeded()
+        #expect(try await waitWhile { table.isMeasuringRows })
+        table.layoutSubtreeIfNeeded()
+        #expect((0..<table.numberOfRows).map { height(table, $0) } == (try expectedHeights(table, notes)))
+    }
+
+    /// The same while a slice is being measured: the rows reloaded since it
+    /// was read, or every row after a new width, aren't given its heights.
+    @Test(arguments: [false, true])
+    func changesWhileASliceIsMeasured(_ resizes: Bool) async throws {
+        let notes = Self.manyNotes()
+        let table = makeTable(notes)
+        var changed = false
+        table.measuringSliceWasReadForTesting = { [unowned table] in
+            guard !changed, table.measuringNext > 0 else { return }
+            changed = true
+            if resizes {
+                table.setWidth(90, forColumnID: "note")
+                table.layoutSubtreeIfNeeded()
+            } else {
+                for row in 0..<notes.texts.count where row % 2 == 0 { notes.texts[row] = "Short again" }
+                table.reloadData(forRowIndexes: IndexSet(0..<notes.texts.count), columnIndexes: [1])
+            }
+        }
+        #expect(try await waitWhile { table.isMeasuringRows })
+        #expect(changed)
+        table.layoutSubtreeIfNeeded()
+        #expect((0..<table.numberOfRows).map { height(table, $0) } == (try expectedHeights(table, notes)))
+    }
+
     /// Without a wrapping column every row has `rowHeight`; the delegate's
     /// heights win over measuring.
     @Test func measuringOnlyWithWrappingColumns() throws {

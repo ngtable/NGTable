@@ -433,6 +433,23 @@ final class NGTextShaper {
         let fontID = fontID(of: font)
         let key = LinesKey(text: text, font: fontID, width: Int((width * 4).rounded(.down)), maximumLines: maximumLines)
         if let cached = wrapped[key] { return cached }
+        // Simple text: wrapped like rows are measured (see NGSimpleWrap.swift).
+        let units = Array(text.utf16)
+        if case .lines(let ranges) = simpleWrap(units, font: font, fontID: fontID, width: width, maximumLines: maximumLines) {
+            let lines = ranges.enumerated().map { index, range in
+                var end = range.upperBound
+                // Spaces at the end hang: not drawn, nor counted for the alignment.
+                while end > range.lowerBound, units[end - 1] == 0x20 { end -= 1 }
+                let line = String(utf16CodeUnits: Array(units[range.lowerBound..<end]), count: end - range.lowerBound)
+                // The last line truncated if text remains; the others are
+                // drawn whole (a colon's glyph may differ by a hair).
+                let truncates = index == ranges.count - 1 && range.upperBound == units.count && index == maximumLines - 1
+                return shape(line, font: font, width: truncates ? width : .greatestFiniteMagnitude)
+            }
+            if wrapped.count > 2_000 { wrapped.removeAll() }
+            wrapped[key] = lines
+            return lines
+        }
         let style = style(of: font, id: fontID)
         let attributed = CFAttributedStringCreate(nil, text as CFString, style.attributes)!
         let typesetter = CTTypesetterCreateWithAttributedString(attributed)
@@ -456,6 +473,58 @@ final class NGTextShaper {
         return lines
     }
 
+    /// Wraps simple text, learning the advances and kerning it needs first:
+    /// `.notSimple` for text Core Text wraps.
+    private func simpleWrap(_ units: [UInt16], font: CTFont, fontID: Int, width: CGFloat, maximumLines: Int) -> NGSimpleWrap.Lines {
+        guard units.allSatisfy(NGSimpleWrap.isWrappable) else { return .notSimple }
+        let simple = simpleFont(fontID)
+        var previous: UInt16?
+        for unit in units {
+            guard glyph(of: unit, in: simple, font: font) != nil else { return .notSimple }
+            if let previous { _ = kerning(previous, unit, in: simple, font: font) }
+            previous = unit
+        }
+        return NGSimpleWrap.lines(of: units, metrics: simple.wrap, width: width, maximumLines: maximumLines)
+    }
+
+    /// What wrapping a font's simple text needs, as learned so far (for other threads).
+    func wrapMetrics(of font: CTFont) -> NGWrapMetrics {
+        simpleFont(fontID(of: font)).wrap
+    }
+
+    /// How many lines `shapeLines` wraps text onto, without laying out glyphs.
+    func lineCount(of text: String, font: CTFont, width: CGFloat, maximumLines: Int) -> Int {
+        guard maximumLines > 1, !text.isEmpty else { return 1 }
+        let fontID = fontID(of: font)
+        if case .lines(let ranges) = simpleWrap(Array(text.utf16), font: font, fontID: fontID, width: width, maximumLines: maximumLines) {
+            return max(1, ranges.count)
+        }
+        return Self.lineCount(of: text, attributes: style(of: font, id: fontID).attributes, width: width, maximumLines: maximumLines)
+    }
+
+    /// The attributes `shapeLines` lays text of a font out with, for
+    /// `lineCount(of:attributes:width:maximumLines:)` on other threads.
+    func lineAttributes(of font: CTFont) -> NGUncheckedSendable<CFDictionary> {
+        NGUncheckedSendable(style(of: font, id: fontID(of: font)).attributes)
+    }
+
+    /// How many lines Core Text's typesetter wraps text onto, as
+    /// `shapeLines` does text that isn't simple (thread-safe).
+    nonisolated static func lineCount(of text: String, attributes: CFDictionary, width: CGFloat, maximumLines: Int) -> Int {
+        guard maximumLines > 1, !text.isEmpty else { return 1 }
+        let attributed = CFAttributedStringCreate(nil, text as CFString, attributes)!
+        let typesetter = CTTypesetterCreateWithAttributedString(attributed)
+        let length = CFAttributedStringGetLength(attributed)
+        var lines = 0
+        var start = 0
+        while start < length, lines < maximumLines {
+            let count = max(1, CTTypesetterSuggestLineBreak(typesetter, start, Double(width)))
+            lines += 1
+            start += count
+        }
+        return max(1, lines)
+    }
+
     // MARK: Simple lines
 
     /// Characters of simple lines: formatted numbers, and Latin and Cyrillic
@@ -465,12 +534,12 @@ final class NGTextShaper {
     /// layout barely gets faster on more threads (about 8 µs a line).
     /// Characters Core Text may change by their context (the colon between
     /// digits, ligature-prone or combining marks) aren't simple.
-    private static func isSimple(_ unit: UInt16) -> Bool {
+    nonisolated static func isSimple(_ unit: UInt16) -> Bool {
         Int(unit) < simpleTable.count && simpleTable[Int(unit)]
     }
 
     /// `simpleCharacters` as a lookup table (one load per character).
-    private static let simpleTable: [Bool] = {
+    private nonisolated static let simpleTable: [Bool] = {
         var table = [Bool](repeating: false, count: Int(simpleCharacters.map(\.upperBound).max() ?? 0) + 1)
         for range in simpleCharacters { for unit in range { table[Int(unit)] = true } }
         return table
@@ -481,7 +550,7 @@ final class NGTextShaper {
     /// Core Text positions on the letter before. The colon is left out: the
     /// system font raises it between digits (a contextual form, beyond a
     /// pair). Characters the font has no glyph for still go to Core Text.
-    static let simpleCharacters: [ClosedRange<UInt16>] = [
+    nonisolated static let simpleCharacters: [ClosedRange<UInt16>] = [
         0x0020...0x0039, 0x003B...0x007E,   // ASCII without the colon.
         0x00A0...0x00AC, 0x00AE...0x024F,   // Latin-1 (no soft hyphen), Latin Extended-A and -B.
         0x0386...0x0386, 0x0388...0x03CE,   // Greek.
@@ -498,6 +567,8 @@ final class NGTextShaper {
     private final class SimpleFont {
         var glyphs: [UInt16: (glyph: CGGlyph, advance: CGFloat)] = [:]
         var kerning: [UInt32: CGFloat] = [:]
+        /// The advances and kerning learned, for wrapping (see NGSimpleWrap.swift).
+        var wrap = NGWrapMetrics()
     }
 
     private var simpleFonts: [Int: SimpleFont] = [:]
@@ -611,6 +682,7 @@ final class NGTextShaper {
         }
         let advance = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
         simple.glyphs[unit] = (glyph, advance)
+        if glyph == 0 { simple.wrap.missing.insert(unit) } else { simple.wrap.advances[unit] = advance }
         return glyph == 0 ? nil : (glyph, advance)
     }
 
@@ -637,6 +709,7 @@ final class NGTextShaper {
             }
         }
         simple.kerning[pair] = kerning
+        simple.wrap.kerning[pair] = kerning
         return kerning
     }
 
