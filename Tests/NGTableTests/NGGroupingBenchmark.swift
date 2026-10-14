@@ -105,6 +105,54 @@ extension NGBenchmarks {
             table.sortsRows = true
             try await report("sorted by spend") { table.sortDescriptors = [NSSortDescriptor(key: "spend", ascending: false)] }
         }
+
+        /// Everything in the background at once after a reload: the sort, a
+        /// first search, the grouping and the summaries, each reading in
+        /// slices. The longest the main thread is held meanwhile.
+        @Test func everythingAtOnceAfterAReload() async throws {
+            let data = Campaigns(count: Self.rows)
+            let (table, window) = makeTable(data)
+            defer { withExtendedLifetime((window, data)) {} }
+            try await waitForBackgroundWork(table)
+            table.sortsRows = true
+            table.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+            table.rowGrouping = NGRowGrouping(columnIDs: ["net"])
+            table.rowFilter = NGRowFilter(searchText: "Campaign 1")
+            try await waitForBackgroundWork(table)
+            // NGTABLE_BENCH_REPEAT: reloads before the measured one (for profiling).
+            for _ in 0..<(Int(ProcessInfo.processInfo.environment["NGTABLE_BENCH_REPEAT"] ?? "") ?? 0) {
+                table.reloadData()
+                try await waitForBackgroundWork(table)
+            }
+            let start = ContinuousClock.now
+            table.reloadData()
+            table.layoutSubtreeIfNeeded()
+            let held = ContinuousClock.now - start
+            var jobs: [String] = []
+            if table.isSortingRows { jobs.append("sort") }
+            if table.isSearchingRows { jobs.append("search") }
+            if table.isGroupingRows { jobs.append("grouping") }
+            if table.isComputingSummary { jobs.append("summaries") }
+            // The longest turn of the run loop (events wait for the next one).
+            final class Turns: @unchecked Sendable { var last = ContinuousClock.now; var longest = 0.0; var span = (ContinuousClock.now, ContinuousClock.now) }
+            let turns = Turns()
+            // Busy from waking to going to sleep (or to the next turn).
+            let activities = CFRunLoopActivity.afterWaiting.rawValue | CFRunLoopActivity.beforeWaiting.rawValue | CFRunLoopActivity.beforeTimers.rawValue
+            let observer = CFRunLoopObserverCreateWithHandler(nil, activities, true, 0) { _, activity in
+                let now = ContinuousClock.now
+                if activity != .afterWaiting {
+                    let d = now - turns.last
+                    let ms = Double(d.components.attoseconds) / 1e15 + Double(d.components.seconds) * 1e3
+                    if ms > turns.longest { turns.longest = ms; turns.span = (turns.last, now) }
+                }
+                turns.last = now
+            }
+            CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
+            defer { CFRunLoopObserverInvalidate(observer) }
+            let longest = try await waitForBackgroundWork(table)
+            let total = ContinuousClock.now - start
+            print("BENCH all at once: reload held \(held), background \(jobs), then the run loop busy at most \(String(format: "%.1f", turns.longest)) ms at once (a 1 ms sleep waited \(String(format: "%.1f", longest)) ms), done after \(total)")
+        }
     }
 }
 #endif

@@ -423,6 +423,8 @@ extension NGTableView {
             guard table.sortSettle.generation == generation else { return }
             // Begun before the pointer came over the rows: it waits for it to leave.
             while self?.isLiveSortPaused == true { try? await Task.sleep(for: .milliseconds(30)) }
+            // Placed in a turn of the run loop of its own.
+            await NGBackgroundSlices.turnOfItsOwn()
             while self?.rowUpdateDepth ?? 0 > 0 { try? await Task.sleep(for: .milliseconds(2)) }
             guard let table = self, table.sortSettle.generation == generation else { return }
             table.finishSortSettle(settled)
@@ -507,7 +509,7 @@ extension NGTableView {
         sortTask = Task { [weak self] in
             // Reading, until every row (also the ones that came meanwhile) is read.
             while true {
-                await Task.yield()
+                await NGBackgroundSlices.nextSlice()
                 guard !Task.isCancelled, let table = self, table.sortGeneration == generation else { return }
                 guard let done = table.readBackgroundSortSlice() else {
                     // The data changed without telling the table: the reload starts over.
@@ -552,6 +554,8 @@ extension NGTableView {
                 job.cancel()
             }
             guard !cancellation.isCancelled else { return }
+            // Laid out in a turn of the run loop of its own.
+            await NGBackgroundSlices.turnOfItsOwn()
             // An open batch (one can span an `await`) finishes it at its end.
             while self.map({ $0.sortGeneration == generation && $0.rowUpdateBatch?.displayIsStale == true }) == true {
                 try? await Task.sleep(for: .milliseconds(5))
@@ -570,7 +574,7 @@ extension NGTableView {
         guard !job.isSnapshotTaken else { return true }
         guard let dataSource, rowUpdateBatch != nil || dataSource.numberOfRows(in: self) == numberOfSourceRows else { return nil }
         let capacity = job.read.count
-        let deadline = ContinuousClock.now.advanced(by: NGTableView.backgroundSlice)
+        let deadline = NGBackgroundSlices.deadline()
         // Numbers by range first, while handles are the row indexes: a call
         // per descriptor instead of one per row.
         if !job.askedForNumbers, rowHandles.isIdentity, rowUpdateDepth == 0 {
