@@ -218,6 +218,9 @@ extension NGTableView {
         guard let dataSource, row < numberOfSourceRows else { return }
         dataSource.tableView(self, setValue: value, for: column, row: row)
         if let index = tableColumns.firstIndex(where: { $0.id == column.id }) {
+            // The user's own edit moves its record at once, under the pointer too.
+            isApplyingUserEdit = true
+            defer { isApplyingUserEdit = false }
             reloadData(forRowIndexes: [row], columnIndexes: [index])
         }
         // The record may have moved by the time it's undone: found by its

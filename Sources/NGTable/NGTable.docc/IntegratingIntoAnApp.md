@@ -351,7 +351,12 @@ times a second reads better without motion.
 With ``NGTableView/sortsRows`` the table keeps the rows sorted as values
 change; otherwise sort and move the row, or sort and call
 ``NGTableView/reorderRows(from:to:)``
-(see <doc:SelectionAndSorting#Re-sorting-without-reloading>).
+(see <doc:SelectionAndSorting#Re-sorting-without-reloading>). While the pointer
+rests over the rows or a selection is dragged, the table's sort holds them in
+place so the row about to be clicked doesn't move away: values still change,
+new rows wait at the end, and the rows move when the pointer leaves
+(``NGTableView/pausesLiveSortUnderPointer``, on by default). The user's own
+edits move their record at once.
 
 To show what changed, give columns a ``NGTableColumn/changeHighlight``: a
 visible cell whose value an update changed flashes and fades, green or red for

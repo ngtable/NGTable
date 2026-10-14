@@ -544,7 +544,8 @@ extension NGTableView {
     /// Search words, group keys and column filters' values are formatted text
     /// too: read again; the table's sort of text follows the new language's rules.
     func readLocaleDependentKeysAgain() {
-        if sortsRows, !sortDescriptors.isEmpty {
+        // (Numbers sort the same in any language.)
+        if sortsRows, !sortDescriptors.isEmpty, sortKeys?.comparesWithoutText != true {
             sortOrderNeedsRebuild = true
             applyTableSort()
         }

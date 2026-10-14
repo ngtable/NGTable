@@ -162,6 +162,23 @@ extension NGTableView {
         return count.multipliedReportingOverflow(by: 16).partialValue
     }
 
+    /// Whether the table's sort holds the rows in place now (see
+    /// `pausesLiveSortUnderPointer`): the pointer is over a row of a window
+    /// that shows the table, or a press in the rows hasn't ended.
+    var isLiveSortPaused: Bool {
+        guard pausesLiveSortUnderPointer, sortsRows, !isApplyingUserEdit else { return false }
+        if isPressingRows { return true }
+        guard let location = pointerWindowLocation, let window, window.isVisible || pointerLocationForTesting != nil else { return false }
+        let point = convert(location, from: nil)
+        return bounds.contains(point) && row(at: point) >= 0
+    }
+
+    /// The rows held while the sort paused go where they go.
+    func resumeLiveSortIfNeeded() {
+        guard !isLiveSortPaused, sortSettle.hasPending else { return }
+        scheduleSortSettle()
+    }
+
     /// Marks rows (handles) whose sort values are read again (targeted updates).
     func invalidateSortKeys(forRows rows: IndexSet) {
         guard !rows.isEmpty else { return }
@@ -357,7 +374,8 @@ extension NGTableView {
         // places, rows gone leave and new ones go to the end, and a round in
         // the background puts them where they go.
         let cost = movingCount &* max(1, Int(log2(Double(max(2, numberOfSourceRows)))))
-        if isSettlingSort || (numberOfSourceRows >= synchronousSortLimit && cost > synchronousPlacementLimit) {
+        // Held under the pointer too (see `pausesLiveSortUnderPointer`).
+        if isSettlingSort || isLiveSortPaused || (numberOfSourceRows >= synchronousSortLimit && cost > synchronousPlacementLimit) {
             if sortSettle.isInFlight {
                 sortSettle.goneSince.append(contentsOf: gone)
                 sortSettle.newSince.append(contentsOf: sortRowsInserted)
@@ -377,7 +395,8 @@ extension NGTableView {
     /// thread, from a snapshot of the order and the sort values (which are
     /// read already), at most every 50 ms.
     func scheduleSortSettle() {
-        guard !sortSettle.isInFlight, sortSettle.hasPending else { return }
+        // Held under the pointer: placed when it leaves (`resumeLiveSortIfNeeded`).
+        guard !sortSettle.isInFlight, sortSettle.hasPending, !isLiveSortPaused else { return }
         sortSettle.isInFlight = true
         let generation = sortSettle.generation
         let wait = sortSettle.lastStart.map { max(.zero, .milliseconds(50) - $0.duration(to: .now)) } ?? .zero
@@ -402,6 +421,10 @@ extension NGTableView {
             }.value
             while table.rowUpdateDepth > 0 { try? await Task.sleep(for: .milliseconds(2)) }
             guard table.sortSettle.generation == generation else { return }
+            // Begun before the pointer came over the rows: it waits for it to leave.
+            while self?.isLiveSortPaused == true { try? await Task.sleep(for: .milliseconds(30)) }
+            while self?.rowUpdateDepth ?? 0 > 0 { try? await Task.sleep(for: .milliseconds(2)) }
+            guard let table = self, table.sortSettle.generation == generation else { return }
             table.finishSortSettle(settled)
         }
     }
