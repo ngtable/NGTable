@@ -332,6 +332,7 @@ extension NGTableView {
     func rowsMouseDown(_ event: NSEvent, in region: NGRegionView) {
         // Display rows don't mean the data source's rows in a batch that moved them.
         guard !ignoresUserInput else { return }
+        isPressingRows = true
         // A header interaction still going on lost its mouse up (e.g. to a menu).
         if isHeaderInteracting {
             cancelHeaderInteraction()
@@ -492,6 +493,7 @@ extension NGTableView {
     }
 
     func rowsMouseUp(_ event: NSEvent) {
+        defer { isPressingRows = false }
         if endControlPress(event) { return }
         rowDragPress = nil
         // (The record may have moved since the press: found where it is now.)

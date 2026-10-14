@@ -574,6 +574,23 @@ public final class NGTableView: NSView {
     /// do. Off by default: a feed that ticks many times a second reads better
     /// without motion.
     public var animatesSortMoves = false
+
+    /// Whether the table's own sort (`sortsRows`) holds the rows in place
+    /// while the pointer rests over them or a selection is dragged, so the
+    /// row about to be clicked doesn't move away. Their values still change;
+    /// rows that came meanwhile wait at the end. When the pointer leaves the
+    /// rows (or the drag ends), they move to where they go. The user's own
+    /// edits (a check box, a choice, an edited cell) move their record at
+    /// once. On by default.
+    public var pausesLiveSortUnderPointer = true {
+        didSet { if !pausesLiveSortUnderPointer { resumeLiveSortIfNeeded() } }
+    }
+    /// Whether the user's own edit of a cell is being applied (it isn't held).
+    var isApplyingUserEdit = false
+    /// Whether the mouse button went down in the rows and is still down.
+    var isPressingRows = false {
+        didSet { if !isPressingRows { resumeLiveSortIfNeeded() } }
+    }
     /// The running row animation (see NGRowAnimation.swift).
     var rowAnimation: NGRowAnimation?
     var rowAnimationLink: CADisplayLink?
@@ -2313,7 +2330,11 @@ public final class NGTableView: NSView {
     weak var pointerOverCell: NGDrawnCell?
     var showsPointingHand = false
     /// Where the pointer last was (window coordinates), for an editable rating's preview.
-    var pointerWindowLocation: NSPoint?
+    var pointerWindowLocation: NSPoint? {
+        didSet { if isLiveSortPaused != wasLiveSortPaused { wasLiveSortPaused = isLiveSortPaused; resumeLiveSortIfNeeded() } }
+    }
+    /// Whether the live sort was held when the pointer last moved.
+    var wasLiveSortPaused = false
     /// Asks for frames while an indeterminate progress bar is drawn (see `syncProgressAnimation`).
     var progressLink: CADisplayLink?
     var drawsIndeterminateProgress = false

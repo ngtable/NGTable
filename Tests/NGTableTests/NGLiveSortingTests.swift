@@ -509,6 +509,25 @@ struct NGLiveSortingTests {
         #expect(table.groupKeys != nil && table.searchIndex != nil)
     }
 
+    /// A locale change sorts text again (its collation changed), not numbers.
+    @Test func aLocaleChangeSortsTextAgainNotNumbers() async throws {
+        let records = Records(count: 100)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        table.sortDescriptors = [NSSortDescriptor(key: "profit", ascending: true)]
+        // Sorting again shows as a sort in the background.
+        table.synchronousSortLimit = 10
+        table.currentLocaleDidChange(Notification(name: NSLocale.currentLocaleDidChangeNotification))
+        #expect(!table.isSortingRows)
+        table.synchronousSortLimit = .max
+        table.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        table.synchronousSortLimit = 10
+        table.currentLocaleDidChange(Notification(name: NSLocale.currentLocaleDidChangeNotification))
+        #expect(table.isSortingRows)
+        #expect(try await waitWhile { table.isSortingRows })
+        #expect(shown(table) == records.expectedOrder(table.sortDescriptors, tableView: table))
+    }
+
     /// A live sort by a number column places changed rows where a full sort
     /// puts them, for -0, NaN (empty), infinities, many equal values (the
     /// status, then the data source order decide), both ways, with rows
