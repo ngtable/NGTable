@@ -153,7 +153,9 @@ extension NGTableView {
 
     /// The data source column for a summary input (defined, hidden or not in the table).
     func summaryColumn(_ columnID: String) -> NGTableColumn {
-        tableColumns.first { $0.id == columnID } ?? NGTableColumn(columnID, title: columnID)
+        // By id (a search of the columns copied each one it passed, for every
+        // summarized column of every batch).
+        columnLayout.columnsByID[columnID] ?? tableColumns.first { $0.id == columnID } ?? NGTableColumn(columnID, title: columnID)
     }
 
     func readSourceValues(of columnIDs: Set<String>) {
@@ -581,8 +583,10 @@ extension NGTableView {
 
     /// The summary texts of the columns in a context, as displayed.
     private func summaryStrings(in context: inout SummaryContext) -> [String: String] {
+        let columns = columnLayout.allColumns
         var texts: [String: String] = [:]
-        for column in columnLayout.allColumns {
+        texts.reserveCapacity(columns.count)
+        for column in columns {
             guard let value = summaryValue(of: column, context: &context) else { continue }
             let isCount = if case .aggregate(.count, _) = column.summary { true } else { false }
             texts[column.id] = isCount
