@@ -118,6 +118,15 @@ struct NGConsistencyTests {
         func tableView(_ tableView: NGTableView, heightOfRow row: Int) -> CGFloat { Self.height(of: records[row]) }
     }
 
+    /// A feed whose names wrap in a narrow column: rows measured by the table.
+    final class WrappingFeed: Feed {}
+
+    /// What rows are as high as.
+    enum Heights: String, Sendable, CaseIterable, CustomTestStringConvertible {
+        case one, delegate, wrapped
+        var testDescription: String { rawValue }
+    }
+
     struct Configuration {
         var searchText = ""
         var searchColumns: Set<String>?
@@ -144,7 +153,9 @@ struct NGConsistencyTests {
         table.synchronousSortLimit = .max
         table.synchronousSearchLimit = .max
         table.synchronousSummaryLimit = .max
-        table.columns = columns
+        table.columns = feed is WrappingFeed
+            ? [.column(NGTableColumn("name", title: "Name", width: 70).wrappingText())] + columns.dropFirst()
+            : columns
         table.hiddenColumnIDs = configuration.hidden
         table.sortsRows = configuration.sortsRows
         table.sortDescriptors = configuration.sort
@@ -281,6 +292,17 @@ struct NGConsistencyTests {
             #expect(geometry.totalHeight == total, "\(context): rows' height", sourceLocation: sourceLocation)
         }
         log("fresh"); let fresh = fresh(like: table, feed, configuration)
+        if feed is WrappingFeed {
+            // Each display row as high as a fresh table measures it.
+            table.layoutSubtreeIfNeeded()
+            let heights = (0..<table.numberOfRows).map { table.rowGeometry.height(of: $0) }
+            let freshHeights = (0..<fresh.numberOfRows).map { fresh.rowGeometry.height(of: $0) }
+            if let row = heights.indices.first(where: { $0 >= freshHeights.count || heights[$0] != freshHeights[$0] }) {
+                Issue.record("\(context): display row \(row) is \(heights[row]) high, not \(row < freshHeights.count ? freshHeights[row] : -1)",
+                             sourceLocation: sourceLocation)
+            }
+            #expect(heights.count == freshHeights.count, "\(context): rows measured", sourceLocation: sourceLocation)
+        }
         log("snapshot"); let actual = snapshot(table, feed)
         log("snapshot fresh"); let expected = snapshot(fresh, feed)
         log("compare")
@@ -385,11 +407,20 @@ struct NGConsistencyTests {
                                         scope: .selectedRows)),
     ]
 
-    @Test(arguments: 0..<10, [false, true])
-    func liveUpdatesShowWhatAFreshTableShows(_ configurationIndex: Int, rowHeights: Bool) async {
+    @Test(arguments: 0..<10, Heights.allCases)
+    func liveUpdatesShowWhatAFreshTableShows(_ configurationIndex: Int, heights: Heights) async {
         let (name, configuration) = Self.configurations[configurationIndex]
         let seed = UInt64(configurationIndex + 1)
-        let feed = rowHeights ? FeedWithHeights(count: 300, seed: seed) : Feed(count: 300, seed: seed)
+        let feed = switch heights {
+        case .one: Feed(count: 300, seed: seed)
+        case .delegate: FeedWithHeights(count: 300, seed: seed)
+        case .wrapped: WrappingFeed(count: 300, seed: seed)
+        }
+        if heights == .wrapped {
+            // Names that wrap, some of them.
+            let plain = Self.makeTable(feed, Configuration())
+            #expect((0..<plain.numberOfRows).contains { plain.rowGeometry.height(of: $0) > plain.rowHeight })
+        }
         let table = Self.makeTable(feed, configuration)
         defer { withExtendedLifetime(feed) {} }
         // The selected records: they stay selected while they are shown.

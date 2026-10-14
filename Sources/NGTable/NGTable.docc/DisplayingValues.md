@@ -12,7 +12,7 @@ numbers and dates are written:
 | Value | Shown as | Summaries | Sorted with `sortsBefore` |
 | --- | --- | --- | --- |
 | `.empty` | Nothing | Left out | First |
-| `.text(String)` | The text, truncated with "…" | Left out | Like Finder (`localizedStandardCompare`) |
+| `.text(String)` | The text, truncated with "…" (or wrapped, see below) | Left out | Like Finder (`localizedStandardCompare`) |
 | `.number(Double)` | Formatted by the column's `format` | Included | Numerically; NaN last |
 | `.bool(Bool)` | "✓" for `true`, nothing for `false` (a check box in editable columns) | Left out | `false` first |
 | `.date(Date)` | Formatted by `.date(includesTime:)` | Left out | Chronologically |
@@ -31,6 +31,30 @@ String, integer and floating-point literals are values too, so
 Text cells show one line, with digits of numbers in monospaced figures so they
 line up in columns. The table only reads values of the cells in view, so
 large tables stay fast; see <doc:PerformanceAndThreading>.
+
+### Wrapped text
+
+A column made with ``NGTableColumn/wrappingText(maximumNumberOfLines:)``
+wraps its text onto more lines, and its rows grow to fit: the table measures
+each row by the most lines its wrapped cells take, as they are drawn, so
+there is nothing to compute or tell the table. Log messages, notes and
+addresses read in full:
+
+```swift
+NGTableColumn("message", title: "Message", width: 420).wrappingText()
+// At most three lines, the last one truncated with "…" (its tool tip shows all).
+NGTableColumn("notes", title: "Notes", width: 240).wrappingText(maximumNumberOfLines: 3)
+```
+
+Rows are measured again when they are reloaded, when a wrapping column's
+width changes and when the font or ``NGTableView/rowHeight`` (the height of
+one line's row) does; heights follow their records through sorting,
+filtering and grouping. The other cells of a taller row keep to its first
+line. Tables of up to 2,000 rows are measured at once; in larger ones rows are
+measured as they come into view (until then they count as one line), and
+the rows in view don't move while those above them grow. Rows whose heights
+the app knows itself come from the delegate instead (``NGTableViewRowHeights``).
+Printed tables show one line per row.
 
 ### Formats
 

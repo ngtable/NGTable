@@ -153,6 +153,7 @@ notification objects and userInfo keys:
 | `menuNeedsUpdate` with `clickedRow` | ``NGTableViewDelegate/tableView(_:menuForRows:clickedRow:column:)``, or the table's `menu` with ``NGTableView/clickedRow`` |
 | `tableView(_:heightOfRow:)` | the same, in ``NGTableViewRowHeights`` (conform the delegate to it) |
 | `noteHeightOfRows(withIndexesChanged:)` | not needed: reloading rows (``NGTableView/reloadData(forRowIndexes:columnIndexes:)``) asks for their heights again |
+| `usesAutomaticRowHeights` with wrapping text fields | ``NGTableColumn/wrappingText(maximumNumberOfLines:)``: rows are measured by their wrapped text, no flag |
 
 ### Selection, actions and sorting
 
@@ -236,7 +237,8 @@ These are the deliberate differences, and why.
   delegate conforms to ``NGTableViewRowHeights``; then each row has the height
   `tableView(_:heightOfRow:)` gives it, asked once and kept with the record
   through sorting, filtering and grouping, and asked again when the row is
-  reloaded. Group header rows keep ``NGTableView/rowHeight``. Dense live tables
+  reloaded. A column that wraps text (``NGTableColumn/wrappingText(maximumNumberOfLines:)``)
+  has the table measure rows itself. Group header rows keep ``NGTableView/rowHeight``. Dense live tables
   are best left at one height: rows under the pointer never shift.
 - term Group rows: Built in (``NGTableView/rowGrouping``) instead of the
   delegate's `tableView(_:isGroupRow:)` and the app inserting header rows.

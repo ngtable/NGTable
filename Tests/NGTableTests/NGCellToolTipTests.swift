@@ -52,5 +52,23 @@ struct NGCellToolTipTests {
         #expect(toolTip(row: 1, column: "name") == "Paused by the rules")
         #expect(toolTip(row: 0, column: "name") == nil)
     }
+
+    /// Wrapped text shows in full unless the column's line limit cuts it.
+    @Test(arguments: [0, 2])
+    func wrappedCellsOnlyWhenCut(_ maximumNumberOfLines: Int) throws {
+        let source = Source()
+        let frame = NSRect(x: 0, y: 0, width: 500, height: 300)
+        let window = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        defer { withExtendedLifetime((window, source)) {} }
+        let table = NGTableView(frame: frame)
+        table.columns = [.column(NGTableColumn("name", title: "Name", width: 80).wrappingText(maximumNumberOfLines: maximumNumberOfLines))]
+        window.contentView = table
+        table.dataSource = source
+        table.layoutSubtreeIfNeeded()
+        #expect(table.rowGeometry.height(of: 0) > table.rowHeight)
+        let x = CGFloat(try #require(table.geometry.center.columns.first).width / 2)
+        let toolTip = table.cellToolTip(at: NSPoint(x: x, y: table.rowGeometry.height(of: 0) / 2), in: table.centerRegion)
+        #expect(toolTip == (maximumNumberOfLines == 0 ? nil : "A campaign with a name far too long for its column"))
+    }
 }
 #endif

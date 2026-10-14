@@ -113,6 +113,18 @@ public struct NGTableColumn: Identifiable, Sendable, Hashable {
     /// Whether the header offers a filter for the column, when the table
     /// allows column filters (`NGTableView.allowsColumnFilters`).
     public var isFilterable: Bool
+    /// Whether text wraps onto more lines instead of being truncated: rows
+    /// are as high as their wrapped text needs (see `wrappingText(maximumNumberOfLines:)`).
+    public var wrapsText: Bool = false
+    /// With `wrapsText`, the most lines a cell shows (the last one truncated
+    /// with "…"); 0: as many as the text needs.
+    public var maximumNumberOfLines: Int = 0
+
+    /// The most lines a cell of the column shows: 1 unless it wraps.
+    var lineLimit: Int {
+        guard wrapsText else { return 1 }
+        return maximumNumberOfLines > 0 ? maximumNumberOfLines : .max
+    }
 
     /// - Parameters:
     ///   - id: Unique across all columns and groups of the table; also the key
@@ -183,6 +195,20 @@ public struct NGTableColumn: Identifiable, Sendable, Hashable {
         self.conditionalFormat = conditionalFormat
         self.isEditable = isEditable
         self.editChoices = editChoices
+    }
+
+    /// The column with its text wrapped onto more lines (`wrapsText`): rows
+    /// grow to fit their wrapped text, at most `maximumNumberOfLines` (0: as
+    /// many as it needs).
+    ///
+    /// ```swift
+    /// NGTableColumn("message", title: "Message", width: 400).wrappingText()
+    /// ```
+    public func wrappingText(maximumNumberOfLines: Int = 0) -> NGTableColumn {
+        var column = self
+        column.wrapsText = true
+        column.maximumNumberOfLines = max(0, maximumNumberOfLines)
+        return column
     }
 
     /// The name in menus: the title, or for untitled columns (e.g. a narrow
