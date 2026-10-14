@@ -384,6 +384,13 @@ extension NGTableView {
             if changedRows != nil, !parentsChanged, !reordered, rowMap == previousRowMap, groupedDisplay != nil {
                 return DisplayRowsChange(regrouped: false, reordered: false)
             }
+            // Rows inserted and removed, nothing else: only they are placed
+            // (sorted, only they were taken out of the order or put in).
+            if let edits = treeEdits, rowMap == nil, previousRowMap == nil,
+               !reordered || sortPlacedInLastUpdate?.allSatisfy({ edits.inserted.contains(Int32($0)) || edits.removed.contains(Int32($0)) }) == true,
+               layOutTreeEdits(inserted: edits.inserted, removed: edits.removed) {
+                return DisplayRowsChange(reordered: false)
+            }
             buildTreeDisplay(readingParents: false)
             return DisplayRowsChange(reordered: reordered)
         }
