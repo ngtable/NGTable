@@ -347,16 +347,17 @@ public final class NGTableView: NSView {
         }
         let count = numberOfRows
         let rowHeight = rowHeight
-        let sorted = groupedDisplay == nil ? sortedDisplay?.integerElements : nil
-        // The display rows' handles (-1: a group header), in order.
+        let identity = rowHandles.isIdentity
+        let sorted = groupedDisplay == nil ? sortedDisplay : nil
+        // The display rows' handles (-1: a group header), in order, by buffers.
         func forEachHandle(_ body: (Int) -> Void) {
             if let groupedDisplay {
-                for entry in groupedDisplay.prefix(count) { body(entry) }
+                groupedDisplay.withUnsafeBufferPointer { for entry in $0 { body(entry) } }
             } else if let sorted {
-                for handle in sorted.prefix(count) { body(handle) }
+                sorted.forEachBlock { for handle in $0 { body(Int(handle)) } }
             } else if let rowMap {
-                for handle in rowMap.prefix(count) { body(handle) }
-            } else if rowHandles.isIdentity {
+                rowMap.withUnsafeBufferPointer { for handle in $0 { body(handle) } }
+            } else if identity {
                 for row in 0..<min(count, rowHandles.capacity) { body(row) }
             } else {
                 for row in 0..<count { body(handle(ofRow: row)) }
@@ -371,21 +372,26 @@ public final class NGTableView: NSView {
                 rowHeightsByHandle[handle] = max(1, provider.tableView(self, heightOfRow: row))
             }
         }
-        var tops: [CGFloat] = []
-        tops.reserveCapacity(count + 1)
-        tops.append(0)
-        var y: CGFloat = 0
-        rowHeightsByHandle.withUnsafeBufferPointer { heights in
-            forEachHandle { handle in
-                let height = handle >= 0 && handle < heights.count ? heights[handle] : rowHeight
-                y += height.isNaN ? rowHeight : height
-                tops.append(y)
+        let tops = rowHeightsByHandle.withUnsafeBufferPointer { heights in
+            [CGFloat](unsafeUninitializedCapacity: count + 1) { tops, initialized in
+                tops[0] = 0
+                var written = 1
+                var y: CGFloat = 0
+                forEachHandle { handle in
+                    // In the middle of a batch the orders may not match the count yet.
+                    guard written <= count else { return }
+                    let height = handle >= 0 && handle < heights.count ? heights[handle] : rowHeight
+                    y += height.isNaN ? rowHeight : height
+                    tops[written] = y
+                    written += 1
+                }
+                while written <= count {
+                    y += rowHeight
+                    tops[written] = y
+                    written += 1
+                }
+                initialized = written
             }
-        }
-        // In the middle of a batch the orders may not match the count yet.
-        while tops.count < count + 1 {
-            y += rowHeight
-            tops.append(y)
         }
         return NGRowGeometry(rowHeight: rowHeight, tops: tops)
     }

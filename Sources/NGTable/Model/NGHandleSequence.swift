@@ -211,6 +211,11 @@ struct NGHandleSequence: Sendable {
         }
     }
 
+    /// Every block of handles in order, without an array of them all.
+    func forEachBlock(_ body: (UnsafeBufferPointer<Int32>) -> Void) {
+        for id in order { blocks[Int(id)].withUnsafeBufferPointer(body) }
+    }
+
     /// Every handle in order with its position, without an array of them.
     func forEachHandle(_ body: (_ position: Int, _ handle: Int32) -> Void) {
         var position = 0
