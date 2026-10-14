@@ -310,7 +310,7 @@ struct NGDataTableTests {
         #expect(table.draggingUpdated(drop) == .copy)
         #expect(table.performDragOperation(drop))
         // (Decoded in the background: a busy suite may take long to come back.)
-        try await eventually(within: .seconds(60)) { !log.dropped.isEmpty }
+        try await eventually { !log.dropped.isEmpty }
         #expect(log.dropped.first?.0 == ["Hello"] && log.dropped.first?.1 == 5)
         #expect(table.registeredDraggedTypes.contains(NSPasteboard.PasteboardType(UTType.plainText.identifier)))
         // From macOS 15.2 the type tells the content types it takes.

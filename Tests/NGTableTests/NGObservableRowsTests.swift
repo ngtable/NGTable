@@ -46,7 +46,7 @@ struct NGObservableRowsTests {
         #expect(table.summaryValue(forColumnID: spend) == 210)
         // A row changes inside: the summary and its cell follow.
         rows[0].spend = 101
-        try await eventually(within: .seconds(60)) { table.summaryValue(forColumnID: spend) == 310 }
+        try await eventually { table.summaryValue(forColumnID: spend) == 310 }
         #expect(table.summaryValue(forColumnID: spend) == 310)
         let column = try #require(table.tableColumns.last)
         let row = try #require(table.displayRow(forSourceRow: 0))
@@ -55,14 +55,14 @@ struct NGObservableRowsTests {
         table.sortDescriptors = [NSSortDescriptor(key: spend, ascending: false)]
         #expect(table.sourceRow(0) == 0)
         rows[5].spend = 1_000
-        try await eventually(within: .seconds(60)) { table.sourceRow(0) == 5 }
+        try await eventually { table.sourceRow(0) == 5 }
         #expect(table.sourceRow(0) == 5)
         // Many changes, read once: one batch.
         let coordinator = try #require(table.dataSource as? NGDataTableCoordinator<Campaign>)
         let (batches, reloaded) = (coordinator.observedBatches, coordinator.observedRowsReloaded)
         for campaign in rows { campaign.spend += 1 }
         let total = rows.reduce(0) { $0 + $1.spend }
-        try await eventually(within: .seconds(60)) { table.summaryValue(forColumnID: spend) == total }
+        try await eventually { table.summaryValue(forColumnID: spend) == total }
         #expect(table.summaryValue(forColumnID: spend) == total)
         #expect(coordinator.observedBatches - batches == 1)
         #expect(coordinator.observedRowsReloaded - reloaded == rows.count)
@@ -70,7 +70,7 @@ struct NGObservableRowsTests {
         table.rowFilter = NGRowFilter(searchText: "zebra")
         #expect(table.numberOfRows == 0)
         rows[3].name = "Zebra"
-        try await eventually(within: .seconds(60)) { table.numberOfRows == 1 }
+        try await eventually { table.numberOfRows == 1 }
         #expect(table.numberOfRows == 1)
     }
 }

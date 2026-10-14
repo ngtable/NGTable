@@ -15,8 +15,10 @@ import Testing
 //     NGTABLE_RECORD_SNAPSHOTS=1 swift test --filter NGFrameSnapshotTests
 //
 // On a mismatch the frame and a difference image are written to
-// $TMPDIR/NGTableSnapshots (the failure message has the path). The fonts are
-// the system's: a new macOS version may need new references.
+// $TMPDIR/NGTableSnapshots (the failure message has the path). The fonts and
+// SF Symbols are the system's: a new macOS version, or symbols the system
+// updated by itself, may need new references (look at the difference images
+// first: only the symbols or text should differ).
 
 /// Reference images: comparing with them and recording them.
 @MainActor

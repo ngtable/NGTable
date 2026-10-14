@@ -774,9 +774,7 @@ struct NGTableViewTests {
         // Not at once: quick computations don't flash a spinner.
         #expect(!table.isSummaryProgressVisible)
         // Tests run in parallel, so wait for it rather than for a fixed time.
-        for _ in 0..<300 where !table.isSummaryProgressVisible && table.isComputingSummary {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        try await waitWhile { !table.isSummaryProgressVisible && table.isComputingSummary }
         #expect(table.isSummaryProgressVisible)
         try await waitForSummary(of: table)
         #expect(!table.isSummaryProgressVisible)
@@ -1262,9 +1260,7 @@ struct NGTableViewTests {
     }
 
     private func waitForSummary(of table: NGTableView) async throws {
-        for _ in 0..<500 where table.isComputingSummary {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        try await waitWhile { table.isComputingSummary }
         #expect(!table.isComputingSummary)
     }
 }

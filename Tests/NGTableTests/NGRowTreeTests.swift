@@ -208,10 +208,7 @@ struct NGRowTreeTests {
         try await _Concurrency.Task.sleep(for: .milliseconds(30))
         table.endUpdates()
         turns = 0
-        while table.isComputingSummary || table.summaryTask != nil, turns < 10_000 {
-            try await _Concurrency.Task.sleep(for: .milliseconds(1))
-            turns += 1
-        }
+        try await waitWhile { table.isComputingSummary || table.summaryTask != nil }
         #expect(!watcher.reports.isEmpty)
         #expect(watcher.reports.allSatisfy { !$0.computing && !$0.running })
         #expect(watcher.reports.last?.total == 1_000)

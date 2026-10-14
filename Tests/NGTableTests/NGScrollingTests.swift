@@ -267,7 +267,7 @@ struct NGScrollingTests {
         table.scrollWheel(with: try wheelEvent(phase: 4))
         #expect(posted == ["start", "live"])
         // (Under a busy suite the main thread may come back to it late.)
-        try await eventually(within: .seconds(60)) { posted.last == "end" }
+        try await eventually { posted.last == "end" }
         #expect(posted == ["start", "live", "end"])
         // The overlay scroller, pressed and let go.
         posted = []

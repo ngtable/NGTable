@@ -533,15 +533,11 @@ struct NGConsistencyTests {
                 break
             }
             if feed.random(3) == 0 {
-                for _ in 0..<2_000 where table.isSortingRows || table.isSearchingRows || table.isComputingSummary {
-                    try? await Task.sleep(for: .milliseconds(1))
-                }
+                _ = try? await waitWhile { table.isSortingRows || table.isSearchingRows || table.isComputingSummary }
                 Self.expectSame(table, feed, configuration, "seed \(seed), round \(round)")
             }
         }
-        for _ in 0..<2_000 where table.isSortingRows || table.isSearchingRows || table.isComputingSummary {
-            try? await Task.sleep(for: .milliseconds(1))
-        }
+        _ = try? await waitWhile { table.isSortingRows || table.isSearchingRows || table.isComputingSummary }
         #expect(!table.isSortingRows && !table.isSearchingRows && !table.isComputingSummary)
         Self.expectSame(table, feed, configuration, "seed \(seed), done")
     }

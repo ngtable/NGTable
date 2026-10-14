@@ -308,10 +308,7 @@ struct NGKeptRecordTests {
         // A selected record removed meanwhile, and its handle given to a newcomer.
         records.remove(0, from: table)
         records.insertFresh(at: 0, into: table)
-        let start = ContinuousClock.now
-        while table.isCopying, ContinuousClock.now - start < .seconds(60) {
-            try await Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isCopying }
         let copied = try #require(pasteboard.string(forType: .string))
         #expect(!copied.contains("Fresh"))
         #expect(copied.hasPrefix("Campaign 1286\t2\t"))
@@ -335,10 +332,7 @@ struct NGKeptRecordTests {
         table.synchronousCopyLimit = 100
         table.copy(nil)
         #expect(table.isCopying)
-        let start = ContinuousClock.now
-        while table.isCopying, ContinuousClock.now - start < .seconds(60) {
-            try await _Concurrency.Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isCopying }
         #expect(pasteboard.string(forType: .string) == expected)
     }
 
@@ -369,10 +363,7 @@ struct NGKeptRecordTests {
             await _Concurrency.Task.yield()
         }
         #expect(reloads >= 4)
-        let start = ContinuousClock.now
-        while table.isCopying, ContinuousClock.now - start < .seconds(60) {
-            try await _Concurrency.Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isCopying }
         let copied = try #require(pasteboard.string(forType: .string))
         #expect(copied.split(separator: "\n").count == count)
     }

@@ -390,10 +390,7 @@ struct NGLiveSortingTests {
             table.endUpdates()
             await Task.yield()
         }
-        let start = ContinuousClock.now
-        while table.isSearchingRows, ContinuousClock.now - start < .seconds(60) {
-            try await Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isSearchingRows }
         #expect(!table.isSearchingRows)
         #expect(shown(table) == expected("campaign 12"))
         let total = expected("campaign 12").reduce(0) { $0 + records.records[$1].profit }
@@ -453,20 +450,14 @@ struct NGLiveSortingTests {
         let expected = table.copyText(forRows: table.selectedRowIndexes)
         table.copy(nil)
         #expect(table.isCopying)
-        let start = ContinuousClock.now
-        while table.isCopying, ContinuousClock.now - start < .seconds(60) {
-            try await Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isCopying }
         #expect(pasteboard.string(forType: .string) == expected)
         // A row removed while the values are read is left out.
         table.selectRowIndexes(IndexSet(integersIn: 0..<3_000), byExtendingSelection: false)
         table.copy(nil)
         records.records.remove(at: 2_999)
         table.removeRows(at: [2_999])
-        let restart = ContinuousClock.now
-        while table.isCopying, ContinuousClock.now - restart < .seconds(60) {
-            try await Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isCopying }
         #expect(pasteboard.string(forType: .string) == table.copyText(forRows: IndexSet(integersIn: 0..<2_999)))
     }
 
@@ -610,8 +601,7 @@ struct NGLiveSortingTests {
             // Rounds run now and then while the rows go on changing.
             if round % 4 == 3 { try await Task.sleep(for: .milliseconds(20)) }
         }
-        let start = ContinuousClock.now
-        while table.isSettlingSort, start.duration(to: .now) < .seconds(60) { try await Task.sleep(for: .milliseconds(5)) }
+        try await waitWhile { table.isSettlingSort }
         #expect(!table.isSettlingSort)
         #expect(shown(table) == expected())
     }
@@ -645,8 +635,7 @@ struct NGLiveSortingTests {
         table.layoutSubtreeIfNeeded()
         let before = recordsInView()
         let reads = records.nameReads
-        let start = ContinuousClock.now
-        while table.isSettlingSort, start.duration(to: .now) < .seconds(60) { try await Task.sleep(for: .milliseconds(5)) }
+        try await waitWhile { table.isSettlingSort }
         #expect(!table.isSettlingSort)
         table.layoutSubtreeIfNeeded()
         let after = recordsInView()
@@ -688,8 +677,7 @@ struct NGLiveSortingTests {
             #expect(table.keptSelection != nil, "round \(round)")
             if round % 3 == 2 { try await Task.sleep(for: .milliseconds(60)) }
         }
-        let start = ContinuousClock.now
-        while table.isSettlingSort, start.duration(to: .now) < .seconds(60) { try await Task.sleep(for: .milliseconds(5)) }
+        try await waitWhile { table.isSettlingSort }
         #expect(table.keptSelection != nil)
         for row in 0..<30 {
             #expect(table.isDisplayRowSelected(row) == selected.contains(records.records[table.sourceRow(row)].id), "row \(row)")
@@ -752,10 +740,7 @@ struct NGLiveSortingTests {
     }
 
     private func waitForSort(_ table: NGTableView) async throws {
-        let start = ContinuousClock.now
-        while table.isSortingRows, ContinuousClock.now - start < .seconds(60) {
-            try await Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isSortingRows }
         #expect(!table.isSortingRows)
     }
 

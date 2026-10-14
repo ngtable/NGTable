@@ -126,7 +126,7 @@ struct NGCollationSortTests {
         table.dataSource = source
         table.sortsRows = true
         table.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-        for _ in 0..<30_000 where table.isSortingRows { try await Task.sleep(for: .milliseconds(1)) }
+        try await waitWhile { table.isSortingRows }
         #expect(!table.isSortingRows)
         let shown = (0..<table.numberOfRows).map { source.names[table.sourceRow($0)] }
         let expected = source.names.indices.sorted { a, b in

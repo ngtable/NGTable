@@ -383,9 +383,7 @@ struct NGRowGroupingTests {
         table.reloadData()
         #expect(table.isComputingSummary)
         #expect(table.subtotalTexts(ofNode: x)["spend"] == "32")
-        for _ in 0..<1_000 where table.isComputingSummary {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        try await waitWhile { table.isComputingSummary }
         #expect(!table.isComputingSummary)
         #expect(table.subtotalTexts(ofNode: x)["spend"] == "32")
         withExtendedLifetime(dataSource) {}

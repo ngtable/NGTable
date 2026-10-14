@@ -124,9 +124,7 @@ struct NGBackgroundFeedTests {
         table.removeRows(at: [feed.records.count])
         for _ in 0..<50 { await Task.yield() }
         table.endUpdates()
-        for _ in 0..<2_000 where table.isSearchingRows || table.isSortingRows || table.isComputingSummary {
-            try await Task.sleep(for: .milliseconds(2))
-        }
+        try await waitWhile { table.isSearchingRows || table.isSortingRows || table.isComputingSummary }
         NGConsistencyTests.expectSame(table, feed, configuration, "after the batch")
     }
 }

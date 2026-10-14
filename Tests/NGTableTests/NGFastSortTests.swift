@@ -76,7 +76,7 @@ struct NGFastSortTests {
         source.cellReads = 0
         table.sortsRows = true
         table.sortDescriptors = [NSSortDescriptor(key: "v", ascending: false)]
-        for _ in 0..<30_000 where table.isSortingRows { try await Task.sleep(for: .milliseconds(1)) }
+        try await waitWhile { table.isSortingRows }
         #expect(!table.isSortingRows)
         #expect(source.batchCalls == 1)
         #expect(source.cellReads < 200)   // The visible cells only.

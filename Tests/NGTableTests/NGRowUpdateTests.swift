@@ -1319,11 +1319,8 @@ struct NGHandleIndexSetTests {
 /// and its timers meanwhile), at most `timeout`: a condition, not a guess
 /// of how long tests running alongside hold the main thread.
 @MainActor
-func eventually(within timeout: Duration = .seconds(5), _ condition: () -> Bool) async throws {
-    let deadline = ContinuousClock.now + timeout
-    while !condition(), ContinuousClock.now < deadline {
-        try await _Concurrency.Task.sleep(for: .milliseconds(5))
-    }
+func eventually(within timeout: Duration = .seconds(300), _ condition: () -> Bool) async throws {
+    try await waitWhile(timeout: timeout, poll: .milliseconds(5)) { !condition() }
 }
 
 /// A small deterministic random number generator, so a failing run repeats.
