@@ -79,10 +79,13 @@ final class NGFontRegistry: @unchecked Sendable {
 }
 
 /// A character's glyph and advance as Core Text lays it out alone; glyph 0:
-/// the font has none (another font draws it, or it takes more glyphs).
+/// it isn't simple (a font draws it that isn't taken, or it takes more glyphs).
 struct NGSimpleGlyph: Sendable {
     let glyph: CGGlyph
     let advance: CGFloat
+    /// The id of the fallback font that draws it (CJK, kana, Hangul), or -1
+    /// for the line's font.
+    var font = -1
 }
 
 /// What lines of a font's simple characters are made of, as learned so far.
@@ -101,6 +104,77 @@ struct NGSimpleFontMetrics: Sendable {
     static func colonKey(_ previous: UInt16?, _ next: UInt16?) -> UInt32 {
         UInt32(previous ?? 0) << 16 | UInt32(next ?? 0)
     }
+
+    /// Characters in the fallback font of the characters before them (by
+    /// `fontID << 16 | unit`; glyph 0: that font has none).
+    var inFallback: [UInt64: NGSimpleGlyph] = [:]
+
+    static func fallbackKey(_ fontID: Int, _ unit: UInt16) -> UInt64 { UInt64(fontID) << 16 | UInt64(unit) }
+
+    enum Resolution {
+        case glyphs([NGSimpleGlyph])
+        case notSimple
+        /// A character, or a character in a fallback font, not learned yet.
+        case unknown(fallback: (font: Int, unit: UInt16)?)
+    }
+
+    /// Each character's glyph as Core Text draws it in the line, one after
+    /// another (no array of them): characters the line's font lacks take
+    /// the fallback font of the characters before them while it has them
+    /// (Core Text picks one font for as many of them in a row as it can),
+    /// otherwise their own. Lines with Hangul and other CJK characters
+    /// aren't simple: Core Text draws ideographs near Hangul with a Korean
+    /// font, looking ahead too.
+    struct Resolver {
+        enum Step {
+            case glyph(NGSimpleGlyph)
+            case notSimple
+            /// A character, or a character in a fallback font, not learned yet.
+            case unknown(fallback: (font: Int, unit: UInt16)?)
+        }
+
+        // (The metrics come with each character: a copy of them here would
+        // retain their tables for every line, from every thread at once.)
+        private var current = -1
+        private var hasHangul = false, hasOtherCJK = false
+
+        mutating func next(_ unit: UInt16, in metrics: NGSimpleFontMetrics) -> Step {
+            guard let glyph = metrics.glyphs[unit] else { return .unknown(fallback: nil) }
+            guard glyph.glyph != 0 else { return .notSimple }
+            guard glyph.font >= 0 else {
+                current = -1
+                return .glyph(glyph)
+            }
+            if (0xAC00...0xD7A3).contains(unit) { hasHangul = true } else { hasOtherCJK = true }
+            if hasHangul, hasOtherCJK { return .notSimple }
+            if current >= 0, current != glyph.font {
+                guard let other = metrics.inFallback[NGSimpleFontMetrics.fallbackKey(current, unit)] else {
+                    return .unknown(fallback: (current, unit))
+                }
+                if other.glyph != 0 { return .glyph(other) }
+            }
+            current = glyph.font
+            return .glyph(glyph)
+        }
+    }
+
+    /// Whether the line resolves; the first fallback glyph to learn if not.
+    func resolves(_ units: [UInt16]) -> Resolver.Step {
+        var resolver = Resolver()
+        for unit in units {
+            let step = resolver.next(unit, in: self)
+            guard case .glyph = step else { return step }
+        }
+        return .glyph(NGSimpleGlyph(glyph: 1, advance: 0))
+    }
+
+    /// How a pair is kerned (`nil`: not learned; NaN: laid out otherwise).
+    /// Characters of fallback fonts aren't kerned: Core Text kerns neither
+    /// across fonts nor CJK text.
+    func kerning(_ first: UInt16, _ second: UInt16) -> CGFloat? {
+        if (glyphs[first]?.font ?? -1) >= 0 || (glyphs[second]?.font ?? -1) >= 0 { return 0 }
+        return kerning[UInt32(first) << 16 | UInt32(second)]
+    }
 }
 
 /// Simple characters: scripts laid out a character at a time.
@@ -108,9 +182,11 @@ enum NGSimpleText {
     /// Characters simple lines take: one glyph each, kerned by pairs,
     /// without combining marks, which Core Text positions on the letter
     /// before. The colon too: between digits the system font raises it (a
-    /// contextual form, learned once per font). Characters the font has no
-    /// glyph for still go to Core Text.
-    static let characters: [ClosedRange<UInt16>] = [
+    /// contextual form, learned once per font). CJK, kana and Hangul
+    /// syllables are drawn by the fallback font Core Text picks for each
+    /// (learned once), not kerned. Other characters the font has no glyph
+    /// for still go to Core Text.
+    static let characters: [ClosedRange<UInt16>] = fallbackCharacters + [
         0x0020...0x007E,                    // ASCII.
         0x00A0...0x00AC, 0x00AE...0x024F,   // Latin-1 (no soft hyphen), Latin Extended-A and -B.
         0x0386...0x0386, 0x0388...0x03CE,   // Greek.
@@ -120,9 +196,29 @@ enum NGSimpleText {
         0x2116...0x2116, 0x2122...0x2122, 0x2190...0x2193, 0x2212...0x2212,   // №, ™, arrows, minus.
     ]
 
+    /// Characters drawn by a fallback font, one glyph each: CJK punctuation,
+    /// kana, the unified ideographs, Hangul syllables, full-width forms. Not
+    /// the rare kana (ゔ, ゕ, ヷ…) and ideographs (extension A, compatibility),
+    /// which other fallback fonts draw, switched to by rules of Core Text's own.
+    static let fallbackCharacters: [ClosedRange<UInt16>] = [
+        0x3000...0x303F, 0x3041...0x3093, 0x309D...0x309E,   // CJK punctuation, hiragana.
+        0x30A1...0x30F6, 0x30FB...0x30FE,                    // Katakana.
+        0x4E00...0x9FFF,                                     // Ideographs.
+        0xAC00...0xD7A3,                                     // Hangul syllables.
+        0xFF01...0xFF60, 0xFFE0...0xFFE6,                    // Full-width forms.
+    ]
+
+    private static let fallbackTable: [Bool] = {
+        var table = [Bool](repeating: false, count: 0x10000)
+        for range in fallbackCharacters { for unit in range { table[Int(unit)] = true } }
+        return table
+    }()
+
+    static func isDrawnByFallback(_ unit: UInt16) -> Bool { fallbackTable[Int(unit)] }
+
     /// `characters` as a lookup table (one load per character).
     private static let table: [Bool] = {
-        var table = [Bool](repeating: false, count: Int(characters.map(\.upperBound).max() ?? 0) + 1)
+        var table = [Bool](repeating: false, count: 0x10000)
         for range in characters { for unit in range { table[Int(unit)] = true } }
         return table
     }()
@@ -145,6 +241,12 @@ enum NGSimpleText {
 /// The simple-text metrics of every font, learned from Core Text (thread-safe).
 final class NGSimpleMetricsStore: @unchecked Sendable {
     private let state = OSAllocatedUnfairLock(uncheckedState: [Int: NGSimpleFontMetrics]())
+    /// The ids of fallback fonts.
+    private let fonts: NGFontRegistry
+
+    init(fonts: NGFontRegistry) {
+        self.fonts = fonts
+    }
 
     /// What has been learned of a font.
     func metrics(of fontID: Int) -> NGSimpleFontMetrics {
@@ -164,11 +266,11 @@ final class NGSimpleMetricsStore: @unchecked Sendable {
             if let found = known.glyphs[unit] ?? glyphs[unit] {
                 glyph = found
             } else {
-                glyph = Self.glyph(of: unit, font: font)
+                glyph = self.glyph(of: unit, font: font)
                 glyphs[unit] = glyph
             }
             guard glyph.glyph != 0 else { break }
-            if pairs, let previous {
+            if pairs, let previous, previous.glyph.font < 0, glyph.font < 0 {
                 let pair = UInt32(previous.unit) << 16 | UInt32(unit)
                 if known.kerning[pair] == nil, kerning[pair] == nil {
                     kerning[pair] = Self.kerning(previous.unit, unit, first: previous.glyph, second: glyph, font: font)
@@ -184,12 +286,23 @@ final class NGSimpleMetricsStore: @unchecked Sendable {
             guard known.colons[key] == nil, colons[key] == nil else { continue }
             colons[key] = Self.colon(after: index > 0 ? array[index - 1] : nil, before: index + 1 < array.count ? array[index + 1] : nil, font: font)
         }
-        guard !glyphs.isEmpty || !kerning.isEmpty || !colons.isEmpty else { return known }
+        // Characters in the fallback fonts of the characters before them.
+        var inFallback: [UInt64: NGSimpleGlyph] = [:]
+        var resolving = known
+        resolving.glyphs.merge(glyphs) { old, _ in old }
+        while case .unknown(let fallback?) = resolving.resolves(array) {
+            let glyph = self.glyph(of: fallback.unit, in: fallback.font)
+            let key = NGSimpleFontMetrics.fallbackKey(fallback.font, fallback.unit)
+            inFallback[key] = glyph
+            resolving.inFallback[key] = glyph
+        }
+        guard !glyphs.isEmpty || !kerning.isEmpty || !colons.isEmpty || !inFallback.isEmpty else { return known }
         return state.withLockUnchecked { all in
             var metrics = all[fontID] ?? NGSimpleFontMetrics()
             metrics.glyphs.merge(glyphs) { old, _ in old }
             metrics.kerning.merge(kerning) { old, _ in old }
             metrics.colons.merge(colons) { old, _ in old }
+            metrics.inFallback.merge(inFallback) { old, _ in old }
             all[fontID] = metrics
             return metrics
         }
@@ -198,25 +311,50 @@ final class NGSimpleMetricsStore: @unchecked Sendable {
     /// A character's glyph and advance as Core Text lays it out alone (with
     /// the font's features, e.g. tabular digits, which the character map
     /// doesn't apply).
-    private static func glyph(of unit: UInt16, font: CTFont) -> NGSimpleGlyph {
+    private func glyph(of unit: UInt16, font: CTFont) -> NGSimpleGlyph {
+        let found = Self.glyph(of: unit, font: font)
+        guard found.glyph != 0, let fallback = found.fallback else { return NGSimpleGlyph(glyph: found.glyph, advance: found.advance) }
+        // Another font draws it: taken for the characters fallback fonts draw alike.
+        guard NGSimpleText.isDrawnByFallback(unit) else { return NGSimpleGlyph(glyph: 0, advance: found.advance) }
+        return NGSimpleGlyph(glyph: found.glyph, advance: found.advance, font: fonts.id(of: fallback))
+    }
+
+    /// A character's glyph and advance in a fallback font (glyph 0: it has none).
+    private func glyph(of unit: UInt16, in fontID: Int) -> NGSimpleGlyph {
+        let font = fonts.font(fontID)
+        var character = unit
+        var glyph: CGGlyph = 0
+        guard CTFontGetGlyphsForCharacters(font, &character, &glyph, 1), glyph != 0 else { return NGSimpleGlyph(glyph: 0, advance: 0) }
+        var advance = CGSize.zero
+        CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
+        return NGSimpleGlyph(glyph: glyph, advance: advance.width, font: fontID)
+    }
+
+    /// One glyph, of this font or of the fallback font Core Text picks
+    /// (glyph 0: more glyphs or runs).
+    private static func glyph(of unit: UInt16, font: CTFont) -> (glyph: CGGlyph, advance: CGFloat, fallback: CTFont?) {
         let text = String(utf16CodeUnits: [unit], count: 1)
         let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, text as CFString, [kCTFontAttributeName: font] as CFDictionary))
         let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
+        let advance = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        guard runs.count == 1, CTRunGetGlyphCount(runs[0]) == 1,
+              let runFont = (CTRunGetAttributes(runs[0]) as NSDictionary)[kCTFontAttributeName] else { return (0, advance, nil) }
         var glyph: CGGlyph = 0
-        // One glyph of this font, or the character needs a fallback font or more glyphs.
-        if runs.count == 1, CTRunGetGlyphCount(runs[0]) == 1,
-           let runFont = (CTRunGetAttributes(runs[0]) as NSDictionary)[kCTFontAttributeName], CFEqual(runFont as CFTypeRef, font) {
-            CTRunGetGlyphs(runs[0], CFRange(location: 0, length: 1), &glyph)
-        }
-        return NGSimpleGlyph(glyph: glyph, advance: CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
+        CTRunGetGlyphs(runs[0], CFRange(location: 0, length: 1), &glyph)
+        let fallback = CFEqual(runFont as CFTypeRef, font) ? nil : (runFont as! CTFont)
+        return (glyph, advance, fallback)
     }
 
     /// The glyph Core Text draws a colon with between two characters (or at
     /// an end), if it keeps the plain colon's advance and kerning and the
     /// neighbors' glyphs (0: it doesn't).
     private static func colon(after previous: UInt16?, before next: UInt16?, font: CTFont) -> CGGlyph {
-        let plain = glyph(of: 0x3A, font: font)
-        let neighbors = [previous, next].map { $0.map { glyph(of: $0, font: font) } }
+        func own(_ unit: UInt16) -> NGSimpleGlyph {
+            let found = glyph(of: unit, font: font)
+            return NGSimpleGlyph(glyph: found.fallback == nil ? found.glyph : 0, advance: found.advance)
+        }
+        let plain = own(0x3A)
+        let neighbors = [previous, next].map { $0.map(own) }
         guard plain.glyph != 0, neighbors.allSatisfy({ $0 == nil || $0!.glyph != 0 }) else { return 0 }
         let units = [previous, 0x3A, next].compactMap { $0 }
         let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, String(utf16CodeUnits: units, count: units.count) as CFString,
@@ -279,11 +417,12 @@ final class NGTextStyle: @unchecked Sendable {
 /// renderer, shared by its shaper and its atlas.
 final class NGTextEngine: Sendable {
     let fonts: NGFontRegistry
-    let metrics = NGSimpleMetricsStore()
+    let metrics: NGSimpleMetricsStore
     private let styles = OSAllocatedUnfairLock(uncheckedState: [Int: NGTextStyle]())
 
     init(fonts: NGFontRegistry = NGFontRegistry()) {
         self.fonts = fonts
+        metrics = NGSimpleMetricsStore(fonts: fonts)
     }
 
     func style(of font: CTFont, id: Int) -> NGTextStyle {
@@ -309,14 +448,15 @@ final class NGTextEngine: Sendable {
     }
 
     private static func simpleLine(_ units: [UInt16], fontID: Int, metrics: NGSimpleFontMetrics) -> NGShapedText? {
+        var resolver = NGSimpleFontMetrics.Resolver()
         var shaped = NGShapedText()
         shaped.glyphs.reserveCapacity(units.count)
         var x: CGFloat = 0
         var previous: UInt16?
         for (index, unit) in units.enumerated() {
-            guard let glyph = metrics.glyphs[unit], glyph.glyph != 0 else { return nil }
+            guard case .glyph(let glyph) = resolver.next(unit, in: metrics) else { return nil }
             if let previous {
-                guard let kerning = metrics.kerning[UInt32(previous) << 16 | UInt32(unit)], !kerning.isNaN else { return nil }
+                guard let kerning = metrics.kerning(previous, unit), !kerning.isNaN else { return nil }
                 x += kerning
             }
             var drawn = glyph.glyph
@@ -324,7 +464,7 @@ final class NGTextEngine: Sendable {
                 guard let colon = metrics.colons[NGSimpleText.colonKey(units, at: index)], colon != 0 else { return nil }
                 drawn = colon
             }
-            shaped.glyphs.append(.init(font: fontID, glyph: drawn, x: x))
+            shaped.glyphs.append(.init(font: glyph.font >= 0 ? glyph.font : fontID, glyph: drawn, x: x))
             x += glyph.advance
             previous = unit
         }
@@ -453,11 +593,23 @@ final class NGTextEngine: Sendable {
 
     /// How many lines text wraps onto (as `NGTextShaper.shapeLines` draws it).
     func lineCount(of text: String, font: CTFont, width: CGFloat, maximumLines: Int) -> Int {
-        guard maximumLines > 1, !text.isEmpty else { return 1 }
         let fontID = fonts.id(of: font)
-        if case .lines(let ranges) = simpleWrap(Array(text.utf16), font: font, fontID: fontID, width: width, maximumLines: maximumLines) {
-            return max(1, ranges.count)
+        var known = metrics.metrics(of: fontID)
+        return lineCount(of: text, font: font, fontID: fontID, width: width, maximumLines: maximumLines, metrics: &known)
+    }
+
+    /// The same with a copy of the font's metrics the caller keeps (taking
+    /// one per text from many threads costs more than counting): updated
+    /// when the text needs metrics not learned yet.
+    func lineCount(of text: String, font: CTFont, fontID: Int, width: CGFloat, maximumLines: Int, metrics known: inout NGSimpleFontMetrics) -> Int {
+        guard maximumLines > 1, !text.isEmpty else { return 1 }
+        let units = Array(text.utf16)
+        var lines = NGSimpleWrap.lines(of: units, metrics: known, width: width, maximumLines: maximumLines)
+        if lines == .unknown {
+            known = metrics.learning(units, font: font, fontID: fontID)
+            lines = NGSimpleWrap.lines(of: units, metrics: known, width: width, maximumLines: maximumLines)
         }
+        if case .lines(let ranges) = lines { return max(1, ranges.count) }
         return Self.coreTextLineCount(of: text, attributes: style(of: font, id: fontID).attributes, width: width, maximumLines: maximumLines)
     }
 

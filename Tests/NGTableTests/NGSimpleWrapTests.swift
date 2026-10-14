@@ -25,6 +25,52 @@ struct NGSimpleWrapTests {
         return (try #require(table.metalRenderer?.shaper), table.metalStyle.textFont)
     }
 
+    /// Where Core Text's typesetter breaks text, as ranges of UTF-16 units.
+    func coreTextBreaks(_ text: String, attributes: CFDictionary, width: CGFloat) -> [Range<Int>] {
+        let attributed = CFAttributedStringCreate(nil, text as CFString, attributes)!
+        let typesetter = CTTypesetterCreateWithAttributedString(attributed)
+        let length = CFAttributedStringGetLength(attributed)
+        var ranges: [Range<Int>] = []
+        var start = 0
+        while start < length {
+            let count = max(1, CTTypesetterSuggestLineBreak(typesetter, start, Double(width)))
+            ranges.append(start..<(start + count))
+            start += count
+        }
+        return ranges
+    }
+
+    static let breakingWords = ["path/to/some/file.txt", "http://example.com/a/b?x=1", "1/2", "3/4", "C:\\Users\\admin", "(cache)",
+                                "\"quoted\"", "«ёлка»", "x-ray", "re-try", "−5", "$12", "15%", "20°C", "a+b", "x|y", "Ŧœur,", "ok!",
+                                "東京都庁舎、新宿区。", "「テスト」です", "ひらがなとカタカナっぽいもの", "한국어 텍스트입니다", "漢字かなカナ", "（全角）",
+                                "東京Tower", "word,東京", "ラーメン", "ｈｅｌｌｏ"]
+
+    /// Words, spaces and the break rules of their characters break where
+    /// Core Text's typesetter breaks them.
+    @Test func textBreaksLikeCoreText() throws {
+        let (shaper, font) = try shaper()
+        let attributes = shaper.lineAttributes(of: font).value
+        let fontID = shaper.engine.fonts.id(of: font)
+        var differences: [String] = []
+        var tested = 0
+        for (index, text) in randomTexts(500, seed: 5, extra: Self.breakingWords).enumerated() {
+            let width = CGFloat(30 + (index * 41) % 300) + 0.25 * CGFloat(index % 4)
+            guard case .lines(let ranges) = shaper.engine.simpleWrap(Array(text.utf16), font: font, fontID: fontID, width: width,
+                                                                     maximumLines: .max) else { continue }
+            tested += 1
+            let coreText = coreTextBreaks(text, attributes: attributes, width: width)
+            if ranges != coreText {
+                let units = Array(text.utf16)
+                func lines(_ ranges: [Range<Int>]) -> String {
+                    ranges.map { "[" + String(utf16CodeUnits: Array(units[$0]), count: $0.count) + "]" }.joined()
+                }
+                differences.append("\(width): \(lines(ranges)) vs \(lines(coreText))")
+            }
+        }
+        #expect(tested > 400)
+        #expect(differences.isEmpty, "\(differences.count): \(differences.prefix(6).joined(separator: "\n"))")
+    }
+
     /// Words and spaces break where Core Text's typesetter breaks them.
     @Test func wordsBreakLikeCoreText() throws {
         let (shaper, font) = try shaper()

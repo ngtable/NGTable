@@ -296,24 +296,34 @@ struct NGMetalRendererTests {
                 fonts.append(.monospacedDigitSystemFont(ofSize: points, weight: weight))
             }
         }
-        let characters: [UInt16] = NGTextShaper.simpleCharacters.flatMap { Array($0) }
+        // Characters of the line's font, and of each group of fallback fonts
+        // (ideographs with full-width forms, kana, Hangul: lines mixing Hangul
+        // with the others go to Core Text).
+        let characters: [UInt16] = NGTextShaper.simpleCharacters.flatMap { Array($0) }.filter { !NGSimpleText.isDrawnByFallback($0) }
+        let cjk: [[UInt16]] = [Array(0x4E00...0x9FFF) + Array(0xFF01...0xFF5E) + Array(0x3001...0x3003), Array(0x3041...0x3093) + Array(0x30A1...0x30F6),
+                               Array(0xAC00...0xD7A3)]
         let words = ["Campaign", "Summer", "Sale", "Кампания", "Летняя", "распродажа", "AVAST", "WAVY", "To", "Ty", "LT", "fi", "ffl",
                      "№", "—", "«", "»", "Tolkien", "Ёлка", "йод", " ", "  ", "Straße", "Ŧœur", "Żółć", "Şişli", "Ţară", "ÀÉÎÕÜ",
                      "Αθήνα", "ΆΈΉΊ", "Ґанок", "Їжак", "Қазақ", "‰", "€ 10", "£", "™", "→", "„Zitat“", "‹›", "•", "°C", "±½",
-                     "12:03:04", "9:0", "0:", ":7", "a:b", "1: 2", "23:59:59.999", "::"]
+                     "12:03:04", "9:0", "0:", ":7", "a:b", "1: 2", "23:59:59.999", "::",
+                     "東京", "都庁舎、", "「テスト」", "ひらがな", "カタカナ", "한국어", "（全角）", "ｈｅｌｌｏ", "ラーメン"]
         var generator = SplitMix64(seed: 2024)
         var texts = ["Campaign 12345 — Summer sale", "Кампания «Лето» № 5", "AVAST Tour LTd", "WAVE Ty Te ", "Ёлка и йод  ",
-                     "2026-10-14 12:03:04 request retried", "Ratio 3:2:1, at 09:30"]
+                     "2026-10-14 12:03:04 request retried", "Ratio 3:2:1, at 09:30",
+                     // Hangul with ideographs: Core Text picks fonts for them by context.
+                     "쮏陟둜帱", "賨鰚鸚넬蹴", "한국東京", "東京한국"]
         for index in 0..<400 {
             if index % 2 == 0 {
-                let units = (0..<(1 + Int(generator.next() % 24))).map { _ in characters[Int(generator.next() % UInt64(characters.count))] }
+                let pool = index % 8 == 0 ? cjk[(index / 8) % cjk.count] : characters
+                let units = (0..<(1 + Int(generator.next() % 24))).map { _ in pool[Int(generator.next() % UInt64(pool.count))] }
                 texts.append(String(utf16CodeUnits: units, count: units.count))
             } else {
                 texts.append((0..<(1 + Int(generator.next() % 5))).map { _ in words[Int(generator.next() % UInt64(words.count))] }.joined())
             }
         }
         func same(_ a: NGShapedText, _ b: NGShapedText) -> Bool {
-            a.glyphs.map(\.glyph) == b.glyphs.map(\.glyph) && zip(a.glyphs, b.glyphs).allSatisfy { abs($0.x - $1.x) < 0.001 }
+            a.glyphs.map(\.glyph) == b.glyphs.map(\.glyph) && a.glyphs.map(\.font) == b.glyphs.map(\.font)
+                && zip(a.glyphs, b.glyphs).allSatisfy { abs($0.x - $1.x) < 0.001 }
                 && abs(a.width - b.width) < 0.001
         }
         // Random characters often include one the font lacks (then Core Text

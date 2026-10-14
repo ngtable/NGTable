@@ -49,15 +49,31 @@ extension NGTableView {
     /// The height a row's wrapped texts need: one line is `rowHeight`, each
     /// more a line of its font, as `shapeLines` draws them (thread-safe).
     nonisolated static func height(of texts: [NGWrappedText], rowHeight: CGFloat, engine: NGTextEngine) -> CGFloat {
+        var metrics: [ObjectIdentifier: (font: CTFont, id: Int, metrics: NGSimpleFontMetrics)] = [:]
+        return height(of: texts, rowHeight: rowHeight, engine: engine, metrics: &metrics)
+    }
+
+    /// The same with the fonts' ids and copies of their metrics the caller
+    /// keeps, by font object (looking them up takes a lock all workers share).
+    private nonisolated static func height(of texts: [NGWrappedText], rowHeight: CGFloat, engine: NGTextEngine,
+                                           metrics: inout [ObjectIdentifier: (font: CTFont, id: Int, metrics: NGSimpleFontMetrics)]) -> CGFloat {
         var height = rowHeight
         for text in texts {
-            let lines = engine.lineCount(of: text.text, font: text.font, width: text.width, maximumLines: text.lineLimit)
+            let key = ObjectIdentifier(text.font)
+            var entry = metrics[key] ?? {
+                let id = engine.fonts.id(of: text.font)
+                return (text.font, id, engine.metrics.metrics(of: id))
+            }()
+            let lines = engine.lineCount(of: text.text, font: text.font, fontID: entry.id, width: text.width, maximumLines: text.lineLimit,
+                                         metrics: &entry.metrics)
+            metrics[key] = entry
             height = max(height, rowHeight + CGFloat(lines - 1) * text.lineHeight)
         }
         return height
     }
 
-    /// The heights of many rows' wrapped texts, on all cores.
+    /// The heights of many rows' wrapped texts, on all cores (each worker
+    /// with its own copies of the metrics).
     nonisolated static func heights(of rows: [[NGWrappedText]], rowHeight: CGFloat, engine: NGTextEngine) -> [CGFloat] {
         var heights = [CGFloat](repeating: rowHeight, count: rows.count)
         let input = NGUncheckedSendable(rows)
@@ -65,8 +81,9 @@ extension NGTableView {
             let output = NGUncheckedSendable(buffer)
             let chunks = min(rows.count, ProcessInfo.processInfo.activeProcessorCount * 2)
             DispatchQueue.concurrentPerform(iterations: chunks) { chunk in
+                var metrics: [ObjectIdentifier: (font: CTFont, id: Int, metrics: NGSimpleFontMetrics)] = [:]
                 for index in stride(from: chunk, to: input.value.count, by: chunks) {
-                    output.value[index] = height(of: input.value[index], rowHeight: rowHeight, engine: engine)
+                    output.value[index] = height(of: input.value[index], rowHeight: rowHeight, engine: engine, metrics: &metrics)
                 }
             }
         }
