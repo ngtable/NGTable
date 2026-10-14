@@ -3,25 +3,14 @@ import CoreGraphics
 // Wrapping simple text without Core Text. Core Text's typesetter finds line
 // breaks at about 30 µs a line of a log message, and no faster on more
 // threads: a million wrapped rows took half a minute to measure. Text of
-// simple characters (`NGTextShaper.simpleCharacters`, and the colon: its
+// simple characters (`NGSimpleText.characters`, and the colon: its
 // glyph between digits differs by a hair, which only moves a break by that
-// hair) is wrapped here from the glyph advances and pair kerning the shaper
-// learned from Core Text: breaks after spaces (which hang past the width)
+// hair) is wrapped here from the glyph advances and pair kerning learned
+// from Core Text (`NGSimpleMetricsStore`): breaks after spaces (which hang past the width)
 // and after hyphens and dashes before a letter, and inside a word only when
 // it is wider than a line. Drawing (`shapeLines`) and measuring rows use the
 // same breaks, so a row is as high as its drawn lines whatever Core Text
 // would have chosen; for plain words and spaces the breaks are Core Text's.
-
-/// What wrapping a font's simple text needs: the advances of the characters
-/// and the kerning of the pairs the shaper has seen (a copy, for other threads).
-struct NGWrapMetrics: Sendable {
-    var advances: [UInt16: CGFloat] = [:]
-    /// By pair (`first << 16 | second`); NaN for a pair Core Text lays out
-    /// otherwise (counted as no kerning).
-    var kerning: [UInt32: CGFloat] = [:]
-    /// Characters the font has no glyph of (another font draws them).
-    var missing: Set<UInt16> = []
-}
 
 enum NGSimpleWrap {
     enum Lines: Equatable {
@@ -30,13 +19,12 @@ enum NGSimpleWrap {
         case lines([Range<Int>])
         /// Not simple text: Core Text wraps it.
         case notSimple
-        /// A character or pair whose metrics aren't known yet (the shaper
-        /// learns them on the main actor).
+        /// A character or pair whose metrics aren't learned yet.
         case unknown
     }
 
     static func isWrappable(_ unit: UInt16) -> Bool {
-        unit == 0x3A || NGTextShaper.isSimple(unit)
+        unit == 0x3A || NGSimpleText.isSimple(unit)
     }
 
     private static func breaksAfter(_ unit: UInt16) -> Bool {
@@ -48,10 +36,12 @@ enum NGSimpleWrap {
     }
 
     /// The lines simple text wraps onto in `width`, at most `maximumLines`.
-    static func lines(of units: [UInt16], metrics: NGWrapMetrics, width: CGFloat, maximumLines: Int) -> Lines {
+    static func lines(of units: [UInt16], metrics: NGSimpleFontMetrics, width: CGFloat, maximumLines: Int) -> Lines {
         guard !units.isEmpty else { return .lines([]) }
         for unit in units {
-            guard isWrappable(unit), !metrics.missing.contains(unit) else { return .notSimple }
+            guard isWrappable(unit) else { return .notSimple }
+            // A character another font draws.
+            if metrics.glyphs[unit]?.glyph == 0 { return .notSimple }
         }
         var lines: [Range<Int>] = []
         var start = 0
@@ -65,7 +55,7 @@ enum NGSimpleWrap {
             var previous: UInt16?
             while index < count {
                 let unit = units[index]
-                guard let advance = metrics.advances[unit] else { return .unknown }
+                guard let advance = metrics.glyphs[unit]?.advance else { return .unknown }
                 var kern: CGFloat = 0
                 if let previous {
                     guard let known = metrics.kerning[UInt32(previous) << 16 | UInt32(unit)] else { return .unknown }
