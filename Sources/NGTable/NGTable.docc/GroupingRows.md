@@ -100,6 +100,11 @@ shown rows disappear, and subtotals cover the shown rows. Targeted updates
 rows to their new groups and update the subtotals; the selection follows its
 records.
 
+Large tables group in the background: above ``NGTableView/synchronousGroupingLimit``
+values to read, the rows show as they were grouped before until the new
+groups are ready (``NGTableView/isGroupingRows``); see
+<doc:PerformanceAndThreading#Grouping-a-million-rows>.
+
 To find your way around the groups: ``NGTableView/topLevelGroups``,
 ``NGTableView/childGroups(of:)``, ``NGTableView/rowIndexes(in:)-(NGRowGroup)`` and
 ``NGTableView/group(forRow:)``.
@@ -179,6 +184,8 @@ rows whose identities are strings or integers are saved.
 - ``NGRowGrouping``
 - ``NGRowGroup``
 - ``NGTableView/rowGrouping``
+- ``NGTableView/synchronousGroupingLimit``
+- ``NGTableView/isGroupingRows``
 
 ### Collapsing and Expanding
 

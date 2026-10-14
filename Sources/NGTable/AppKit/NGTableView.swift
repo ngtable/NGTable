@@ -800,6 +800,7 @@ public final class NGTableView: NSView {
             if rowGrouping != nil, rowTree != nil { rowTree = nil }
             groupsExpandedByDefault = !(rowGrouping?.startsCollapsed ?? false)
             toggledGroups = []
+            if rowGrouping == nil { cancelGroupingJob() }
             previousGroupSubtotals = [:]
             updateDisplayedRows(rebuildingSummaries: false) { computeDisplayRows() }
             if allowsUserGrouping, !isApplyingLayoutState { autosaveLayoutState() }
@@ -2419,6 +2420,19 @@ public final class NGTableView: NSView {
     /// Whether the words of a search are being read (see `synchronousSearchLimit`).
     public internal(set) var isSearchingRows = false
 
+    /// Up to this many group keys to read (data source rows × grouping
+    /// columns not grouped by before), rows are grouped at once. Above it,
+    /// the keys are read in slices of a few milliseconds, keeping the app
+    /// responsive, and the rows show as they were grouped before meanwhile
+    /// (`isGroupingRows`). Columns grouped by keep their keys: collapsing,
+    /// filtering and grouping by them again are immediate.
+    public var synchronousGroupingLimit = 50_000
+    /// Whether the keys of a grouping are being read (see `synchronousGroupingLimit`).
+    public internal(set) var isGroupingRows = false
+    /// The keys of a grouping being read, and the task reading them.
+    var groupingJob: NGGroupingJob?
+    var groupingTask: Task<Void, Never>?
+
     /// Whether summaries are being computed in the background; the summary row
     /// shows the previous values meanwhile.
     public internal(set) var isComputingSummary = false
@@ -2495,6 +2509,7 @@ public final class NGTableView: NSView {
         sortTask?.cancel()
         summaryTask?.cancel()
         searchBuildTask?.cancel()
+        groupingTask?.cancel()
         copyTask?.cancel()
     }
 
@@ -2657,6 +2672,7 @@ public final class NGTableView: NSView {
         filteredRowsToPlace = []
         groupKeys = nil
         groupKeysToRead = []
+        cancelGroupingJob()
         // Everything is read again: what an open batch noted is done.
         if rowUpdateBatch != nil {
             rowUpdateBatch!.dirtyRows = []
