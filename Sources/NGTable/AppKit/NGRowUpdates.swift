@@ -295,6 +295,8 @@ extension NGTableView {
             allRowHandlesCache = nil
             rowMapNeedsRebuild = true
             summaryRowsMoved += 1
+            // The last row moves: siblings in another order.
+            treeEdits = nil
             noteRemoved(rowHandles.removeReplacingWithLast(at: index), in: &batch)
             let movedHandle = handle(ofRow: index)
             if sortKeys != nil || backgroundSort != nil { batch.movedRows.insert(movedHandle) }
@@ -494,6 +496,7 @@ extension NGTableView {
                 noteRemoved(rowHandles.remove(at: index), in: &batch)
             }
             if let (from, to) = moved {
+                treeEdits = nil
                 rowHandles.move(from: from, to: to)
                 let movedHandle = handle(ofRow: to)
                 if sortKeys != nil || backgroundSort != nil { batch.movedRows.insert(movedHandle) }
@@ -517,6 +520,7 @@ extension NGTableView {
     /// The handles for a whole remapping (old row to new row): the rows that
     /// stay keep theirs, in their new order; rows no old row maps to are new.
     private func remapHandles(_ remapping: [Int?], newCount: Int, in batch: inout NGRowUpdateBatch) {
+        treeEdits = nil
         var order = [Int32](repeating: -1, count: newCount)
         for (old, new) in remapping.enumerated() where old < rowHandles.count {
             if let new {
@@ -547,7 +551,10 @@ extension NGTableView {
         // A removed record's identity is no longer selected (its handle may be reused).
         if !selectedIdentifiers.isEmpty { selectedIdentifiers.removeValue(forKey: handle) }
         identityIndex?.remove(handle)
-        if !treeParentHandles.isEmpty { treeRemovedHandles.insert(handle) }
+        if !treeParentHandles.isEmpty {
+            treeRemovedHandles.insert(handle)
+            noteTreeEdit(removed: handle)
+        }
         let handle = Int(handle)
         guard !batch.movedRowsWithoutSummaryValues, !summarySourceValues.isEmpty else {
             if groupedDisplay != nil { batch.groupLeavesAreUnknown = true }
@@ -582,6 +589,7 @@ extension NGTableView {
         if !treeParentHandles.isEmpty {
             treeParentsToRead.insert(Int(handle))
             rowsInsertedSinceTreeLayout = true
+            noteTreeEdit(inserted: handle)
         }
         if identityIndex != nil {
             identityIndex?.noteInserted(handle)

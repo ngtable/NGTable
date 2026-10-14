@@ -155,8 +155,10 @@ copied and dragged like any other.
 - Live updates keep the tree: a changed row may get another parent, inserted
   rows go under theirs, and the children of a removed row move to the top
   until a row with its identity comes back. Value changes that keep the
-  parents and the order cost no layout; inserts and removes lay the tree out
-  again (about 5 ms for 200,000 rows).
+  parents and the order cost no layout. A few rows inserted and removed (up
+  to 32 a batch, without a filter) are placed alone, about 0.8 ms a batch
+  for 200,000 rows; rows moved, other rows given other parents or more
+  changes lay the whole tree out again (about 4 ms).
 - Expansion is kept by identity across `reloadData()`.
 
 Use the `NSOutlineView`-like API by data source row:

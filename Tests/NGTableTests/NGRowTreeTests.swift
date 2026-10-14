@@ -524,5 +524,97 @@ struct NGRowTreeTests {
         table.rowGrouping = NGRowGrouping(columnID: "name")
         #expect(table.rowTree == nil)
     }
+
+    /// A feed of a tree: rows inserted (under existing rows or at the top)
+    /// and removed, now and then moved, reparented, collapsed or changed
+    /// in value, sorted or not. Rows inserted and removed alone are placed
+    /// by themselves (`layOutTreeEdits`); after every batch the tree is what
+    /// laying out the whole of it gives.
+    @Test(arguments: [false, true])
+    func placingEditsMatchesTheWholeLayout(sorted: Bool) throws {
+        let items = Items()
+        var generator = SplitMix(seed: sorted ? 21 : 12)
+        var nextID = 0
+        func newID() -> String { nextID += 1; return "n\(nextID)" }
+        var gone: [String] = []
+        items.items = (0..<300).map { index in
+            Items.Item(id: "r\(index)", parent: index % 10 == 0 ? nil : "r\(index - index % 10)", spend: Double(index * 7_919 % 10_007) + 0.5)
+        }
+        let table = makeTable(items)
+        defer { withExtendedLifetime(items) {} }
+        if sorted {
+            table.sortsRows = true
+            table.sortDescriptors = [NSSortDescriptor(key: "spend", ascending: false)]
+        }
+        table.layoutSubtreeIfNeeded()
+        func snapshot(_ table: NGTableView) -> [String] {
+            (0..<table.numberOfRows).map { displayRow in
+                let row = table.sourceRow(displayRow)
+                return "\(table.level(forRow: row)) \(items.items[row].id) \(table.childRows(ofRow: row).map { items.items[$0].id })"
+            } + table.treeRoots.map { "root \(items.items[table.row(ofHandle: Int($0))].id)" }
+        }
+        // The same rows in a new table: parents read afresh.
+        func fresh() -> [String] {
+            let other = makeTable(items)
+            other.toggledTreeRows = table.toggledTreeRows
+            other.sortsRows = table.sortsRows
+            other.sortDescriptors = table.sortDescriptors
+            other.reloadData()
+            other.layoutSubtreeIfNeeded()
+            return snapshot(other)
+        }
+        let placedBefore = table.treeEditLayoutsForTesting
+        for batch in 0..<150 {
+            table.beginUpdates()
+            let kind = generator.next() % 20
+            for _ in 0..<(1 + Int(generator.next() % 3)) {
+                let count = items.items.count
+                switch kind {
+                case 0:
+                    // Moved.
+                    let from = Int(generator.next() % UInt64(count)), to = Int(generator.next() % UInt64(count))
+                    items.items.insert(items.items.remove(at: from), at: to)
+                    table.moveRow(at: from, to: to)
+                case 1:
+                    // Another parent.
+                    let row = Int(generator.next() % UInt64(count))
+                    items.items[row].parent = items.items[Int(generator.next() % UInt64(count))].id
+                    table.reloadData(forRowIndexes: [row], columnIndexes: [0])
+                case 2:
+                    // Another value (sorted: rows move).
+                    let row = Int(generator.next() % UInt64(count))
+                    items.items[row].spend += 7.25
+                    table.reloadData(forRowIndexes: [row], columnIndexes: [1])
+                case 3 ... 11:
+                    // In, under a row or at the top, anywhere; now and then
+                    // a row removed before, whose children wait for it.
+                    let at = Int(generator.next() % UInt64(count + 1))
+                    let parent = generator.next() % 4 == 0 ? nil : items.items[Int(generator.next() % UInt64(count))].id
+                    let id = !gone.isEmpty && generator.next() % 3 == 0 ? gone.removeLast() : newID()
+                    items.items.insert(Items.Item(id: id, parent: parent, spend: Double(generator.next() % 1_000_000) / 7), at: at)
+                    table.insertRows(at: [at])
+                default:
+                    // Out: mostly rows without children.
+                    let row = Int(generator.next() % UInt64(count))
+                    gone.append(items.items.remove(at: row).id)
+                    table.removeRows(at: [row])
+                }
+            }
+            table.endUpdates()
+            if batch % 30 == 15, let row = (0..<items.items.count).first(where: { table.isRowExpandable($0) }) {
+                table.isRowExpanded(row) ? table.collapseRow(row) : table.expandRow(row)
+            }
+            table.layoutSubtreeIfNeeded()
+            let placed = snapshot(table)
+            table.buildTreeDisplay(readingParents: false)
+            let whole = snapshot(table)
+            let afresh = fresh()
+            #expect(placed == whole, "batch \(batch), kind \(kind)")
+            #expect(placed == afresh, "batch \(batch), kind \(kind)")
+            if placed != whole || placed != afresh { break }
+        }
+        // Most batches only inserted and removed.
+        #expect(table.treeEditLayoutsForTesting - placedBefore > 60)
+    }
 }
 #endif

@@ -915,6 +915,20 @@ public final class NGTableView: NSView {
     var treeLevels: [Int32] = []
     var treeChildStarts: [Int] = []
     var treeChildren: [Int32] = []
+    /// The top-level rows (handles), in order, as last laid out.
+    var treeRoots: [Int32] = []
+    /// Rows (handles) inserted and removed since the tree was laid out, to
+    /// place only them (`layOutTreeEdits`); `nil` after changes they don't
+    /// cover (rows moved, other rows given other parents, many edits).
+    var treeEdits: (inserted: [Int32], removed: [Int32])?
+    /// The rows (handles) the last `updateDisplayOrder()` took out of the
+    /// sorted order and put back (`nil`: a new order): if only the batch's
+    /// rows inserted and removed, the others keep their order.
+    var sortPlacedInLastUpdate: IndexSet? = []
+    /// Some row's parent identity names no row (yet): rows inserted may be it.
+    var treeHasOrphans = false
+    /// Layouts that placed only the edits (for tests).
+    var treeEditLayoutsForTesting = 0
     /// Rows (by identity) whose expansion isn't `treeExpandedByDefault`.
     var toggledTreeRows = Set<AnyHashable>()
     var treeExpandedByDefault = true

@@ -216,6 +216,7 @@ extension NGTableView {
             sortRowsToPlace = []
             sortRowsInserted = []
             sortOrderNeedsRebuild = false
+            sortPlacedInLastUpdate = []
             return changed
         }
         let count = numberOfSourceRows
@@ -287,6 +288,7 @@ extension NGTableView {
             }
             change = (nil, true)
         }
+        sortPlacedInLastUpdate = change.placed
         // A filtered tree lays out its rows by the whole order (parents the
         // filter shows for context are in it, not in the filtered one).
         return updateFilteredSortedOrder(placed: change.placed, flipped: flipped) || change.moved && (rowMap == nil || isShowingRowTree)
