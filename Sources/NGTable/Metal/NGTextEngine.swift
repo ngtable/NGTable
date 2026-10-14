@@ -92,17 +92,26 @@ struct NGSimpleFontMetrics: Sendable {
     /// its two glyphs; NaN for a pair it lays out otherwise (a ligature, a
     /// contextual form).
     var kerning: [UInt32: CGFloat] = [:]
+    /// The glyph of a colon by its neighbors (`previous << 16 | next`, 0 for
+    /// none): the system font raises it between digits and capitals ("12:30",
+    /// "LT:7") with the plain colon's advance and kerning. 0: Core Text lays
+    /// that colon out otherwise.
+    var colons: [UInt32: CGGlyph] = [:]
+
+    static func colonKey(_ previous: UInt16?, _ next: UInt16?) -> UInt32 {
+        UInt32(previous ?? 0) << 16 | UInt32(next ?? 0)
+    }
 }
 
 /// Simple characters: scripts laid out a character at a time.
 enum NGSimpleText {
     /// Characters simple lines take: one glyph each, kerned by pairs,
     /// without combining marks, which Core Text positions on the letter
-    /// before. The colon is left out: the system font raises it between
-    /// digits (a contextual form, beyond a pair). Characters the font has no
+    /// before. The colon too: between digits the system font raises it (a
+    /// contextual form, learned once per font). Characters the font has no
     /// glyph for still go to Core Text.
     static let characters: [ClosedRange<UInt16>] = [
-        0x0020...0x0039, 0x003B...0x007E,   // ASCII without the colon.
+        0x0020...0x007E,                    // ASCII.
         0x00A0...0x00AC, 0x00AE...0x024F,   // Latin-1 (no soft hyphen), Latin Extended-A and -B.
         0x0386...0x0386, 0x0388...0x03CE,   // Greek.
         0x0400...0x0482, 0x048A...0x052F,   // Cyrillic without its combining marks.
@@ -120,6 +129,11 @@ enum NGSimpleText {
 
     static func isSimple(_ unit: UInt16) -> Bool {
         Int(unit) < table.count && table[Int(unit)]
+    }
+
+    /// The neighbors of the character at `index`, as a colon's key.
+    static func colonKey(_ units: [UInt16], at index: Int) -> UInt32 {
+        NGSimpleFontMetrics.colonKey(index > 0 ? units[index - 1] : nil, index + 1 < units.count ? units[index + 1] : nil)
     }
 
     /// Spaces Core Text drops before an ellipsis.
@@ -162,11 +176,20 @@ final class NGSimpleMetricsStore: @unchecked Sendable {
             }
             previous = (unit, glyph)
         }
-        guard !glyphs.isEmpty || !kerning.isEmpty else { return known }
+        // Colons by their neighbors.
+        var colons: [UInt32: CGGlyph] = [:]
+        let array = Array(units)
+        for index in array.indices where array[index] == 0x3A {
+            let key = NGSimpleText.colonKey(array, at: index)
+            guard known.colons[key] == nil, colons[key] == nil else { continue }
+            colons[key] = Self.colon(after: index > 0 ? array[index - 1] : nil, before: index + 1 < array.count ? array[index + 1] : nil, font: font)
+        }
+        guard !glyphs.isEmpty || !kerning.isEmpty || !colons.isEmpty else { return known }
         return state.withLockUnchecked { all in
             var metrics = all[fontID] ?? NGSimpleFontMetrics()
             metrics.glyphs.merge(glyphs) { old, _ in old }
             metrics.kerning.merge(kerning) { old, _ in old }
+            metrics.colons.merge(colons) { old, _ in old }
             all[fontID] = metrics
             return metrics
         }
@@ -186,6 +209,37 @@ final class NGSimpleMetricsStore: @unchecked Sendable {
             CTRunGetGlyphs(runs[0], CFRange(location: 0, length: 1), &glyph)
         }
         return NGSimpleGlyph(glyph: glyph, advance: CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
+    }
+
+    /// The glyph Core Text draws a colon with between two characters (or at
+    /// an end), if it keeps the plain colon's advance and kerning and the
+    /// neighbors' glyphs (0: it doesn't).
+    private static func colon(after previous: UInt16?, before next: UInt16?, font: CTFont) -> CGGlyph {
+        let plain = glyph(of: 0x3A, font: font)
+        let neighbors = [previous, next].map { $0.map { glyph(of: $0, font: font) } }
+        guard plain.glyph != 0, neighbors.allSatisfy({ $0 == nil || $0!.glyph != 0 }) else { return 0 }
+        let units = [previous, 0x3A, next].compactMap { $0 }
+        let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, String(utf16CodeUnits: units, count: units.count) as CFString,
+                                                                             [kCTFontAttributeName: font] as CFDictionary))
+        let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
+        guard runs.count == 1, CTRunGetGlyphCount(runs[0]) == units.count else { return 0 }
+        var glyphs = [CGGlyph](repeating: 0, count: units.count)
+        var positions = [CGPoint](repeating: .zero, count: units.count)
+        CTRunGetGlyphs(runs[0], CFRange(location: 0, length: units.count), &glyphs)
+        CTRunGetPositions(runs[0], CFRange(location: 0, length: units.count), &positions)
+        let colon = previous == nil ? 0 : 1
+        var x: CGFloat = 0
+        if let previous, let before = neighbors[0] {
+            let kern = kerning(previous, 0x3A, first: before, second: plain, font: font)
+            guard glyphs[0] == before.glyph, !kern.isNaN else { return 0 }
+            x = before.advance + kern
+        }
+        guard abs(positions[colon].x - x) < 0.0001 else { return 0 }
+        if let next, let after = neighbors[1] {
+            let kern = kerning(0x3A, next, first: plain, second: after, font: font)
+            guard glyphs[colon + 1] == after.glyph, !kern.isNaN, abs(positions[colon + 1].x - (x + plain.advance + kern)) < 0.0001 else { return 0 }
+        }
+        return glyphs[colon]
     }
 
     /// How Core Text kerns a pair laid out as its two glyphs (NaN: it lays
@@ -259,13 +313,18 @@ final class NGTextEngine: Sendable {
         shaped.glyphs.reserveCapacity(units.count)
         var x: CGFloat = 0
         var previous: UInt16?
-        for unit in units {
+        for (index, unit) in units.enumerated() {
             guard let glyph = metrics.glyphs[unit], glyph.glyph != 0 else { return nil }
             if let previous {
                 guard let kerning = metrics.kerning[UInt32(previous) << 16 | UInt32(unit)], !kerning.isNaN else { return nil }
                 x += kerning
             }
-            shaped.glyphs.append(.init(font: fontID, glyph: glyph.glyph, x: x))
+            var drawn = glyph.glyph
+            if unit == 0x3A {
+                guard let colon = metrics.colons[NGSimpleText.colonKey(units, at: index)], colon != 0 else { return nil }
+                drawn = colon
+            }
+            shaped.glyphs.append(.init(font: fontID, glyph: drawn, x: x))
             x += glyph.advance
             previous = unit
         }
@@ -307,6 +366,8 @@ final class NGTextEngine: Sendable {
         let x = full.glyphs[kept].x
         var shaped = NGShapedText()
         shaped.glyphs = Array(full.glyphs.prefix(kept))
+        // (Core Text keeps the whole line's glyphs: a colon raised between
+        // digits stays raised before the ellipsis.)
         shaped.glyphs.append(.init(font: fontID, glyph: ellipsis.glyph, x: x))
         shaped.width = x + ellipsis.advance
         return shaped

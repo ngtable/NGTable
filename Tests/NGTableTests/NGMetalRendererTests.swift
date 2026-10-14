@@ -299,9 +299,11 @@ struct NGMetalRendererTests {
         let characters: [UInt16] = NGTextShaper.simpleCharacters.flatMap { Array($0) }
         let words = ["Campaign", "Summer", "Sale", "Кампания", "Летняя", "распродажа", "AVAST", "WAVY", "To", "Ty", "LT", "fi", "ffl",
                      "№", "—", "«", "»", "Tolkien", "Ёлка", "йод", " ", "  ", "Straße", "Ŧœur", "Żółć", "Şişli", "Ţară", "ÀÉÎÕÜ",
-                     "Αθήνα", "ΆΈΉΊ", "Ґанок", "Їжак", "Қазақ", "‰", "€ 10", "£", "™", "→", "„Zitat“", "‹›", "•", "°C", "±½"]
+                     "Αθήνα", "ΆΈΉΊ", "Ґанок", "Їжак", "Қазақ", "‰", "€ 10", "£", "™", "→", "„Zitat“", "‹›", "•", "°C", "±½",
+                     "12:03:04", "9:0", "0:", ":7", "a:b", "1: 2", "23:59:59.999", "::"]
         var generator = SplitMix64(seed: 2024)
-        var texts = ["Campaign 12345 — Summer sale", "Кампания «Лето» № 5", "AVAST Tour LTd", "WAVE Ty Te ", "Ёлка и йод  "]
+        var texts = ["Campaign 12345 — Summer sale", "Кампания «Лето» № 5", "AVAST Tour LTd", "WAVE Ty Te ", "Ёлка и йод  ",
+                     "2026-10-14 12:03:04 request retried", "Ratio 3:2:1, at 09:30"]
         for index in 0..<400 {
             if index % 2 == 0 {
                 let units = (0..<(1 + Int(generator.next() % 24))).map { _ in characters[Int(generator.next() % UInt64(characters.count))] }

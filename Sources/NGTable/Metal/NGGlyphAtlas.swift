@@ -378,7 +378,7 @@ final class NGTextShaper {
                 while end > range.lowerBound, units[end - 1] == 0x20 { end -= 1 }
                 let line = String(utf16CodeUnits: Array(units[range.lowerBound..<end]), count: end - range.lowerBound)
                 // The last line allowed truncated if text remains; the others
-                // are drawn whole (a colon's glyph may differ by a hair).
+                // are drawn whole.
                 return shape(line, font: font, width: index == maximumLines - 1 ? width : .greatestFiniteMagnitude)
             }
         } else {
