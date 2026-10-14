@@ -160,7 +160,8 @@ sets what drags allow inside and outside the app.
 ``NGTableView/printView(_:)``, AppKit's `print:` action, prints the rows
 shown with the visible columns: the column titles on every page, group header
 rows, the summary row at the end, in black on white whatever the screen's
-appearance. Give the File menu a "Print…" item without a target, and it goes
+appearance. Columns that wrap text print it wrapped, rows as high as it.
+Give the File menu a "Print…" item without a target, and it goes
 to the focused table. Columns wider than the paper are scaled to its width;
 with ``NGTableView/printPagination`` `.automatic` they go on across pages
 instead, in bands of whole columns with the columns pinned at the leading
