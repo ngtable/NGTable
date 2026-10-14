@@ -41,6 +41,13 @@ struct NGRowGeometry: Sendable {
         self.tops = tops
     }
 
+    /// Rows given by their tops and the bottom of the last one (`count + 1` values).
+    init(rowHeight: CGFloat, tops: [CGFloat]) {
+        self.rowHeight = rowHeight
+        count = max(0, tops.count - 1)
+        self.tops = tops.isEmpty ? [0] : tops
+    }
+
     /// Whether rows have heights of their own.
     var hasRowHeights: Bool { !tops.isEmpty }
 

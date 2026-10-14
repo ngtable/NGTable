@@ -604,6 +604,8 @@ extension NGTableView {
         // A reused handle is a new record: shown, not flashing, its height asked.
         hiddenRowHandles.remove(handle)
         if handle < rowHeightsByHandle.count { rowHeightsByHandle[handle] = .nan }
+        rowsLeftToMeasure = true
+        if measuringTask != nil { measuringForgotten.insert(handle) }
         forgetChangeHighlights(ofHandle: handle)
         func prepare<Element>(_ array: inout [Element], _ placeholder: Element) {
             guard !array.isEmpty else { return }

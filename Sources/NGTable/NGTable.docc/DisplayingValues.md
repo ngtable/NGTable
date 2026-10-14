@@ -50,9 +50,10 @@ Rows are measured again when they are reloaded, when a wrapping column's
 width changes and when the font or ``NGTableView/rowHeight`` (the height of
 one line's row) does; heights follow their records through sorting,
 filtering and grouping. The other cells of a taller row keep to its first
-line. Tables of up to 2,000 rows are measured at once; in larger ones rows are
-measured as they come into view (until then they count as one line), and
-the rows in view don't move while those above them grow. Rows whose heights
+line. Tables of up to 2,000 rows are measured at once; in larger ones the rows
+in view are, and the others in the background (a million log messages in
+about 2 seconds), counting as one line until then; the rows in view don't
+move while those above them grow. Rows whose heights
 the app knows itself come from the delegate instead (``NGTableViewRowHeights``).
 Printing wraps the text the same way, each row on one page. In SwiftUI it is
 ``NGDataColumn/lineLimit(_:)``.
