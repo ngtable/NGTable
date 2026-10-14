@@ -12,11 +12,12 @@ struct NGTableMetalTests {
     @MainActor
     final class Data: NGTableViewDataSource {
         var names: [Int: String] = [:]
+        var spendAdded = 0.0
         func numberOfRows(in tableView: NGTableView) -> Int { 40 }
         func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
             switch column.id {
             case "name": .text(names[row] ?? ["DE Keto Wide #\(row)", "Кампания «Суставы» \(row)", "Office ffi fl"][row % 3])
-            case "spend": .number(Double(row) * 123.45)
+            case "spend": .number(Double(row) * 123.45 + spendAdded)
             case "status": .tags([NGTag(row % 2 == 0 ? "Active" : "Paused", color: row % 2 == 0 ? .green : .orange)])
             case "mark": row % 4 == 0 ? .mark(NGMark("star.fill", color: .yellow, label: "Star")) : .empty
             default: .empty
@@ -128,15 +129,25 @@ struct NGTableMetalTests {
         let data = Data()
         let (table, window) = makeTable(data: data)
         defer { withExtendedLifetime((window, data)) {} }
-        table.setFrameSize(NSSize(width: 640.3, height: 400.3))
-        table.layoutSubtreeIfNeeded()
-        let layer = try #require(table.metalLayer)
-        #expect(layer.frame.width * layer.contentsScale == layer.drawableSize.width)
-        #expect(layer.frame.height * layer.contentsScale == layer.drawableSize.height)
-        // Its top and left edges are the table's: the part past is below and right.
-        let flipped = table.layer?.isGeometryFlipped == true
-        #expect(flipped ? layer.frame.minY == 0 : abs(layer.frame.maxY - table.bounds.height) < 0.001)
-        #expect(layer.frame.minX == 0)
+        for scale: CGFloat in [1, 2] {
+            table.scaleForTesting = scale
+            for size in [NSSize(width: 640.3, height: 400.3), NSSize(width: 641.5, height: 399.75), NSSize(width: 640.25, height: 400.5)] {
+                table.setFrameSize(size)
+                table.layoutSubtreeIfNeeded()
+                let layer = try #require(table.metalLayer)
+                let context = "\(size) at \(scale)x"
+                #expect(layer.contentsScale == scale, "\(context)")
+                #expect(layer.frame.width * layer.contentsScale == layer.drawableSize.width, "\(context)")
+                #expect(layer.frame.height * layer.contentsScale == layer.drawableSize.height, "\(context)")
+                // Whole pixels covering the table: no row cut at an edge.
+                #expect(layer.drawableSize.width == (size.width * scale).rounded(.up), "\(context)")
+                #expect(layer.drawableSize.height == (size.height * scale).rounded(.up), "\(context)")
+                // Its top and left edges are the table's: the part past is below and right.
+                let flipped = table.layer?.isGeometryFlipped == true
+                #expect(flipped ? layer.frame.minY == 0 : abs(layer.frame.maxY - table.bounds.height) < 0.001, "\(context)")
+                #expect(layer.frame.minX == 0, "\(context)")
+            }
+        }
     }
 
     /// A batch that changes visible cells only doesn't draw the header and
@@ -158,6 +169,95 @@ struct NGTableMetalTests {
         table.setWidth(260, forColumnID: "name")
         table.layoutSubtreeIfNeeded()
         #expect(header.needsFrame)
+    }
+
+    /// What the header and the summary row show without the columns
+    /// moving: each such change draws them again (their layout key only
+    /// follows sizes and columns, see `chromeLayoutKey`).
+    enum ChromeChange: String, CaseIterable, CustomTestStringConvertible {
+        case sort, columnFilter, filtersAllowed, retitled, headerHovered, style, otherAppearance
+        case summaryValue, summaryScope, selectionInScope, locale
+        var testDescription: String { rawValue }
+        /// Which of them it changes.
+        var header: Bool { [.sort, .columnFilter, .filtersAllowed, .retitled, .headerHovered, .style, .otherAppearance].contains(self) }
+        var summary: Bool { ![.sort, .columnFilter, .filtersAllowed, .retitled, .headerHovered].contains(self) }
+    }
+
+    @Test(arguments: ChromeChange.allCases)
+    func chromeDrawsAgainWhenItsContentChanges(_ change: ChromeChange) throws {
+        let data = Data()
+        let (table, window) = makeTable(data: data)
+        defer { withExtendedLifetime((window, data)) {} }
+        if change == .selectionInScope { table.summaryScope = .selectedRows }
+        if change == .headerHovered || change == .columnFilter { table.allowsColumnFilters = true }
+        table.layoutSubtreeIfNeeded()
+        table.drawMetalFrameIfNeeded()
+        let header = try #require(table.headerSurface), summary = try #require(table.summarySurface)
+        header.needsFrame = false
+        summary.needsFrame = false
+        // (Asked for, or already drawn by the window's display pass.)
+        let drawnBefore = NGMetalSurface.framesForTesting
+        switch change {
+        case .sort: table.sortDescriptors = [NSSortDescriptor(key: "spend", ascending: false)]
+        case .columnFilter: table.columnFilters = ["spend": .range(min: 100, max: nil)]
+        case .filtersAllowed: table.allowsColumnFilters = true
+        case .retitled:
+            table.columns = table.columns.map { item in
+                guard case .column(var column) = item, column.id == "spend" else { return item }
+                column.title = "Cost"
+                return .column(column)
+            }
+        case .headerHovered:
+            let frame = try #require(table.geometry.center.columns.first)
+            table.updateHoveredHeaderColumn(at: NSPoint(x: frame.x + frame.width / 2, y: 10))
+        case .style: table.tableStyle.textColor = .systemRed
+        case .otherAppearance:
+            // The other one than the system's.
+            let isDark = table.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            window.appearance = NSAppearance(named: isDark ? .aqua : .darkAqua)
+            // AppKit tells views of a new appearance as the window displays.
+            window.displayIfNeeded()
+        case .summaryValue:
+            data.spendAdded = 1_000
+            table.reloadData(forRowIndexes: [5], columnIndexes: [2])
+        case .summaryScope: table.summaryScope = .selectedRows
+        case .selectionInScope: table.selectRowIndexes([10], byExtendingSelection: false)
+        case .locale: table.locale = Locale(identifier: "de_DE")
+        }
+        table.layoutSubtreeIfNeeded()
+        let drawn = NGMetalSurface.framesForTesting - drawnBefore
+        if change.header { #expect(header.needsFrame || drawn >= (change.summary ? 2 : 1), "header") }
+        if change.summary { #expect(summary.needsFrame || drawn >= (change.header ? 2 : 1), "summary") }
+    }
+
+    /// A window no one sees (here: not on screen) draws nothing under live
+    /// updates; seen again, one frame shows the rows, header and summary as
+    /// they are then.
+    @Test func unseenWindowsDrawWhenSeenAgain() throws {
+        let data = Data()
+        let (table, window) = makeTable(data: data)
+        defer { withExtendedLifetime((window, data)) {} }
+        table.drawMetalFrameIfNeeded()
+        table.drawsWhileUnseenForTesting = false
+        #expect(table.isWindowUnseen)
+        let frames = NGTableView.metalFramesForTesting, chromeFrames = NGMetalSurface.framesForTesting
+        for tick in 0..<5 {
+            data.spendAdded = Double(tick)
+            table.reloadData(forRowIndexes: [1, 2, 3], columnIndexes: [2])
+            table.drawMetalFrameIfNeeded()
+        }
+        #expect(NGTableView.metalFramesForTesting == frames)
+        #expect(NGMetalSurface.framesForTesting == chromeFrames)
+        // Seen again (the window says so): the waiting frame is drawn once.
+        table.drawsWhileUnseenForTesting = true
+        NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: window)
+        let header = try #require(table.headerSurface), summary = try #require(table.summarySurface)
+        #expect(table.needsMetalFrame && header.needsFrame && summary.needsFrame)
+        table.drawMetalFrameIfNeeded()
+        #expect(NGTableView.metalFramesForTesting == frames + 1)
+        #expect(NGMetalSurface.framesForTesting == chromeFrames + 2)
+        table.drawMetalFrameIfNeeded()
+        #expect(NGTableView.metalFramesForTesting == frames + 1)
     }
 
     @Test func aClearBackgroundIsNotOpaque() throws {
