@@ -6,8 +6,18 @@ import UniformTypeIdentifiers
 // the visible columns in display order, the rows shown (or selected) in
 // display order, and the summary row. Values are read on the main actor in
 // slices of a few milliseconds by row handle, so a live feed moving rows
-// meanwhile doesn't mix records up, then the file is written off the main
-// thread.
+// meanwhile doesn't mix records up, and handed in chunks to a writer off the
+// main thread, which formats and writes one while the next is read: the
+// export holds a chunk or two, not the whole table. A file is written beside
+// the destination and moved over it when done.
+
+/// Rows read for an export or a copy (see `NGTableView.readValues`).
+enum NGReadChunk: Sendable {
+    /// What came before is dropped: the rows are read again.
+    case restart
+    /// The next rows, a value for each column.
+    case values([NGCellValue])
+}
 
 extension NGTableView {
     /// The table as a file's contents: CSV or an Excel workbook of the
@@ -15,21 +25,39 @@ extension NGTableView {
     /// are read in slices, keeping the app responsive (`isExporting`).
     /// Empty when nothing could be exported: no data source, the task
     /// cancelled, or a workbook of 4 GB or more (`export(to:as:options:)`
-    /// throws then).
+    /// throws then). The file is built in memory: for a large table,
+    /// `export(to:as:options:)` writes it as it goes instead.
     public func exportedData(as format: NGExportFormat, options: NGExportOptions = NGExportOptions()) async -> Data {
-        guard let content = await exportContent(options: options) else { return Data() }
-        return await Task.detached(priority: .userInitiated) {
-            NGTableExport.data(content, as: format)
-        }.value
+        let sink = NGExportSink()
+        guard (try? await export(into: sink, as: format, options: options)) != nil else { return Data() }
+        return sink.contents
     }
 
-    /// Writes the table to a file (see `exportedData(as:options:)`).
-    /// Throws when nothing could be written (a workbook of 4 GB or more,
-    /// or no data source).
+    /// Writes the table to a file (see `exportedData(as:options:)`), as the
+    /// rows are read: a chunk of rows at a time in memory. The file appears
+    /// when it is done; until then (and if the export fails) a file already
+    /// there stays as it was. Throws when nothing could be written (a
+    /// workbook of 4 GB or more, no data source, the task cancelled, or the
+    /// file system's error).
     public func export(to url: URL, as format: NGExportFormat, options: NGExportOptions = NGExportOptions()) async throws {
-        let data = await exportedData(as: format, options: options)
-        guard !data.isEmpty else { throw CocoaError(.fileWriteUnknown) }
-        try data.write(to: url, options: .atomic)
+        let files = FileManager.default
+        let directory = try files.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: url, create: true)
+        defer { try? files.removeItem(at: directory) }
+        let written = directory.appendingPathComponent(url.lastPathComponent)
+        guard files.createFile(atPath: written.path, contents: nil) else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: url]) }
+        let file = try FileHandle(forWritingTo: written)
+        do {
+            try await export(into: NGExportSink(file: file), as: format, options: options)
+            try file.close()
+        } catch {
+            try? file.close()
+            throw error is NGExportError ? CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: url]) : error
+        }
+        if files.fileExists(atPath: url.path) {
+            _ = try files.replaceItemAt(url, withItemAt: written)
+        } else {
+            try files.moveItem(at: written, to: url)
+        }
     }
 
     /// Asks where to save the rows shown, as an Excel workbook or CSV, and
@@ -69,9 +97,10 @@ extension NGTableView {
         }
     }
 
-    /// Reads the values to export.
-    private func exportContent(options: NGExportOptions) async -> NGExportContent? {
-        guard dataSource != nil else { return nil }
+    /// Reads the rows and writes them into `sink`: a chunk written off the
+    /// main thread while the next is read, the summary row last.
+    private func export(into sink: NGExportSink, as format: NGExportFormat, options: NGExportOptions) async throws {
+        guard dataSource != nil else { throw CocoaError(.fileWriteUnknown) }
         let columns = columnLayout.allColumns
         let selectedOnly = options.rows == .selected
         // (Exports at once each count: the first to end doesn't say it's over.)
@@ -81,19 +110,40 @@ extension NGTableView {
             exportsRunning -= 1
             isExporting = exportsRunning > 0
         }
-        guard let values = await readValues(columns: columns, rows: { table in
-            if selectedOnly { return table.inDisplayOrder(table.selectedRowIndexes) }
-            // Group headers have no data source row.
-            return (0..<table.numberOfRows).map(table.sourceRow).filter { $0 >= 0 }
-        }) else { return nil }
-        let summary = options.includesSummaryRow && showsSummaryRow
-        return NGExportContent(
-            columns: columns.map { NGExportContent.Column(title: $0.menuTitle, format: $0.format, width: width(ofColumnID: $0.id) ?? $0.width) },
-            values: values,
-            summaryTexts: summary ? columns.map { summaryText(forColumnID: $0.id) ?? "" } : nil,
-            summaryValues: summary ? columns.map { summaryValue(forColumnID: $0.id) } : nil,
-            summaryIsCount: summary ? columns.map { if case .aggregate(.count, _) = $0.summary { true } else { false } } : nil,
+        let layout = NGExportLayout(
+            columns: columns.map { column in
+                let isCount = if case .aggregate(.count, _) = column.summary { true } else { false }
+                return NGExportLayout.Column(title: column.menuTitle, format: column.format, width: width(ofColumnID: column.id) ?? column.width,
+                                             isCount: isCount)
+            },
             maxRowsPerSheet: exportMaxRowsPerSheet, locale: formattingLocale)
+        let writer = NGTableExport.writer(for: format, layout: layout, sink: sink)
+        // The chunk being written, and the first error writing.
+        var writing: Task<Void, any Error>?
+        var failure: (any Error)?
+        let read = await readValues(columns: columns, rows: { table in
+            selectedOnly ? table.rowHandles.refs(atIndexes: table.inDisplayOrder(table.selectedRowIndexes)) : table.shownRowRefs()
+        }, chunkRows: max(1, exportChunkCells / max(1, columns.count))) { chunk in
+            // One chunk at a time: the one before written first.
+            do { try await writing?.value } catch {
+                failure = error
+                return false
+            }
+            writing = Task.detached(priority: .userInitiated) {
+                switch chunk {
+                case .restart: try writer.restart()
+                case .values(let values): try writer.write(rows: values)
+                }
+            }
+            return true
+        }
+        try await writing?.value
+        if let failure { throw failure }
+        guard read else { throw CocoaError(.userCancelled) }
+        let summary = options.includesSummaryRow && showsSummaryRow
+            ? NGExportSummary(texts: columns.map { summaryText(forColumnID: $0.id) ?? "" }, values: columns.map { summaryValue(forColumnID: $0.id) })
+            : nil
+        try await Task.detached(priority: .userInitiated) { try writer.finish(summary: summary) }.value
     }
 }
 /// The save panel's format menu: sets the panel's file type.

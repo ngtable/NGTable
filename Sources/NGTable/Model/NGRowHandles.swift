@@ -91,6 +91,16 @@ struct NGRowHandles: Sendable {
         return NGRowRef(handle: handle, stamp: UInt64(epoch) << 32 | UInt64(generation))
     }
 
+    /// References to the records of handles (in their order), in one pass.
+    func refs<Handles: Sequence<Int>>(ofHandles handles: Handles) -> [NGRowRef] {
+        handles.map { ref(of: Int32(truncatingIfNeeded: $0)) }
+    }
+
+    /// References to the records at indexes (in their order), in one pass.
+    func refs<Indexes: Sequence<Int>>(atIndexes indexes: Indexes) -> [NGRowRef] {
+        indexes.map { ref(at: $0) }
+    }
+
     /// The index of a reference's record, or -1 if it was removed (its
     /// handle may be another record's now, or every handle after `reset`).
     func index(of ref: NGRowRef) -> Int {

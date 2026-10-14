@@ -98,37 +98,42 @@ struct NGExportTests {
     }
 
     /// An archive that would pass the ZIP limit (4 GB without ZIP64; small
-    /// here) gives nothing rather than a broken file, whether an entry or the
-    /// central directory crosses it.
+    /// here) gives nothing rather than a broken file, whether an entry, a
+    /// streamed entry's piece or the central directory crosses it.
     @Test func zipArchivesStayBelowTheLimit() throws {
         var generator = SplitMix(seed: 7)
         let noise = Data((0..<600).map { _ in UInt8(truncatingIfNeeded: generator.next()) })   // Doesn't deflate.
         var fits = NGZipWriter()
         fits.sizeLimit = 1_000
-        fits.add("a.bin", noise)
-        #expect(fits.finish() != nil)
+        try fits.add("a.bin", noise)
+        try fits.finish()
         var entry = NGZipWriter()
         entry.sizeLimit = 1_000
-        entry.add("a.bin", noise)
-        entry.add("b.bin", noise)
-        #expect(entry.finish() == nil)
+        try entry.add("a.bin", noise)
+        #expect(throws: NGExportError.self) { try entry.add("b.bin", noise) }
+        var streamed = NGZipWriter()
+        streamed.sizeLimit = 1_000
+        try streamed.begin("a.bin")
+        try streamed.append(NGZipWriter.piece(noise))
+        #expect(throws: NGExportError.self) { try streamed.append(NGZipWriter.piece(noise)) }
         var directory = NGZipWriter()
         directory.sizeLimit = 700
-        directory.add("a-long-name-for-the-central-directory.bin", noise)
-        #expect(directory.finish() == nil)
+        try directory.add("a-long-name-for-the-central-directory.bin", noise)
+        #expect(throws: NGExportError.self) { try directory.finish() }
         // At the exact size: the archive and directory must stay under the limit.
         var measured = NGZipWriter()
-        measured.add("a.bin", noise)
-        let archive = measured.finish()
-        let size = try #require(archive).count
+        try measured.add("a.bin", noise)
+        try measured.finish()
+        let size = measured.sink.count
         var just = NGZipWriter()
         just.sizeLimit = size + 1
-        just.add("a.bin", noise)
-        #expect(just.finish()?.count == size)
+        try just.add("a.bin", noise)
+        try just.finish()
+        #expect(just.sink.count == size)
         var over = NGZipWriter()
         over.sizeLimit = size
-        over.add("a.bin", noise)
-        #expect(over.finish() == nil)
+        try over.add("a.bin", noise)
+        #expect(throws: NGExportError.self) { try over.finish() }
     }
 
     /// Text that a spreadsheet would run as a formula is made inert; numbers stay.
@@ -157,11 +162,139 @@ struct NGExportTests {
         #expect(format?.attribute(forName: "numFmtId")?.stringValue == "0")
     }
 
+    /// Values of every kind, in columns of every format (and a summary of
+    /// each kind), for comparing whole files.
+    @MainActor final class Kinds: NGTableViewDataSource {
+        let count: Int
+        init(count: Int) { self.count = count }
+        func numberOfRows(in tableView: NGTableView) -> Int { count }
+        func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
+            let texts = ["plain", "with, comma", "quote \"q\"", "=HYPERLINK(\"x\")", "-minus", "line\nbreak", "tab\there",
+                         "ctl\u{1}char", "emoji 👩‍👩‍👧 <&>", "", "@cmd", "Кириллица"]
+            switch column.id {
+            case "text": return .text(texts[row % texts.count])
+            case "number":
+                let numbers = [1.5, -2.25, 0, -0.0, .nan, .infinity, 1e15, 123_456.789]
+                return .number(numbers[row % numbers.count])
+            case "currency": return row % 7 == 0 ? .empty : .number(Double(row) * 1.37 - 50)
+            case "percent": return .number(Double(row % 100) / 100)
+            case "date": return .date(Date(timeIntervalSince1970: 1_700_000_000 + Double(row) * 3_600))
+            case "bool": return .bool(row % 2 == 0)
+            case "tags": return .tags([NGTag("a"), NGTag("b, c")])
+            case "rating": return .rating(row % 6)
+            case "progress": return row % 5 == 0 ? .progress(nil) : .progress(Double(row % 10), total: 10)
+            case "sparkline": return .sparkline(NGSparkline([1, 2, Double(row)]))
+            case "link": return .link(NGLink("Link \(row)", url: URL(string: "https://example.com/\(row)")))
+            default: return .empty
+            }
+        }
+    }
+
+    /// The rows go to the writer in chunks, each formatted (and deflated)
+    /// in pieces on all cores: however they are cut, row by row or a sheet
+    /// at once, the file is the same (CSV byte for byte; a workbook's parts,
+    /// read back with their checksums checked), across sheets too.
+    @Test func chunksDontChangeTheFile() async throws {
+        let kinds = Kinds(count: 2_345)
+        let table = NGTableView(frame: NSRect(x: 0, y: 0, width: 900, height: 400))
+        defer { withExtendedLifetime(kinds) {} }
+        table.columns = [
+            .column(NGTableColumn("text", title: "Text, \"titled\"", width: 200)),
+            .column(NGTableColumn("number", title: "Number", width: 90, format: .number(fractionDigits: 2), summary: .aggregate(.sum))),
+            .column(NGTableColumn("currency", title: "Currency", width: 90, format: .currency(code: "EUR"), summary: .aggregate(.count))),
+            .column(NGTableColumn("percent", title: "Percent", width: 90, format: .percent(fractionDigits: 1), summary: .aggregate(.average))),
+            .column(NGTableColumn("date", title: "Date", width: 120, format: .date(includesTime: true))),
+            .column(NGTableColumn("bool", title: "Bool", width: 40)),
+            .column(NGTableColumn("tags", title: "Tags", width: 90)),
+            .column(NGTableColumn("rating", title: "Rating", width: 90, summary: .aggregate(.max))),
+            .column(NGTableColumn("progress", title: "Progress", width: 90, format: .percent(fractionDigits: 0))),
+            .column(NGTableColumn("sparkline", title: "Sparkline", width: 90)),
+            .column(NGTableColumn("link", title: "Link", width: 90)),
+        ]
+        table.dataSource = kinds
+        table.exportMaxRowsPerSheet = 700
+        table.layoutSubtreeIfNeeded()
+        let columns = table.columns.count
+        var csv: [Data] = []
+        var workbooks: [String] = []
+        for cells in [1_000_000, columns * 37, columns] {
+            table.exportChunkCells = cells
+            csv.append(await table.exportedData(as: .csv))
+            let workbook = await table.exportedData(as: .xlsx)
+            workbooks.append(try #require(try parts(of: workbook)))
+        }
+        #expect(csv[0].count > 100_000)
+        #expect(csv.allSatisfy { $0 == csv[0] })
+        #expect(workbooks[0].contains("== xl/worksheets/sheet4.xml"))
+        #expect(workbooks.allSatisfy { $0 == workbooks[0] })
+    }
+
+    /// A reload while the rows are read and written: the file starts over
+    /// with the new rows, once.
+    @Test(arguments: [NGExportFormat.csv, .xlsx])
+    func aReloadStartsTheFileOver(_ format: NGExportFormat) async throws {
+        let records = Records(count: 300)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        table.exportChunkCells = 1   // A row at a time: the export takes many turns.
+        let reads = records.nameReads
+        let export = Task { await table.exportedData(as: format, options: NGExportOptions(includesSummaryRow: false)) }
+        while records.nameReads < reads + 20 { await Task.yield() }
+        records.records = (0..<120).map { .init(id: $0, name: "New \($0)", profit: Double($0), status: "Active") }
+        table.reloadData()
+        let data = await export.value
+        let text: String
+        if format == .csv {
+            text = try #require(String(data: data, encoding: .utf8))
+            #expect(text.components(separatedBy: "Name,Profit,Status").count == 2)
+        } else {
+            text = try #require(try parts(of: data))
+            #expect(text.components(separatedBy: "== xl/worksheets/sheet1.xml").count == 2)
+        }
+        #expect(!text.contains("Campaign"))
+        #expect((0..<120).allSatisfy { text.contains("New \($0)") })
+    }
+
+    /// A cancelled export leaves a file already there as it was.
+    @Test func aCancelledExportLeavesTheFile() async throws {
+        let records = Records(count: 300)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        table.exportChunkCells = 1
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("NGExportTests-\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data("before".utf8).write(to: url)
+        let reads = records.nameReads
+        let export = Task { try await table.export(to: url, as: .csv) }
+        while records.nameReads < reads + 20 { await Task.yield() }
+        export.cancel()
+        await #expect(throws: CocoaError.self) { try await export.value }
+        #expect(try Data(contentsOf: url) == Data("before".utf8))
+        #expect(!table.isExporting)
+        // And one that ends replaces it.
+        table.exportChunkCells = 1_000
+        try await table.export(to: url, as: .csv)
+        #expect(String(data: try Data(contentsOf: url), encoding: .utf8)?.hasPrefix("Name,Profit,Status") == true)
+    }
+
+    /// Every part of a workbook by name, as one text (the checksums checked).
+    func parts(of data: Data) throws -> String? {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("NGExportTests-\(UUID().uuidString).xlsx")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try data.write(to: url)
+        return python(["import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; "
+                       + "[sys.stdout.write('== ' + n + '\\n' + z.read(n).decode() + '\\n') for n in sorted(z.namelist())]", url.path])
+    }
+
     func unzip(_ url: URL, part: String) -> String? {
+        python(["import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; sys.stdout.write(z.read(sys.argv[2]).decode())",
+                url.path, part])
+    }
+
+    private func python(_ arguments: [String]) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = ["-c", "import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; sys.stdout.write(z.read(sys.argv[2]).decode())",
-                             url.path, part]
+        process.arguments = ["-c"] + arguments
         let pipe = Pipe()
         process.standardOutput = pipe
         do { try process.run() } catch { return nil }

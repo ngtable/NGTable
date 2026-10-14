@@ -214,9 +214,10 @@ processor at a lower speed.
   glyphs don't fit) and a cache of recently laid out text (20,000 strings).
 - Summary values are stored as one `Double` per row and summarized column,
   shared between filtered views of the same data.
-- An export holds what it writes until the file is done: about 100 bytes a
-  cell for CSV and 280 for a workbook (about 5.6 GB for 1,000,000 rows of 20
-  columns as xlsx). Export very large tables as CSV, or the selected rows.
+- An export to a file holds a chunk of rows (400,000 cells) or two, and the
+  pieces being formatted: about 50 MB for CSV and 110 MB for a workbook
+  whatever the rows (was 1.4 and 4 GB for 1,000,000 rows of 20 columns).
+  `exportedData(as:options:)` holds the whole file too.
 - The search index holds the words of the searched columns of every row. It
   is created on the first search and dropped on reload.
 - Per row, measured on a million rows: about 23 bytes the table always
