@@ -61,6 +61,42 @@ extension NGBenchmarks {
             print("BENCH wrapped rows: opened in \(opened), all measured after \(measured), main thread held at most \(longest) at once, "
                   + "\(tall) of \(table.numberOfRows) rows wrap, content \(Int(table.layoutMetrics.contentHeight)) pt")
         }
+
+        /// Rows of the delegate's heights: what rebuilding their tops costs
+        /// after a batch, unsorted, sorted and grouped.
+        @MainActor private final class Heights: NGTableViewDelegate, NGTableViewRowHeights {
+            func tableView(_ tableView: NGTableView, heightOfRow row: Int) -> CGFloat { 20 + CGFloat(row % 7) }
+        }
+
+        @Test func rebuildingTheRowsTops() async throws {
+            let log = Log(count: Self.rows)
+            let heights = Heights()
+            let table = NGTableView(frame: NSRect(x: 0, y: 0, width: 900, height: 700))
+            defer { withExtendedLifetime((log, heights)) {} }
+            table.columns = [.column(NGTableColumn("line", title: "Line", width: 80)),
+                             .column(NGTableColumn("message", title: "Message", width: 420))]
+            table.dataSource = log
+            table.delegate = heights
+            table.layoutSubtreeIfNeeded()
+            func cost(_ name: String) {
+                var best = Duration.seconds(1)
+                for _ in 0..<5 {
+                    table.rowGeometryCache = nil
+                    let start = ContinuousClock.now
+                    _ = table.rowGeometry
+                    best = min(best, ContinuousClock.now - start)
+                }
+                print("BENCH row tops of \(table.numberOfRows) rows, \(name): \(best)")
+            }
+            cost("data source order")
+            table.sortsRows = true
+            table.sortDescriptors = [NSSortDescriptor(key: "line", ascending: false)]
+            while table.isSortingRows { try await Task.sleep(for: .milliseconds(5)) }
+            cost("sorted")
+            table.rowGrouping = NGRowGrouping(columnIDs: ["line"].map { _ in "message" })
+            while table.isGroupingRows { try await Task.sleep(for: .milliseconds(5)) }
+            cost("grouped")
+        }
     }
 }
 #endif
