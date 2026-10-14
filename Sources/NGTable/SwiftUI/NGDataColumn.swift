@@ -272,6 +272,21 @@ public struct NGDataColumn<Row> {
         return copy
     }
 
+    /// The most lines a cell's text takes, like `View.lineLimit(_:)`: more
+    /// than 1 wraps it and rows grow to fit (the last line truncated with
+    /// "…"); `nil` wraps it onto as many lines as it needs. One line (the
+    /// default) truncates it. See `NGTableColumn.wrappingText(maximumNumberOfLines:)`.
+    public func lineLimit(_ number: Int?) -> Self {
+        var copy = self
+        if let number, number <= 1 {
+            copy.column.wrapsText = false
+            copy.column.maximumNumberOfLines = 0
+        } else {
+            copy.column = copy.column.wrappingText(maximumNumberOfLines: number ?? 0)
+        }
+        return copy
+    }
+
     /// Lets the user edit the column's cells, like the AppKit table's
     /// editable columns: text and numbers in place, Booleans with a check
     /// box, values from a menu of `choices`. The value is written into the

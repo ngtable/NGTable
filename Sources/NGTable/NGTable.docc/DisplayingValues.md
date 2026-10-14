@@ -54,7 +54,8 @@ line. Tables of up to 2,000 rows are measured at once; in larger ones rows are
 measured as they come into view (until then they count as one line), and
 the rows in view don't move while those above them grow. Rows whose heights
 the app knows itself come from the delegate instead (``NGTableViewRowHeights``).
-Printed tables show one line per row.
+Printing wraps the text the same way, each row on one page. In SwiftUI it is
+``NGDataColumn/lineLimit(_:)``.
 
 ### Formats
 

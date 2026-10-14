@@ -71,7 +71,7 @@ NGTable also sorts, filters, sums and highlights changes while doing it.
   colored **tags**, icon **marks**, **sparklines** (lines, areas, bars, wins and
   losses), **links**, **buttons**, **progress bars**, **ratings**, and
   **pictures and videos** by URL (loaded, cached and played under the pointer
-  by the table).
+  by the table); text that **wraps**, rows as high as it.
 - Native feel: overlay scrollers, elastic scrolling, Liquid Glass summary bar
   on macOS 26, dark mode, accent colors, keyboard navigation, type select,
   copying to spreadsheets, VoiceOver.

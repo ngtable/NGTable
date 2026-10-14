@@ -150,6 +150,16 @@ NGDataTable(tasks) { … }
 `dropDestination(for:action:)` needs macOS 15.2 to know the types a value
 comes as; before, pass them (`contentTypes: [.plainText]`).
 
+### Wrapped text
+
+Cells show one line of text, truncated. ``NGDataColumn/lineLimit(_:)`` wraps
+it, like `Text`'s `lineLimit`, and rows grow to fit (see <doc:DisplayingValues>):
+
+```swift
+NGDataColumn("Message", value: \.message).lineLimit(nil)   // As many lines as it needs.
+NGDataColumn("Notes", value: \.notes).lineLimit(3)         // At most three.
+```
+
 ### Customizing columns
 
 Like a `Table`'s, columns say what the user may change and how they start:

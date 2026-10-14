@@ -148,6 +148,44 @@ struct NGPrintingTests {
         #expect(clipped.count == 1 && clipped[0].contains("name-0") && !clipped[0].contains("c5-0"))
     }
 
+    @MainActor
+    final class Messages: NGTableViewDataSource {
+        func numberOfRows(in tableView: NGTableView) -> Int { 60 }
+        func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
+            column.id == "id" ? .text("Row \(row)")
+                : .text("Begin\(row) the request was retried after the upstream server answered slowly, then succeeded on the third attempt End\(row)")
+        }
+    }
+
+    /// Wrapping columns print their text in full, rows as high as it, each
+    /// row on one page; a line limit cuts the text there.
+    @Test func wrappedTextPrintsInFull() throws {
+        let messages = Messages()
+        let table = NGTableView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        defer { withExtendedLifetime(messages) {} }
+        table.dataSource = messages
+        let info = NSPrintInfo()
+        info.paperSize = NSSize(width: 595, height: 842)
+        func pages(_ message: NGTableColumn) throws -> [String] {
+            table.columns = [.column(NGTableColumn("id", title: "Id", width: 80)), .column(message)]
+            table.layoutSubtreeIfNeeded()
+            return try pdfText(table.pdfData(printInfo: info))
+        }
+        let oneLine = try pages(NGTableColumn("message", title: "Message", width: 200))
+        #expect(!oneLine.joined().contains("End0"))
+        let wrapped = try pages(NGTableColumn("message", title: "Message", width: 200).wrappingText())
+        #expect(wrapped.count > oneLine.count)
+        for row in 0..<60 {
+            // PDF text breaks lines with newlines: words survive.
+            let page = wrapped.first { $0.contains("Begin\(row) ") }
+            #expect(page?.contains("End\(row)") == true, "row \(row)")
+        }
+        let twoLines = try pages(NGTableColumn("message", title: "Message", width: 200).wrappingText(maximumNumberOfLines: 2))
+        #expect(twoLines.count < wrapped.count)
+        #expect(!twoLines.joined().contains("End0"))
+        #expect(twoLines.joined().contains("Begin59"))
+    }
+
     /// The print operation: the progress panel, the table's options in the
     /// print panel (selected rows only, the summary row; the preview follows
     /// them), and the app's own accessories.

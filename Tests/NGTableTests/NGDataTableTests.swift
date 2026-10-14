@@ -70,6 +70,29 @@ struct NGDataTableTests {
         #expect(state.selection == [2, 3])
     }
 
+    /// `lineLimit` wraps a column's text and rows grow to it, like `Text`'s.
+    @Test func lineLimitWrapsText() throws {
+        let long = "A campaign name long enough to wrap onto several lines of its column"
+        let rows = [Campaign(id: 1, name: long, spend: 1), Campaign(id: 2, name: "Short", spend: 2)]
+        func view(_ limit: Int?) -> NGDataTable<Campaign> {
+            NGDataTable(rows) { NGDataColumn("Name", value: \.name).width(120).lineLimit(limit) }
+        }
+        let (hosting, window, table) = host(view(nil))
+        defer { withExtendedLifetime(window) {} }
+        let lineHeight = NGLineHeights.height(of: table.metalStyle.textFont)
+        #expect(table.tableColumns[0].wrapsText)
+        let wrapped = table.rowGeometry.height(of: 0)
+        #expect(wrapped >= table.rowHeight + 2 * lineHeight)
+        #expect(table.rowGeometry.height(of: 1) == table.rowHeight)
+        hosting.rootView = view(2)
+        hosting.layoutSubtreeIfNeeded()
+        #expect(table.rowGeometry.height(of: 0) == table.rowHeight + lineHeight)
+        hosting.rootView = view(1)
+        hosting.layoutSubtreeIfNeeded()
+        #expect(!table.tableColumns[0].wrapsText)
+        #expect(table.rowGeometry.height(of: 0) == table.rowHeight)
+    }
+
     @Test func valuesUpdatesAndSelection() throws {
         let state = State()
         var rows = [Campaign(id: 1, name: "B", spend: 20), Campaign(id: 2, name: "A", spend: 10, note: "x")]

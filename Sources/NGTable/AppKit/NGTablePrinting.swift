@@ -108,7 +108,8 @@ extension NGTableView {
                 NGTablePrintView.Column(title: column.menuTitle, width: CGFloat(width(ofColumnID: column.id) ?? column.width),
                                         alignment: column.alignment.textAlignment(isNumeric: column.isNumeric,
                                                                                   layoutDirection: userInterfaceLayoutDirection),
-                                        repeats: columnLayout.leading.columns.contains { $0.id == column.id })
+                                        repeats: columnLayout.leading.columns.contains { $0.id == column.id },
+                                        lineLimit: column.lineLimit)
             },
             options: options, content: content, texts: texts, printInfo: printInfo, pagination: printPagination,
             fontSize: max(7, tableStyle.cellFontSize - 3), isRightToLeft: isRightToLeft, locale: formattingLocale)
@@ -123,6 +124,9 @@ final class NGTablePrintView: NSView {
         let alignment: NSTextAlignment
         /// Printed on every band of columns (pinned at the leading edge).
         var repeats = false
+        /// The most lines a cell prints (more than 1: its text wraps, see
+        /// `NGTableColumn.wrapsText`).
+        var lineLimit = 1
     }
 
     enum Line {
@@ -146,6 +150,8 @@ final class NGTablePrintView: NSView {
     private let font: NSFont
     private let boldFont: NSFont
     private let rowHeight: CGFloat
+    /// The height a line of wrapped text adds to a row.
+    private let lineHeight: CGFloat
     private let headerHeight: CGFloat
     /// Columns from the right, right to left.
     private let isRightToLeft: Bool
@@ -162,15 +168,18 @@ final class NGTablePrintView: NSView {
         var widths: [CGFloat]
         /// The columns of each band across pages (one band unless `.automatic`).
         var bands: [[Int]]
-        var rowsPerPage: Int
-        /// Pages down, for the rows; each has a page per band.
-        var rowPageCount: Int
+        /// The first line of each page down (and the summary row as the line
+        /// after the last); each has a page per band.
+        var pageStarts: [Int]
+        /// With wrapped text, each line's height (the summary row's last);
+        /// empty when every line is `rowHeight` high.
+        var lineHeights: [CGFloat] = []
+        var rowPageCount: Int { pageStarts.count }
         var pageCount: Int { rowPageCount * bands.count }
     }
     private var layout: Layout
     private var pageSize: NSSize { layout.pageSize }
     private var widths: [CGFloat] { layout.widths }
-    private var rowsPerPage: Int { layout.rowsPerPage }
     var pageCount: Int { layout.pageCount }
     /// The columns of each band across pages, as indexes of the columns.
     var columnBands: [[Int]] { layout.bands }
@@ -192,34 +201,87 @@ final class NGTablePrintView: NSView {
         font = .systemFont(ofSize: fontSize)
         boldFont = .systemFont(ofSize: fontSize, weight: .semibold)
         rowHeight = ceil(fontSize * 1.6)
+        lineHeight = ceil(NSLayoutManager().defaultLineHeight(for: font))
         headerHeight = ceil(fontSize * 2)
-        layout = Self.layout(for: printInfo, pagination: pagination, columns: columns, lineCount: lines.count + (summary == nil ? 0 : 1),
-                             rowHeight: rowHeight, headerHeight: headerHeight)
-        super.init(frame: NSRect(x: 0, y: 0, width: layout.pageSize.width, height: layout.pageSize.height * CGFloat(layout.pageCount)))
+        layout = Layout(pageSize: .zero, widths: [], bands: [], pageStarts: [])
+        super.init(frame: .zero)
+        layOutPages(for: printInfo)
+    }
+
+    /// Lays the pages out for a paper: the columns across, the lines down
+    /// (as many as fit a page, by their heights with wrapped text).
+    private func layOutPages(for info: NSPrintInfo) {
+        let lineCount = lines.count + (summary == nil ? 0 : 1)
+        layout = Self.layout(for: info, pagination: pagination, columns: columns)
+        let room = layout.pageSize.height - headerHeight
+        if columns.contains(where: { $0.lineLimit > 1 }) {
+            // Each row as high as its wrapped cells at the widths it prints in.
+            layout.lineHeights = lines.map { line in
+                guard case .row(let ref) = line else { return rowHeight }
+                return height(ofRow: texts(ref))
+            }
+            if summary != nil { layout.lineHeights.append(rowHeight) }
+            var starts = [0]
+            var used: CGFloat = 0
+            for (index, height) in layout.lineHeights.enumerated() {
+                // A line taller than a page starts one and is cut off.
+                if used + height > room, used > 0 {
+                    starts.append(index)
+                    used = 0
+                }
+                used += height
+            }
+            layout.pageStarts = starts
+        } else {
+            let rowsPerPage = max(1, Int(room / rowHeight))
+            layout.pageStarts = Array(stride(from: 0, to: max(1, lineCount), by: rowsPerPage))
+        }
+        setFrameSize(NSSize(width: layout.pageSize.width, height: layout.pageSize.height * CGFloat(layout.pageCount)))
+    }
+
+    /// The lines a cell's text wraps onto in a column, at most its limit.
+    private func lineCount(of text: String, column index: Int) -> Int {
+        let limit = columns[index].lineLimit
+        guard limit > 1, !text.isEmpty else { return 1 }
+        let width = max(1, widths[index] - 6)
+        let bounds = (text as NSString).boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude),
+                                                     options: .usesLineFragmentOrigin, attributes: [.font: font])
+        return min(limit, max(1, Int((bounds.height / lineHeight).rounded(.up))))
+    }
+
+    /// A row's height: one line's, and a line more for each line its
+    /// wrapped cells take beyond the first.
+    private func height(ofRow texts: [String]) -> CGFloat {
+        var lines = 1
+        for index in columns.indices where columns[index].lineLimit > 1 && index < texts.count && index < widths.count {
+            lines = max(lines, lineCount(of: texts[index], column: index))
+        }
+        return rowHeight + CGFloat(lines - 1) * lineHeight
+    }
+
+    private func lineHeight(at index: Int) -> CGFloat {
+        index < layout.lineHeights.count ? layout.lineHeights[index] : rowHeight
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("made in code") }
 
-    private static func layout(for info: NSPrintInfo, pagination: NSPrintInfo.PaginationMode, columns: [Column], lineCount: Int,
-                               rowHeight: CGFloat, headerHeight: CGFloat) -> Layout {
+    /// The page size and the columns across pages for a paper (the lines
+    /// down are `layOutPages(for:)`'s).
+    private static func layout(for info: NSPrintInfo, pagination: NSPrintInfo.PaginationMode, columns: [Column]) -> Layout {
         let paper = info.paperSize
         let pageSize = NSSize(width: max(1, paper.width - info.leftMargin - info.rightMargin),
                               height: max(1, paper.height - info.topMargin - info.bottomMargin))
         let total = max(1, columns.reduce(0) { $0 + $1.width })
-        let rowsPerPage = max(1, Int((pageSize.height - headerHeight) / rowHeight))
-        let rowPages = max(1, (lineCount + rowsPerPage - 1) / rowsPerPage)
         let all = Array(columns.indices)
         switch pagination {
         case .automatic where total > pageSize.width:
-            return Layout(pageSize: pageSize, widths: columns.map(\.width), bands: bands(of: columns, width: pageSize.width),
-                          rowsPerPage: rowsPerPage, rowPageCount: rowPages)
+            return Layout(pageSize: pageSize, widths: columns.map(\.width), bands: bands(of: columns, width: pageSize.width), pageStarts: [0])
         case .clip, .automatic:
-            return Layout(pageSize: pageSize, widths: columns.map(\.width), bands: [all], rowsPerPage: rowsPerPage, rowPageCount: rowPages)
+            return Layout(pageSize: pageSize, widths: columns.map(\.width), bands: [all], pageStarts: [0])
         default:
             let scale = min(1, pageSize.width / total)
-            return Layout(pageSize: pageSize, widths: columns.map { $0.width * scale }, bands: [all], rowsPerPage: rowsPerPage,
-                          rowPageCount: rowPages)
+            return Layout(pageSize: pageSize, widths: columns.map { $0.width * scale }, bands: [all], pageStarts: [0])
         }
     }
 
@@ -258,9 +320,7 @@ final class NGTablePrintView: NSView {
         let info = NSPrintOperation.current?.printInfo ?? printInfo
         // (The table's pagination, whatever an operation's print info says:
         // the print panel doesn't change it, and a default one would clip.)
-        layout = Self.layout(for: info, pagination: pagination, columns: columns, lineCount: lines.count + (summary == nil ? 0 : 1),
-                             rowHeight: rowHeight, headerHeight: headerHeight)
-        setFrameSize(NSSize(width: pageSize.width, height: pageSize.height * CGFloat(pageCount)))
+        layOutPages(for: info)
         range.pointee = NSRange(location: 1, length: pageCount)
         return true
     }
@@ -288,8 +348,10 @@ final class NGTablePrintView: NSView {
         NSColor.lightGray.setFill()
         NSRect(x: 0, y: top + headerHeight - 1, width: pageSize.width, height: 0.5).fill()
         var y = top + headerHeight
-        let start = rowPage * rowsPerPage
-        for index in start..<min(start + rowsPerPage, lines.count + (summary == nil ? 0 : 1)) {
+        let start = layout.pageStarts[rowPage]
+        let end = rowPage + 1 < layout.pageStarts.count ? layout.pageStarts[rowPage + 1] : lines.count + (summary == nil ? 0 : 1)
+        for index in start..<end {
+            let height = lineHeight(at: index)
             if index == lines.count, let summary {
                 NSColor.lightGray.setFill()
                 NSRect(x: 0, y: y, width: pageSize.width, height: 0.5).fill()
@@ -299,9 +361,9 @@ final class NGTablePrintView: NSView {
                 case .row(let ref):
                     if index.isMultiple(of: 2) == false {
                         NSColor(white: 0.5, alpha: 0.07).setFill()
-                        NSRect(x: 0, y: y, width: pageSize.width, height: rowHeight).fill()
+                        NSRect(x: 0, y: y, width: pageSize.width, height: height).fill()
                     }
-                    drawCells(texts(ref), band: band, y: y, height: rowHeight, font: font, color: .black)
+                    drawCells(texts(ref), band: band, y: y, height: rowHeight, font: font, color: .black, wraps: true)
                 case .group(let title, let level, let count):
                     NSColor(white: 0.5, alpha: 0.14).setFill()
                     NSRect(x: 0, y: y, width: pageSize.width, height: rowHeight).fill()
@@ -311,29 +373,35 @@ final class NGTablePrintView: NSView {
                          font: boldFont, color: .black, alignment: isRightToLeft ? .right : .left)
                 }
             }
-            y += rowHeight
+            y += height
         }
     }
 
-    private func drawCells(_ values: [String], band: [Int], y: CGFloat, height: CGFloat, font: NSFont, color: NSColor) {
+    /// - Parameter wraps: Whether cells of wrapping columns print their
+    ///   lines below the first (whose line is `height` high, as the others').
+    private func drawCells(_ values: [String], band: [Int], y: CGFloat, height: CGFloat, font: NSFont, color: NSColor, wraps: Bool = false) {
         var x: CGFloat = 0
         for index in band where index < widths.count && index < values.count {
             // Right to left, the first column at the right.
             let left = isRightToLeft ? pageSize.width - x - widths[index] : x
+            let lines = wraps ? lineCount(of: values[index], column: index) : 1
             draw(values[index], in: NSRect(x: left + 3, y: y, width: max(0, widths[index] - 6), height: height), font: font,
-                 color: color, alignment: columns[index].alignment)
+                 color: color, alignment: columns[index].alignment, lines: lines)
             x += widths[index]
         }
     }
 
-    private func draw(_ text: String, in rect: NSRect, font: NSFont, color: NSColor, alignment: NSTextAlignment) {
+    /// Draws text in a line `rect.height` high, centered; with `lines` more
+    /// than one, wrapped onto the lines below it, the last truncated.
+    private func draw(_ text: String, in rect: NSRect, font: NSFont, color: NSColor, alignment: NSTextAlignment, lines: Int = 1) {
         guard !text.isEmpty, rect.width > 0 else { return }
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = alignment
-        paragraph.lineBreakMode = .byTruncatingTail
+        paragraph.lineBreakMode = lines > 1 ? .byWordWrapping : .byTruncatingTail
         let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color, .paragraphStyle: paragraph]
-        let lineHeight = ceil(font.ascender - font.descender + font.leading)
-        let line = NSRect(x: rect.minX, y: rect.minY + (rect.height - lineHeight) / 2, width: rect.width, height: lineHeight)
+        let lineHeight = lines > 1 ? self.lineHeight : ceil(font.ascender - font.descender + font.leading)
+        let line = NSRect(x: rect.minX, y: rect.minY + (rect.height - lineHeight) / 2, width: rect.width,
+                          height: lineHeight * CGFloat(lines))
         (text as NSString).draw(with: line, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attributes)
     }
 }
