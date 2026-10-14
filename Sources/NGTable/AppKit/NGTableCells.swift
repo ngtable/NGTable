@@ -552,6 +552,7 @@ extension NGTableView {
         searchIndex = nil
         cancelSearchBuild()
         groupKeys = nil
+        cancelGroupingJob()
         filterNeedsFullEvaluation = true
         applyRowFilter()
     }

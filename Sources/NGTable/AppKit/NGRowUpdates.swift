@@ -639,6 +639,12 @@ extension NGTableView {
             for level in keys.ids.indices { prepare(&keys.ids[level], -1) }
             groupKeys = keys
         }
+        if var job = groupingJob.take() {
+            prepare(&job.read, false)
+            job.firstUnread = min(job.firstUnread, handle)
+            for level in job.keys.ids.indices { prepare(&job.keys.ids[level], -1) }
+            groupingJob = job
+        }
         if var keys = sortKeys.take() {
             keys.prepare(handle)
             sortKeys = keys
@@ -1154,6 +1160,8 @@ extension NGTableView {
             }
             searchBuild = build
         }
+        // So does a grouping being read.
+        if let job = groupingJob { markGroupingJobRowsUnread(rowsToRead(forColumns: job.keys.columnIDs)) }
         phase("read")
 
         // The filter may now show other rows, and changed values move rows
@@ -1172,8 +1180,9 @@ extension NGTableView {
             filterRowsToCheck?.formUnion(changed)
             columnFilterRowsToCheck.formUnion(changed)
         }
-        // Keys kept while not grouped (for grouping again) are read again too.
-        let groupRows = rowsToRead(forColumns: rowGrouping?.columnIDs ?? groupKeys?.columnIDs ?? [])
+        // Keys kept while not grouped (for grouping again, or shown while a
+        // grouping's are read) are read again too.
+        let groupRows = rowsToRead(forColumns: Set((rowGrouping?.columnIDs ?? []) + (groupKeys?.columnIDs ?? [])))
         if sortKeys != nil || backgroundSort != nil { sortRowsToPlace.formUnion(Self.subtracting(rowHandles.removedHandles, from: batch.movedRows)) }
         var display: DisplayRowsChange
         if groupedDisplay != nil, !batch.isStructural {

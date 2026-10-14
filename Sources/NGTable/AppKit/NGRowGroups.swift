@@ -83,6 +83,34 @@ struct NGGroupKeys {
     /// Key numbers of a level (used or not), for tests.
     func keyCount(level: Int) -> Int { keys[level].count }
 
+    /// The keys of other grouping columns: the levels of columns these keys
+    /// have are taken over as they are (read already), the others are new.
+    /// - Returns: The keys, and the levels that are new (no row read).
+    func regrouped(by columnIDs: [String], rowCount: Int) -> (keys: NGGroupKeys, newLevels: [Int]) {
+        var result = NGGroupKeys(columnIDs: columnIDs, rowCount: rowCount)
+        var newLevels: [Int] = []
+        for (level, columnID) in columnIDs.enumerated() {
+            guard let old = self.columnIDs.firstIndex(of: columnID), ids[old].count == rowCount else {
+                newLevels.append(level)
+                continue
+            }
+            result.take(level: level, from: self, level: old)
+        }
+        return (result, newLevels)
+    }
+
+    /// Takes over one level of other keys.
+    mutating func take(level: Int, from other: NGGroupKeys, level old: Int) {
+        ids[level] = other.ids[old]
+        keys[level] = other.keys[old]
+        values[level] = other.values[old]
+        idOfKey[level] = other.idOfKey[old]
+        idOfValue[level] = other.idOfValue[old]
+        idOfText[level] = other.idOfText[old]
+        idOfNumber[level] = other.idOfNumber[old]
+        compactionThresholds[level] = other.compactionThresholds[old]
+    }
+
     mutating func id(level: Int, key: String, value: NGCellValue) -> Int32 {
         if let id = idOfKey[level][key] { return id }
         let id = Int32(keys[level].count)
@@ -359,7 +387,10 @@ extension NGTableView {
             buildTreeDisplay(readingParents: false)
             return DisplayRowsChange(reordered: reordered)
         }
-        guard let grouping = rowGrouping, !grouping.columnIDs.isEmpty, dataSource != nil else {
+        // A grouping whose keys are read in the background shows the rows as
+        // they were grouped before meanwhile (see NGBackgroundGrouping.swift).
+        guard let target = rowGrouping?.columnIDs, !target.isEmpty, dataSource != nil,
+              let columnIDs = groupingColumnsToShow(for: target) else {
             retireGroupSubtotals()
             groupTree = NGGroupTree()
             groupTreeGeneration += 1
@@ -369,7 +400,7 @@ extension NGTableView {
             return DisplayRowsChange(reordered: reordered)
         }
         // Sorted rows in other places: the groups list their rows again (in order).
-        if let changedRows, groupedDisplay != nil, rowMap == previousRowMap, groupKeys?.columnIDs == grouping.columnIDs,
+        if let changedRows, groupedDisplay != nil, rowMap == previousRowMap, groupKeys?.columnIDs == columnIDs,
            groupKeys?.ids.first?.count == rowHandles.capacity {
             // Their groups before and after: their subtotals change.
             var affected = groups(containing: changedRows)
@@ -403,11 +434,11 @@ extension NGTableView {
         // Rows moved in a batch: if only its changed rows may be in other
         // groups (or shown or hidden), and the keys were kept, the groups
         // may stay.
-        let keysKept = groupKeys?.columnIDs == grouping.columnIDs && groupKeys?.ids.first?.count == rowHandles.capacity
+        let keysKept = groupKeys?.columnIDs == columnIDs && groupKeys?.ids.first?.count == rowHandles.capacity
         let reread = groupKeysToRead
-        readGroupKeys(grouping.columnIDs)
+        readGroupKeys(columnIDs)
         if let movedRows, keysKept, filterEvaluations == evaluations, groupedDisplay != nil, let keys = groupKeys,
-           groupTree.nodes.last?.group.columnIDs == grouping.columnIDs, groupTree.leafOfSourceRow.count == rowHandles.capacity {
+           groupTree.nodes.last?.group.columnIDs == columnIDs, groupTree.leafOfSourceRow.count == rowHandles.capacity {
             var tree = groupTree
             groupTree = NGGroupTree()   // One owner while it changes.
             let shown = displayOrder ?? rowMap ?? allRowHandles
@@ -442,25 +473,34 @@ extension NGTableView {
     }
 
     /// The key of a row's value in a grouping column.
-    private func groupKey(of value: NGCellValue, in column: NGTableColumn) -> String {
+    func groupKey(of value: NGCellValue, in column: NGTableColumn) -> String {
         value == .empty ? "" : column.format.string(for: value, locale: formattingLocale)
     }
 
-    /// Reads the keys of all rows after a reload (or other grouping columns),
+    /// Reads the keys of all rows after a reload (or of grouping columns not
+    /// read before: the levels of columns grouped by before are kept),
     /// otherwise of the rows (handles) `invalidateGroupKeys(forRows:)` marked.
     private func readGroupKeys(_ columnIDs: [String]) {
         guard let dataSource else { return }
         let capacity = rowHandles.capacity
+        let allRows = IndexSet(integersIn: 0..<capacity)
+        var newLevels: [Int] = []
         if groupKeys?.columnIDs != columnIDs || groupKeys?.ids.first?.count != capacity {
-            groupKeys = NGGroupKeys(columnIDs: columnIDs, rowCount: capacity)
-            groupKeysToRead = IndexSet(integersIn: 0..<capacity)
+            if let old = groupKeys.take() {
+                (groupKeys, newLevels) = old.regrouped(by: columnIDs, rowCount: capacity)
+            } else {
+                groupKeys = NGGroupKeys(columnIDs: columnIDs, rowCount: capacity)
+                newLevels = Array(columnIDs.indices)
+            }
+            // Read before for other columns or rows: every row is read.
+            if newLevels.count == columnIDs.count { groupKeysToRead = allRows }
         }
-        guard var keys = groupKeys, !groupKeysToRead.isEmpty else { return }
+        guard var keys = groupKeys, !groupKeysToRead.isEmpty || !newLevels.isEmpty else { return }
         groupKeys = nil   // One owner: changing a row's key doesn't copy every row's.
         for (level, columnID) in columnIDs.enumerated() {
             let column = summaryColumn(columnID)
             // By ranges (all rows after a reload): iterating an index set row by row costs more.
-            for range in groupKeysToRead.rangeView {
+            for range in (newLevels.contains(level) ? allRows : groupKeysToRead).rangeView {
                 for handle in range where handle < capacity {
                     let row = row(ofHandle: handle)
                     guard row >= 0 else { continue }

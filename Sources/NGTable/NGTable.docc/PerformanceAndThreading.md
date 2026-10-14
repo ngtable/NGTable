@@ -158,6 +158,21 @@ with leading zeros together with ß or case, nor with ligatures and
 full-width digits), no order agrees with every comparison; the table's is
 then sorted pair by pair, like any sort with that comparison.
 
+### Grouping a million rows
+
+Grouping reads every row's value of each grouping column once, by
+`valueFor` on the main actor, and keeps the keys: collapsing, expanding,
+filtering and grouping by the same columns again use them (a few
+milliseconds on a million rows), and grouping by one more column reads only
+that column. Above ``NGTableView/synchronousGroupingLimit`` keys to read
+(rows × columns not read yet, 50,000 by default) they are read in slices of
+a few milliseconds, between which the app keeps handling events; the rows
+show as they were grouped before meanwhile (``NGTableView/isGroupingRows``),
+and rows the app changes or inserts meanwhile are read again. On 1,000,000
+rows (release, M1 Max) grouping held the main thread 87 ms, a second level
+176 ms; now the longest hold is about 9 ms (building the groups when every
+key is read), the groups showing after about 130 ms.
+
 ### Live updates
 
 Targeted updates (see <doc:IntegratingIntoAnApp#Live-updates>) cost what
@@ -184,7 +199,7 @@ single-row inserts in one batch cost about as much as one insert of 500 rows. Ou
 rows whose sort values changed move, by binary search over blocks of the
 sorted rows, without a pass over every row; full sorts of large
 tables run in the background (``NGTableView/synchronousSortLimit``). Background
-sorts, summaries and first searches go on under a feed that inserts and removes
+sorts, summaries, groupings and first searches go on under a feed that inserts and removes
 rows: what they read is kept by row handle, and the rows that changed or came
 meanwhile are read when they're done. Debug builds are several times slower, and a
 feed with pauses runs slower than a busy one while the system keeps the
