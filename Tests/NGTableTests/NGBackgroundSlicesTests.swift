@@ -29,7 +29,7 @@ struct NGBackgroundSlicesTests {
                 log.slices.append((NGBackgroundSlices.budgetsForTesting, NGBackgroundSlices.turnForTesting, job, ContinuousClock.now - start))
             }
         }
-        let firstTurn = NGBackgroundSlices.turnForTesting
+        let restarts = NGBackgroundSlices.restartsWithoutTurnsForTesting
         let jobs = [Task { await slice(0) }, Task { await slice(1) }]
         for job in jobs { await job.value }
         // By the budget they took their time from (a turn's, or a moment's
@@ -41,8 +41,9 @@ struct NGBackgroundSlicesTests {
         #expect(Set(log.slices.map(\.job)) == [0, 1])
         #expect(log.slices.count >= 6)
         // The run loop turning all along (not tests keeping the main actor
-        // busy): a turn's slices add up to one budget.
-        if NGBackgroundSlices.turnForTesting - firstTurn >= log.slices.count {
+        // busy, when budgets start again without a turn): a turn's slices
+        // add up to one budget.
+        if NGBackgroundSlices.restartsWithoutTurnsForTesting == restarts {
             var perTurn: [Int: Duration] = [:]
             for slice in log.slices { perTurn[slice.turn, default: .zero] += slice.time }
             #expect(perTurn.values.allSatisfy { $0 <= budget }, "\(perTurn.values.max() ?? .zero)")

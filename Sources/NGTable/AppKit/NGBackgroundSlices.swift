@@ -34,6 +34,8 @@ enum NGBackgroundSlices {
     static var turnForTesting: Int { turn }
     /// Budgets started (for tests).
     static var budgetsForTesting = 0
+    /// Budgets started again in a turn without the run loop turning (for tests).
+    static var restartsWithoutTurnsForTesting = 0
 
     private static func observeTurns() {
         guard observer == nil else { return }
@@ -72,11 +74,15 @@ enum NGBackgroundSlices {
                 // Other work on the main actor goes on between slices still.
                 await Task.yield()
                 budgetTurn = -1
+                restartsWithoutTurnsForTesting += 1
                 continue
             }
             waitsForTesting += 1
             // No turn came: a new budget anyway.
-            if !(await waitForATurn(ticket: ticket ?? 0)) { budgetTurn = -1 }
+            if !(await waitForATurn(ticket: ticket ?? 0)) {
+                budgetTurn = -1
+                restartsWithoutTurnsForTesting += 1
+            }
         }
     }
 
