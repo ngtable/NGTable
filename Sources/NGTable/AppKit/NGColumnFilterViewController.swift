@@ -137,7 +137,8 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
         list.addTableColumn(listColumn)
         list.headerView = nil
         list.style = .plain
-        list.rowHeight = 22
+        // The old stack's pitch: a check box and 4 points between them.
+        list.rowHeight = 20
         list.intercellSpacing = .zero
         list.backgroundColor = .clear
         list.selectionHighlightStyle = .none
@@ -149,12 +150,14 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
         scroll.drawsBackground = false
         scroll.automaticallyAdjustsContentInsets = false
         scroll.documentView = list
-        scroll.heightAnchor.constraint(equalToConstant: min(260, CGFloat(max(1, values.count)) * 22 + 4)).isActive = true
+        scroll.heightAnchor.constraint(equalToConstant: min(260, CGFloat(max(1, values.count)) * 20)).isActive = true
         showValues()
         let stack = NSStackView(views: [searchField, allBox, scroll])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
+        // The rows center their check boxes: the first one where the stack had it.
+        stack.setCustomSpacing(6, after: allBox)
         for view in [searchField, scroll] {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
