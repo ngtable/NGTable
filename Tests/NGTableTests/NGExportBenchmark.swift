@@ -119,3 +119,38 @@ extension NGBenchmarks {
     }
 }
 #endif
+
+extension NGBenchmarks.NGExportBenchmark {
+    /// Numbers as displayed: FormatStyle against the learned templates, on
+    /// one core and on all of them (templates shared, as the writers share
+    /// a column's style).
+    @Test func formattingNumbers() {
+        let count = 2_000_000
+        var generator = SplitMix(seed: 2)
+        let numbers = (0..<count).map { _ in Double(generator.next() % 100_000_000) / 100 - 300_000 }
+        let format = NGValueFormat.currency(code: "USD")
+        let locale = Locale(identifier: "en_US")
+        let formatStyle = FloatingPointFormatStyle<Double>.Currency(code: "USD", locale: locale)
+        let style = NGNumberStyle(format, locale: locale)
+        #expect(style.usesTemplate)
+        func time(_ body: () -> Int) -> Duration {
+            let start = ContinuousClock.now
+            let bytes = body()
+            #expect(bytes > 0)
+            return (ContinuousClock.now - start) / count
+        }
+        let viaFormatStyle = time { numbers.prefix(count / 10).reduce(0) { $0 + formatStyle.format($1).utf8.count } } * 10
+        let viaTemplate = time { numbers.reduce(0) { $0 + style.string(for: $1).utf8.count } }
+        // A style made for each number (`NGValueFormat.string(for:locale:)`): the template looked up.
+        let perCall = time { numbers.prefix(count / 10).reduce(0) { $0 + format.string(for: $1, locale: locale).utf8.count } } * 10
+        let cores = ProcessInfo.processInfo.activeProcessorCount
+        let parallel = time {
+            let pieces = NGTableExport.inPieces(count, minimumRows: count / cores) { rows in
+                rows.reduce(0) { $0 + style.string(for: numbers[$1]).utf8.count }
+            }
+            return pieces.reduce(0, +)
+        }
+        print("BENCH numbers: FormatStyle \(viaFormatStyle) a number, template \(viaTemplate), template on \(cores) cores \(parallel), "
+              + "a style for each number \(perCall)")
+    }
+}
