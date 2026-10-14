@@ -601,8 +601,9 @@ extension NGTableView {
     /// at the end of the batch, once their calculators let them go. Arrays
     /// not in use (empty: no sort, no groups) stay empty.
     private func prepareRowData(forHandle handle: Int) {
-        // A reused handle is a new record: shown, not flashing.
+        // A reused handle is a new record: shown, not flashing, its height asked.
         hiddenRowHandles.remove(handle)
+        if handle < rowHeightsByHandle.count { rowHeightsByHandle[handle] = .nan }
         forgetChangeHighlights(ofHandle: handle)
         func prepare<Element>(_ array: inout [Element], _ placeholder: Element) {
             guard !array.isEmpty else { return }
@@ -1020,6 +1021,14 @@ extension NGTableView {
         // built once, without the rows removed after they changed.
         let dirtyListOnly = !readsTreeParents && batch.dirtyRows.isEmpty && batch.pendingDirtyRows.count > 16
         let batchDirtyRows = dirtyListOnly ? IndexSet() : Self.union(batch.dirtyRows, batch.pendingDirtyRows, capacity: rowHandles.capacity)
+        // Reloaded rows' heights are asked again.
+        if rowHeightProvider != nil {
+            if dirtyListOnly {
+                forgetRowHeights(ofHandles: batch.pendingDirtyRows.lazy.map { Int($0) })
+            } else {
+                forgetRowHeights(ofHandles: batchDirtyRows)
+            }
+        }
         // A tree's parents first: the summaries leave out rows with a parent
         // (`.topLevelRows`), so new rows, changed ones and those whose parent
         // came or went are read by what they are now; rows that got or lost

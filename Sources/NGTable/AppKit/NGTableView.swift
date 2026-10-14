@@ -53,6 +53,9 @@ public final class NGTableView: NSView {
     public weak var delegate: NGTableViewDelegate? {
         // Tints and markers come from the delegate.
         didSet {
+            rowHeightProvider = delegate as? NGTableViewRowHeights
+            rowHeightsByHandle = []
+            rowGeometryCache = nil
             recycleAllCells()
             needsLayout = true
         }
@@ -273,12 +276,15 @@ public final class NGTableView: NSView {
         }
     }
 
-    /// Height of every row, in points (at least 1). All rows have the same height.
+    /// Height of every row, in points (at least 1), unless the delegate gives
+    /// rows heights of their own (`NGTableViewRowHeights`); group header rows
+    /// have it in any case.
     public var rowHeight: CGFloat = 24 {
         didSet {
             // Rows are laid out by dividing by the height.
             if rowHeight < 1 { rowHeight = 1 }
             guard rowHeight != oldValue else { return }
+            rowGeometryCache = nil
             // The data is unchanged: only cells move, summaries stay.
             recycleAllCells()
             needsLayout = true
@@ -287,7 +293,68 @@ public final class NGTableView: NSView {
     }
 
     /// Where the display rows are: their tops and heights, the row at a y.
-    var rowGeometry: NGRowGeometry { NGRowGeometry(rowHeight: rowHeight, count: numberOfRows) }
+    /// With a delegate that gives rows their heights (`NGTableViewRowHeights`),
+    /// built when asked after the rows shown or their heights changed.
+    var rowGeometry: NGRowGeometry {
+        guard let rowHeightProvider else { return NGRowGeometry(rowHeight: rowHeight, count: numberOfRows) }
+        if let rowGeometryCache, rowGeometryCache.count == numberOfRows { return rowGeometryCache }
+        let geometry = buildRowGeometry(rowHeightProvider)
+        rowGeometryCache = geometry
+        return geometry
+    }
+
+    /// The delegate as one that gives rows their heights.
+    var rowHeightProvider: NGTableViewRowHeights?
+    /// The rows' heights by handle (NaN: not asked yet); used only with a
+    /// `rowHeightProvider`.
+    var rowHeightsByHandle: [CGFloat] = []
+    /// The geometry of rows of their own heights, until the rows shown or
+    /// their heights change.
+    var rowGeometryCache: NGRowGeometry?
+
+    /// The display rows' heights, asking the provider for those it hasn't
+    /// given yet: group header rows have `rowHeight`.
+    private func buildRowGeometry(_ provider: NGTableViewRowHeights) -> NGRowGeometry {
+        if rowHeightsByHandle.count < rowHandles.capacity {
+            rowHeightsByHandle.append(contentsOf: repeatElement(.nan, count: rowHandles.capacity - rowHeightsByHandle.count))
+        }
+        func height(ofHandle handle: Int) -> CGFloat {
+            guard handle >= 0, handle < rowHeightsByHandle.count else { return rowHeight }
+            let known = rowHeightsByHandle[handle]
+            if !known.isNaN { return known }
+            let row = row(ofHandle: handle)
+            guard row >= 0 else { return rowHeight }
+            let height = max(1, provider.tableView(self, heightOfRow: row))
+            rowHeightsByHandle[handle] = height
+            return height
+        }
+        let count = numberOfRows
+        var heights: [CGFloat] = []
+        heights.reserveCapacity(count)
+        if let groupedDisplay {
+            for entry in groupedDisplay { heights.append(entry < 0 ? rowHeight : height(ofHandle: entry)) }
+        } else if let sorted = sortedDisplay {
+            for handle in sorted.integerElements { heights.append(height(ofHandle: handle)) }
+        } else if let rowMap {
+            for handle in rowMap { heights.append(height(ofHandle: handle)) }
+        } else {
+            for row in 0..<count { heights.append(height(ofHandle: handle(ofRow: row))) }
+        }
+        // In the middle of a batch the orders may not match the count yet.
+        if heights.count > count { heights.removeLast(heights.count - count) }
+        while heights.count < count { heights.append(rowHeight) }
+        return NGRowGeometry(rowHeight: rowHeight, heights: heights)
+    }
+
+    /// Forgets the heights of rows (handles) the app reloaded: they are
+    /// asked for again.
+    func forgetRowHeights(ofHandles handles: some Sequence<Int>) {
+        guard rowHeightProvider != nil else { return }
+        for handle in handles where handle >= 0 && handle < rowHeightsByHandle.count {
+            rowHeightsByHandle[handle] = .nan
+        }
+        rowGeometryCache = nil
+    }
 
     /// Height of the summary row.
     public var summaryRowHeight: CGFloat = 30 {
@@ -577,8 +644,12 @@ public final class NGTableView: NSView {
     /// shows: blocked sequences (`NGHandleSequence`), so a row that changed
     /// is taken out and put back by binary search, and a display row's row
     /// and a row's display row are lookups, without arrays of every row.
-    var sortedOrder: NGHandleSequence?
-    var filteredSortedOrder: NGHandleSequence?
+    var sortedOrder: NGHandleSequence? {
+        didSet { rowGeometryCache = nil }
+    }
+    var filteredSortedOrder: NGHandleSequence? {
+        didSet { rowGeometryCache = nil }
+    }
     /// Rows (handles) whose filter match changed since the sort last looked
     /// (`nil`: unknown, after a full evaluation).
     var filterFlippedRows: IndexSet?
@@ -586,7 +657,9 @@ public final class NGTableView: NSView {
     /// Number of rows shown, after the row filter (also `numberOfDisplayedRows`).
     /// Unlike the other row indexes of the API, these are display rows; use
     /// `numberOfSourceRows` for the data source's count.
-    public internal(set) var numberOfRows = 0
+    public internal(set) var numberOfRows = 0 {
+        didSet { rowGeometryCache = nil }
+    }
 
     /// Number of rows shown, after the row filter.
     public var numberOfDisplayedRows: Int { numberOfRows }
@@ -818,7 +891,9 @@ public final class NGTableView: NSView {
     var groupTreeGeneration = 0
     /// Display rows while rows are grouped: a data source row (>= 0) or a
     /// group header (-1 - its node index).
-    var groupedDisplay: [Int]?
+    var groupedDisplay: [Int]? {
+        didSet { rowGeometryCache = nil }
+    }
     /// The display row of each data source row while grouped (-1: hidden).
     var displayRowOfSource: [Int] = []
     /// Groups whose expansion isn't `groupsExpandedByDefault`.
@@ -844,7 +919,9 @@ public final class NGTableView: NSView {
 
     /// The filtered rows: their data source rows while a filter is active
     /// (the order summaries count them in; grouping lays them out).
-    var rowMap: [Int]?
+    var rowMap: [Int]? {
+        didSet { rowGeometryCache = nil }
+    }
     /// The handles of `rowMap` as a blocked sequence (index in `rowMap`
     /// of a handle, and back), kept in step by `computeRowMap`.
     var filteredRows: NGHandleSequence?
@@ -2525,6 +2602,8 @@ public final class NGTableView: NSView {
         let (focused, cellRange) = (focusedCell, selectedCellRange)
         numberOfSourceRows = dataSource?.numberOfRows(in: self) ?? 0
         rowHandles.reset(count: numberOfSourceRows)
+        rowHeightsByHandle = []
+        rowGeometryCache = nil
         sortRowsInserted = []
         // Other records: identities are read again on the next lookup, and
         // a tree's parents.

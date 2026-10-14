@@ -151,7 +151,8 @@ notification objects and userInfo keys:
 | `tableView(_:nextTypeSelectMatchFromRow:toRow:for:)` | the same, by display index; a search that wraps asks twice instead of with `endRow < startRow` |
 | `tableView(_:rowViewForRow:)` for tints | ``NGTableViewDelegate/tableView(_:backgroundColorForRow:)``, ``NGTableViewDelegate/tableView(_:markerColorForRow:)`` |
 | `menuNeedsUpdate` with `clickedRow` | ``NGTableViewDelegate/tableView(_:menuForRows:clickedRow:column:)``, or the table's `menu` with ``NGTableView/clickedRow`` |
-| `tableView(_:heightOfRow:)` | one ``NGTableView/rowHeight`` for all rows |
+| `tableView(_:heightOfRow:)` | the same, in ``NGTableViewRowHeights`` (conform the delegate to it) |
+| `noteHeightOfRows(withIndexesChanged:)` | not needed: reloading rows (``NGTableView/reloadData(forRowIndexes:columnIndexes:)``) asks for their heights again |
 
 ### Selection, actions and sorting
 
@@ -231,9 +232,12 @@ These are the deliberate differences, and why.
 
 ### Rows
 
-- term One row height: There's no `tableView(_:heightOfRow:)` or
-  `usesAutomaticRowHeights`: every row has ``NGTableView/rowHeight`` (deferred:
-  dense tables keep one height, and rows under the pointer never shift).
+- term Row heights: Every row has ``NGTableView/rowHeight`` unless the
+  delegate conforms to ``NGTableViewRowHeights``; then each row has the height
+  `tableView(_:heightOfRow:)` gives it, asked once and kept with the record
+  through sorting, filtering and grouping, and asked again when the row is
+  reloaded. Group header rows keep ``NGTableView/rowHeight``. Dense live tables
+  are best left at one height: rows under the pointer never shift.
 - term Group rows: Built in (``NGTableView/rowGrouping``) instead of the
   delegate's `tableView(_:isGroupRow:)` and the app inserting header rows.
 - term Outline views: Trees are ``NGTableView/rowTree``: rows name their

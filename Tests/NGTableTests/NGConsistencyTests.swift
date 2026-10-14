@@ -13,7 +13,7 @@ import Testing
 @MainActor
 struct NGConsistencyTests {
     @MainActor
-    final class Feed: NGTableViewDataSource, NGTableViewDelegate {
+    class Feed: NGTableViewDataSource, NGTableViewDelegate {
         struct Record {
             var id: Int
             var name: String
@@ -112,6 +112,12 @@ struct NGConsistencyTests {
     ]
 
     /// What a table is set to show.
+    /// A feed whose rows have heights of their own, from a value updates change.
+    final class FeedWithHeights: Feed, NGTableViewRowHeights {
+        static func height(of record: Record) -> CGFloat { 20 + CGFloat(record.spend) }
+        func tableView(_ tableView: NGTableView, heightOfRow row: Int) -> CGFloat { Self.height(of: records[row]) }
+    }
+
     struct Configuration {
         var searchText = ""
         var searchColumns: Set<String>?
@@ -257,6 +263,23 @@ struct NGConsistencyTests {
                            sourceLocation: SourceLocation = #_sourceLocation) {
         func log(_ text: String) { if ProcessInfo.processInfo.environment["NGTABLE_LOG"] != nil { FileHandle.standardError.write((text + "\n").data(using: .utf8)!) } }
         log("invariants"); checkInvariants(table, context, sourceLocation: sourceLocation)
+        if feed is FeedWithHeights {
+            // Each display row has its record's height, group headers `rowHeight`.
+            let geometry = table.rowGeometry
+            #expect(geometry.count == table.numberOfRows, "\(context): geometry's rows", sourceLocation: sourceLocation)
+            var total: CGFloat = 0
+            for displayRow in 0..<table.numberOfRows {
+                let row = table.sourceRow(displayRow)
+                let expected = row < 0 ? table.rowHeight : FeedWithHeights.height(of: feed.records[row])
+                total += expected
+                if geometry.height(of: displayRow) != expected {
+                    Issue.record("\(context): display row \(displayRow) is \(geometry.height(of: displayRow)) high, not \(expected)",
+                                 sourceLocation: sourceLocation)
+                    break
+                }
+            }
+            #expect(geometry.totalHeight == total, "\(context): rows' height", sourceLocation: sourceLocation)
+        }
         log("fresh"); let fresh = fresh(like: table, feed, configuration)
         log("snapshot"); let actual = snapshot(table, feed)
         log("snapshot fresh"); let expected = snapshot(fresh, feed)
@@ -362,10 +385,11 @@ struct NGConsistencyTests {
                                         scope: .selectedRows)),
     ]
 
-    @Test(arguments: 0..<10)
-    func liveUpdatesShowWhatAFreshTableShows(_ configurationIndex: Int) async {
+    @Test(arguments: 0..<10, [false, true])
+    func liveUpdatesShowWhatAFreshTableShows(_ configurationIndex: Int, rowHeights: Bool) async {
         let (name, configuration) = Self.configurations[configurationIndex]
-        let feed = Feed(count: 300, seed: UInt64(configurationIndex + 1))
+        let seed = UInt64(configurationIndex + 1)
+        let feed = rowHeights ? FeedWithHeights(count: 300, seed: seed) : Feed(count: 300, seed: seed)
         let table = Self.makeTable(feed, configuration)
         defer { withExtendedLifetime(feed) {} }
         // The selected records: they stay selected while they are shown.

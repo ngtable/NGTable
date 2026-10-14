@@ -145,6 +145,28 @@ public struct NGCellPosition: Hashable, Sendable {
     }
 }
 
+/// A delegate whose rows have heights of their own, like `NSTableViewDelegate`'s
+/// `tableView(_:heightOfRow:)`. Conform the table's `delegate` to it:
+///
+/// ```swift
+/// final class LogDelegate: NGTableViewDelegate, NGTableViewRowHeights {
+///     func tableView(_ tableView: NGTableView, heightOfRow row: Int) -> CGFloat {
+///         entries[row].isExpanded ? 72 : tableView.rowHeight
+///     }
+/// }
+/// ```
+///
+/// The table asks for a row's height once and keeps it with the record, so
+/// it follows the record when rows are sorted, filtered or grouped; it asks
+/// again for rows the app reloads (`reloadData()`, the targeted updates) and
+/// for new ones. There is no `noteHeightOfRows(withIndexesChanged:)`:
+/// reload the rows whose heights changed. Group header rows keep `rowHeight`.
+@MainActor
+public protocol NGTableViewRowHeights: AnyObject {
+    /// The height of a data source row, in points (at least 1).
+    func tableView(_ tableView: NGTableView, heightOfRow row: Int) -> CGFloat
+}
+
 /// Optional customization and notifications of an `NGTableView`.
 @MainActor
 public protocol NGTableViewDelegate: AnyObject {
