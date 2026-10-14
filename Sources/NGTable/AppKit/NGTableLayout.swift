@@ -128,6 +128,9 @@ extension NGTableView {
         needsLayout = true
     }
 
+    /// The canvases' heights grow and shrink in steps of this many points.
+    static let canvasHeightStep: CGFloat = 4096
+
     public override func layout() {
         super.layout()
         isInLayoutPass = true
@@ -187,13 +190,16 @@ extension NGTableView {
 
         layoutScrollers(metrics)
         layoutEmptyState(metrics)
-        layoutSummaryProgress()
 
         // Canvases cover the whole content so hit testing reaches every cell.
-        let canvasHeight = max(metrics.contentHeight, metrics.bodyHeight)
-        leadingRegion.canvas.setFrameSize(NSSize(width: metrics.leadingWidth, height: canvasHeight))
-        centerRegion.canvas.setFrameSize(NSSize(width: centerCanvasWidth, height: canvasHeight))
-        trailingRegion.canvas.setFrameSize(NSSize(width: metrics.trailingWidth, height: canvasHeight))
+        // In steps, past the rows: resizing them on every inserted row cost
+        // AppKit's constraint updates in every batch of a live table (points
+        // past the rows hit no row, as below a short table).
+        let canvasHeight = max(metrics.bodyHeight, (metrics.contentHeight / Self.canvasHeightStep).rounded(.up) * Self.canvasHeightStep)
+        for (canvas, width) in [(leadingRegion.canvas, metrics.leadingWidth), (centerRegion.canvas, centerCanvasWidth),
+                                (trailingRegion.canvas, metrics.trailingWidth)] where canvas.frame.size != NSSize(width: width, height: canvasHeight) {
+            canvas.setFrameSize(NSSize(width: width, height: canvasHeight))
+        }
         layoutGridLines(height: canvasHeight)
 
         // The header and summary (and the header's cursor areas) only when

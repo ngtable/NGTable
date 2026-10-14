@@ -2528,8 +2528,12 @@ public final class NGTableView: NSView {
         return indicator
     }()
 
+    /// The spinner's side (a mini control's fitting size, asked once).
+    private var summaryProgressSize: CGFloat?
+    private var isSummaryProgressShowing: Bool { showsSummaryProgress && isSummaryProgressVisible && showsSummaryBar }
+
     private func updateSummaryProgress() {
-        let visible = showsSummaryProgress && isSummaryProgressVisible && showsSummaryBar
+        let visible = isSummaryProgressShowing
         if visible, summaryProgress.superview !== summaryBar.contentView {
             summaryBar.contentView.addSubview(summaryProgress)
         }
@@ -2547,8 +2551,14 @@ public final class NGTableView: NSView {
 
     /// At the leading edge of the summary row, in the table's edge margin.
     func layoutSummaryProgress() {
-        guard summaryProgress.superview != nil else { return }
-        let size = summaryProgress.fittingSize.height > 0 ? summaryProgress.fittingSize.height : 10
+        // (Hidden it's left alone: its fitting size is an Auto Layout pass,
+        // which every layout of a live table paid for.)
+        guard summaryProgress.superview != nil, !summaryProgress.isHidden || isSummaryProgressShowing else { return }
+        if summaryProgressSize == nil {
+            let fitting = summaryProgress.fittingSize.height
+            summaryProgressSize = fitting > 0 ? fitting : 10
+        }
+        let size = summaryProgressSize ?? 10
         let bounds = summaryBar.contentView.bounds
         summaryProgress.frame = NSRect(x: 6, y: ((bounds.height - size) / 2).rounded(), width: size, height: size)
     }

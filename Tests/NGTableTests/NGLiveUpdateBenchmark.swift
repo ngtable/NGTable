@@ -51,6 +51,8 @@ private final class LiveRecords: NGTableViewDataSource {
         case "revenue": .number(record.revenue)
         case "roi": .number(record.spend > 0 ? (record.revenue - record.spend) / record.spend : 0)
         case "_one": .number(1)
+        // Metric columns m0, m1, … (the single-insert benchmark).
+        case let id where id.hasPrefix("m"): .number(record.clicks + Double(id.dropFirst().count))
         default: .empty
         }
     }
@@ -165,6 +167,47 @@ extension NGBenchmarks {
                 .map { "\($0.key) \(String(format: "%.1f", $0.value / Double(ticks) * 1000))" }.joined(separator: ", ")
             let tablePerTick = tableTime / Double(ticks) * 1000
             print("LIVE \(Self.rows) rows, \(updates) updates, groups \(environment["NGTABLE_BENCH_GROUPS"] ?? "none"), sort \(environment["NGTABLE_BENCH_SORT"] ?? "none"), filter \(environment["NGTABLE_BENCH_FILTER"] ?? "none"): \(String(format: "%.1f", perTick)) ms per tick, the table \(String(format: "%.1f", tablePerTick)) ms (finishing: \(phases) ms)")
+            withExtendedLifetime((window, data)) {}
+        }
+
+        /// Single inserts and removes, each a batch of its own (a feed that
+        /// calls the table for every record), on 200,000 rows with 30
+        /// summarized columns: what one costs, and where the time goes.
+        @Test func singleInsertsAndRemovesOutsideBatches() async throws {
+            let rows = Int(ProcessInfo.processInfo.environment["NGTABLE_BENCH_ROWS"] ?? "") ?? 200_000
+            let frame = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+            let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
+            let data = LiveRecords(count: rows)
+            let table = NGTableView(frame: frame)
+            table.columns = [.column(NGTableColumn("name", title: "Name", width: 220, pin: .leading))]
+                + (0..<30).map { .column(NGTableColumn("m\($0)", title: "M\($0)", width: 70, format: .number(fractionDigits: 0), summary: .aggregate(.sum))) }
+            window.contentView = table
+            table.dataSource = data
+            table.layoutSubtreeIfNeeded()
+            for _ in 0..<3000 where table.isComputingSummary { try await Task.sleep(for: .milliseconds(10)) }
+            var phaseTotals: [String: CFTimeInterval] = [:]
+            NGTableView.rowUpdatePhasesForTesting = { phases in
+                for (name, time) in phases { phaseTotals[name, default: 0] += time }
+            }
+            defer { NGTableView.rowUpdatePhasesForTesting = nil }
+            var generator = SplitMix(seed: 3)
+            let calls = Int(ProcessInfo.processInfo.environment["NGTABLE_BENCH_CALLS"] ?? "") ?? 500
+            var inserting: CFTimeInterval = 0, removing: CFTimeInterval = 0
+            for _ in 0..<calls {
+                let row = Int(generator.next() % UInt64(data.records.count + 1))
+                data.records.insert(data.newRecord(), at: row)
+                var start = CACurrentMediaTime()
+                table.insertRows(at: [row])
+                inserting += CACurrentMediaTime() - start
+                let gone = Int(generator.next() % UInt64(data.records.count))
+                data.records.remove(at: gone)
+                start = CACurrentMediaTime()
+                table.removeRows(at: [gone])
+                removing += CACurrentMediaTime() - start
+            }
+            let phases = phaseTotals.sorted { $0.value > $1.value }
+                .map { "\($0.key) \(String(format: "%.3f", $0.value / Double(2 * calls) * 1000))" }.joined(separator: ", ")
+            print("SINGLE \(rows) rows x 30 sums: insert \(String(format: "%.3f", inserting / Double(calls) * 1000)) ms, remove \(String(format: "%.3f", removing / Double(calls) * 1000)) ms per call (finishing: \(phases) ms)")
             withExtendedLifetime((window, data)) {}
         }
     }
