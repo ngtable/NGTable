@@ -1322,6 +1322,7 @@ struct NGHandleIndexSetTests {
 func eventually(within timeout: Duration = .seconds(300), _ condition: () -> Bool) async throws {
     try await waitWhile(timeout: timeout, poll: .milliseconds(5)) { !condition() }
 }
+#endif
 
 /// A small deterministic random number generator, so a failing run repeats.
 struct SplitMix: RandomNumberGenerator {
@@ -1335,4 +1336,3 @@ struct SplitMix: RandomNumberGenerator {
         return z ^ (z >> 31)
     }
 }
-#endif

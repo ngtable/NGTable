@@ -79,6 +79,10 @@ final class NGGridHeaderView: UIView {
 /// The summary row at the bottom, over the rows scrolling under it.
 final class NGSummaryBarView: UIView {
     let contentView = NGSummaryContentView(frame: .zero)
+    /// The values' strip at the top; below it the bar only reaches under the home indicator.
+    var valuesHeight: CGFloat = 0 {
+        didSet { if valuesHeight != oldValue { setNeedsLayout() } }
+    }
     private let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
 
     override init(frame: CGRect) {
@@ -93,7 +97,7 @@ final class NGSummaryBarView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         effectView.frame = bounds
-        contentView.frame = effectView.contentView.bounds
+        contentView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: min(valuesHeight, bounds.height))
     }
 }
 

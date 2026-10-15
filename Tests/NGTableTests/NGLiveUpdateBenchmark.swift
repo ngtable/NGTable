@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import Testing
 @testable import NGTable
@@ -212,3 +213,4 @@ extension NGBenchmarks {
         }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Runs the demo as a regular app window, with a main menu so Copy, Select
@@ -82,3 +83,13 @@ private extension NSMenu {
         addItem(item)
     }
 }
+#else
+/// The demo is a Mac app (the iPad's is Demos/iPadTable.swiftpm); on iOS the
+/// package's tests build it too.
+@main
+enum NGTableDemoApp {
+    static func main() {
+        print("NGTableDemo runs on the Mac; see Demos/iPadTable.swiftpm for the iPad.")
+    }
+}
+#endif

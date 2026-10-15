@@ -118,7 +118,6 @@ extension NGBenchmarks {
         }
     }
 }
-#endif
 
 extension NGBenchmarks.NGExportBenchmark {
     /// Numbers as displayed: FormatStyle against the learned templates, on
@@ -154,3 +153,4 @@ extension NGBenchmarks.NGExportBenchmark {
               + "a style for each number \(perCall)")
     }
 }
+#endif

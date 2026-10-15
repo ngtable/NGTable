@@ -69,6 +69,7 @@ final class Campaigns: NGTableViewDataSource {
 
 final class CampaignsViewController: UIViewController {
     private let table = NGTableView(frame: .zero)
+    private let frameMeter = FrameMeterLabel()
     private let campaigns = Campaigns(count: 20_000)
     private var timer: Timer?
 
@@ -79,10 +80,10 @@ final class CampaignsViewController: UIViewController {
             .column(NGTableColumn("name", title: "Campaign", width: 180, pin: .leading)),
             .column(NGTableColumn("network", title: "Network", width: 100)),
             .column(NGTableColumn("status", title: "Status", width: 100)),
-            .column(NGTableColumn("clicks", title: "Clicks", width: 100, format: .number(fractionDigits: 0), summary: .aggregate(.sum))),
-            .column(NGTableColumn("spend", title: "Spend", width: 120, format: .currency(code: "USD"), summary: .aggregate(.sum),
+            .column(NGTableColumn("clicks", title: "Clicks", width: 120, format: .number(fractionDigits: 0), summary: .aggregate(.sum))),
+            .column(NGTableColumn("spend", title: "Spend", width: 150, format: .currency(code: "USD"), summary: .aggregate(.sum),
                                   changeHighlight: .direction)),
-            .column(NGTableColumn("revenue", title: "Revenue", width: 120, format: .currency(code: "USD"), summary: .aggregate(.sum))),
+            .column(NGTableColumn("revenue", title: "Revenue", width: 150, format: .currency(code: "USD"), summary: .aggregate(.sum))),
             .column(NGTableColumn("roi", title: "ROI", width: 90, format: .percent(fractionDigits: 1), summary: .aggregate(.average))),
             .column(NGTableColumn("created", title: "Created", width: 130, format: .date(includesTime: false), summary: .aggregate(.min))),
         ]
@@ -90,11 +91,17 @@ final class CampaignsViewController: UIViewController {
         table.sortsRows = true
         table.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(table)
+        frameMeter.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(frameMeter)
+        // To the bottom edge: the summary row's strip reaches under the home
+        // indicator, its values stay above it.
         NSLayoutConstraint.activate([
             table.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             table.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             table.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            table.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            table.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            frameMeter.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            frameMeter.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -48),
         ])
         // `-scrollTest`: scrolls as a finger would (the table's scroll view), for checking it.
         if ProcessInfo.processInfo.arguments.contains("-scrollTest") {

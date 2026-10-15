@@ -1,3 +1,12 @@
+import Foundation
+import Testing
+
+/// The benchmarks run one at a time (each suite of them is in this one):
+/// run alongside, their timings would mix. Skipped unless NGTABLE_BENCH is set.
+@Suite("Benchmarks", .serialized, .enabled(if: ProcessInfo.processInfo.environment["NGTABLE_BENCH"] != nil))
+struct NGBenchmarks {}
+
+#if os(macOS)
 import AppKit
 import os
 import Testing
@@ -58,11 +67,6 @@ func makeWideColumns() -> [NGColumnItem] {
     }
     return items
 }
-
-/// The benchmarks run one at a time (each suite of them is in this one):
-/// run alongside, their timings would mix. Skipped unless NGTABLE_BENCH is set.
-@Suite("Benchmarks", .serialized, .enabled(if: ProcessInfo.processInfo.environment["NGTABLE_BENCH"] != nil))
-struct NGBenchmarks {}
 
 extension NGBenchmarks {
     @Suite("Scroll benchmark", .enabled(if: ProcessInfo.processInfo.environment["NGTABLE_BENCH"] != nil))
@@ -235,3 +239,4 @@ extension NGBenchmarks {
         }
     }
 }
+#endif
