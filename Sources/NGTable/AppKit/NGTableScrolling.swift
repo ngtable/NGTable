@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Scrolling without NSScrollView: scroll events move the table's own
 // `contentOffset` (elastic overscroll is in NGElasticScrolling.swift), the
@@ -97,6 +101,7 @@ extension NGTableView {
         }
     }
 
+    #if os(macOS)
     /// Follows a gesture's phases for the live scroll notifications.
     private func trackLiveScroll(_ event: NSEvent) {
         if event.phase.contains(.began) || event.phase.contains(.changed) && !isLiveScrolling {
@@ -110,6 +115,7 @@ extension NGTableView {
             endLiveScroll()
         }
     }
+    #endif
 
     private func scheduleHeaderPointerAreasUpdate() {
         headerPointerAreasGeneration += 1
@@ -122,6 +128,7 @@ extension NGTableView {
         }
     }
 
+    #if os(macOS)
     private func updateHeaderPointerAreas() {
         headerPointerAreasGeneration += 1
         // Interactions that move columns rebuild them when they end.
@@ -130,12 +137,13 @@ extension NGTableView {
         }
         headerView.refreshToolTip()
     }
+    #endif
 
     /// Whether the table is laid out right to left (see `userInterfaceLayoutDirection`).
     var isRightToLeft: Bool {
         if let passIsRightToLeft { return passIsRightToLeft }
         layoutDirectionReads += 1
-        return userInterfaceLayoutDirection == .rightToLeft
+        return layoutDirection == .rightToLeft
     }
 
     /// Runs a pass with the layout direction read once (see `passIsRightToLeft`).
@@ -166,15 +174,15 @@ extension NGTableView {
         // Aligned to device pixels, so text and hairlines stay sharp at
         // fractional trackpad offsets.
         let canvasY = pixelAligned(layoutMetrics.headerHeight - renderedOffsetY)
-        let centerOrigin = NSPoint(x: -pixelAligned(layoutMetrics.leadingWidth + physicalOffsetX), y: canvasY)
+        let centerOrigin = CGPoint(x: -pixelAligned(layoutMetrics.leadingWidth + physicalOffsetX), y: canvasY)
         // With Metal, the rows are drawn where the canvases now are, on every
         // step that moves them (not only when rows come into view, below).
         if leadingRegion.canvas.frame.minY != canvasY || centerRegion.canvas.frame.origin != centerOrigin {
             setNeedsMetalFrame()
         }
-        leadingRegion.canvas.setFrameOrigin(NSPoint(x: 0, y: canvasY))
+        leadingRegion.canvas.setFrameOrigin(CGPoint(x: 0, y: canvasY))
         centerRegion.canvas.setFrameOrigin(centerOrigin)
-        trailingRegion.canvas.setFrameOrigin(NSPoint(x: 0, y: canvasY))
+        trailingRegion.canvas.setFrameOrigin(CGPoint(x: 0, y: canvasY))
         // Moving the canvases scrolls; cells only change when rows or columns
         // come into or out of view.
         layoutVisibleContent(onlyIfVisibleRangeChanged: !relayoutAll)
@@ -189,7 +197,9 @@ extension NGTableView {
         }
         layoutCellEditor()
         // Open row actions stay with their record (or close when it's not shown).
+        #if os(macOS)
         if let swipe = rowSwipe, !swipe.isTracking { layoutRowActionButtons() }
+        #endif
         // The rows moved under the pointer.
         updateHoveredCellFromPointer()
     }
@@ -199,6 +209,7 @@ extension NGTableView {
         contentOffset.y + verticalOverscroll
     }
 
+    #if os(macOS)
     public override func scrollWheel(with event: NSEvent) {
         let isGesture = !event.phase.isEmpty || !event.momentumPhase.isEmpty
         if event.phase.contains(.mayBegin) || event.phase.contains(.began) {
@@ -293,6 +304,7 @@ extension NGTableView {
             revealScroller(.vertical)
         }
     }
+    #endif
 
     // MARK: Scrollers
     //
@@ -301,10 +313,9 @@ extension NGTableView {
     // Legacy style ("always show scroll bars") uses standard NSScrollers that are
     // always visible and take up space.
 
-    private var isOverlayStyle: Bool {
-        NSScroller.preferredScrollerStyle == .overlay
-    }
+    private var isOverlayStyle: Bool { !Self.usesLegacyScrollers }
 
+    #if os(macOS)
     func setUpScrollers() {
         for scroller in [verticalScroller, horizontalScroller] {
             scroller.scrollerStyle = .legacy
@@ -335,6 +346,7 @@ extension NGTableView {
             addSubview(scroller)
         }
     }
+    #endif
 
     @objc func preferredScrollerStyleDidChange(_ notification: Notification) {
         for scroller in [verticalOverlayScroller, horizontalOverlayScroller] {
@@ -345,6 +357,7 @@ extension NGTableView {
         needsLayout = true
     }
 
+    #if os(macOS)
     func layoutScrollers(_ metrics: LayoutMetrics) {
         verticalOverlayScroller.isMirrored = isRightToLeft
         let top = metrics.headerHeight
@@ -354,18 +367,20 @@ extension NGTableView {
         let legacyThickness = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
         // Right to left, the vertical scroller is at the left edge.
         let rtl = isRightToLeft
-        verticalScroller.frame = NSRect(x: rtl ? 0 : bounds.width - legacyThickness, y: top, width: legacyThickness, height: verticalHeight)
-        horizontalScroller.frame = NSRect(x: metrics.centerX, y: summaryTop - legacyThickness, width: metrics.centerWidth, height: legacyThickness)
+        verticalScroller.frame = CGRect(x: rtl ? 0 : bounds.width - legacyThickness, y: top, width: legacyThickness, height: verticalHeight)
+        horizontalScroller.frame = CGRect(x: metrics.centerX, y: summaryTop - legacyThickness, width: metrics.centerWidth, height: legacyThickness)
 
         let overlayThickness = NGOverlayScroller.thickness
-        verticalOverlayScroller.frame = NSRect(x: rtl ? 0 : bounds.width - overlayThickness, y: top, width: overlayThickness, height: verticalHeight)
+        verticalOverlayScroller.frame = CGRect(x: rtl ? 0 : bounds.width - overlayThickness, y: top, width: overlayThickness, height: verticalHeight)
         // Without frozen columns at the vertical scroller's side the horizontal scroller would run under it.
         let reserve = metrics.maxOffset.y > 0 ? overlayThickness : 0
         let overlayStart = rtl ? max(metrics.centerX, reserve) : metrics.centerX
         let overlayEnd = rtl ? metrics.centerX + metrics.centerWidth : min(metrics.centerX + metrics.centerWidth, bounds.width - reserve)
-        horizontalOverlayScroller.frame = NSRect(x: overlayStart, y: summaryTop - overlayThickness, width: max(0, overlayEnd - overlayStart), height: overlayThickness)
+        horizontalOverlayScroller.frame = CGRect(x: overlayStart, y: summaryTop - overlayThickness, width: max(0, overlayEnd - overlayStart), height: overlayThickness)
     }
+    #endif
 
+    #if os(macOS)
     private func updateScrollers() {
         let metrics = layoutMetrics
         let visibleHeight = metrics.bodyHeight - metrics.bottomInset
@@ -403,15 +418,21 @@ extension NGTableView {
             horizontalOverlayScroller.isHidden = true
         }
     }
+    #endif
 
+    #if os(macOS)
     private func overlayScroller(for axis: NSEvent.GestureAxis) -> NGOverlayScroller {
         axis == .vertical ? verticalOverlayScroller : horizontalOverlayScroller
     }
+    #endif
 
+    #if os(macOS)
     private func canScroll(_ axis: NSEvent.GestureAxis) -> Bool {
         axis == .vertical ? layoutMetrics.maxOffset.y > 0 : layoutMetrics.maxOffset.x > 0
     }
+    #endif
 
+    #if os(macOS)
     /// Shows an overlay scroller and fades it out after a moment of inactivity.
     /// It stays visible while hovered or dragged. Like system overlay scrollers,
     /// it only appears when scrolling, never just because the pointer is near.
@@ -469,7 +490,9 @@ extension NGTableView {
             }
         }
     }
+    #endif
 
+    #if os(macOS)
     func scrollToFraction(_ fraction: CGFloat, along axis: NSEvent.GestureAxis) {
         let maxOffset = layoutMetrics.maxOffset
         if axis == .vertical {
@@ -480,7 +503,9 @@ extension NGTableView {
         }
         revealScroller(axis)
     }
+    #endif
 
+    #if os(macOS)
     func scrollByPage(_ direction: CGFloat, along axis: NSEvent.GestureAxis) {
         let metrics = layoutMetrics
         if axis == .vertical {
@@ -492,7 +517,9 @@ extension NGTableView {
         }
         revealScroller(axis)
     }
+    #endif
 
+    #if os(macOS)
     @objc private func legacyScrollerDidScroll(_ sender: NSScroller) {
         let axis: NSEvent.GestureAxis = sender === verticalScroller ? .vertical : .horizontal
         switch sender.hitPart {
@@ -506,5 +533,6 @@ extension NGTableView {
             break
         }
     }
+    #endif
 }
 #endif

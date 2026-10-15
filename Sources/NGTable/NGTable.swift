@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// Supplies rows and cell values to an `NGTableView`.
 ///
@@ -81,6 +85,7 @@ public protocol NGTableViewDataSource: AnyObject {
     /// `tableView(_:setObjectValue:for:row:)`: store it; the table then reads
     /// the row again. `.empty` when the user cleared the cell.
     func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int)
+    #if os(macOS)
     /// What a dragged row puts on the pasteboard, like NSTableView's; `nil`
     /// (the default) doesn't let the row be dragged.
     func tableView(_ tableView: NGTableView, pasteboardWriterForRow row: Int) -> (any NSPasteboardWriting)?
@@ -103,6 +108,7 @@ public protocol NGTableViewDataSource: AnyObject {
     /// A drag entered the table, like NSTableView's: the items' images may
     /// change for it (`enumerateDraggingItems`).
     func tableView(_ tableView: NGTableView, updateDraggingItemsForDrag draggingInfo: any NSDraggingInfo)
+    #endif
 }
 
 public extension NGTableViewDataSource {
@@ -118,6 +124,7 @@ public extension NGTableViewDataSource {
                    into values: UnsafeMutableBufferPointer<Double>) -> Bool { false }
     func tableView(_ tableView: NGTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {}
     func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int) {}
+    #if os(macOS)
     func tableView(_ tableView: NGTableView, pasteboardWriterForRow row: Int) -> (any NSPasteboardWriting)? { nil }
     func tableView(_ tableView: NGTableView, validateDrop info: any NSDraggingInfo, proposedRow row: Int,
                    proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation { [] }
@@ -128,6 +135,7 @@ public extension NGTableViewDataSource {
     func tableView(_ tableView: NGTableView, draggingSession session: NSDraggingSession, endedAt screenPoint: NSPoint,
                    operation: NSDragOperation) {}
     func tableView(_ tableView: NGTableView, updateDraggingItemsForDrag draggingInfo: any NSDraggingInfo) {}
+    #endif
     func tableView(_ tableView: NGTableView, sortValueFor column: NGTableColumn, row: Int) -> NGCellValue {
         self.tableView(tableView, valueFor: column, row: row)
     }
@@ -243,11 +251,13 @@ public protocol NGTableViewDelegate: AnyObject {
     /// The text that typing matches for a row (`tableColumn` is the
     /// `typeSelectColumnID` column), like `NSTableViewDelegate`'s. `nil` (the
     /// default) matches the cell's text; an empty string leaves the row out.
+    #if os(macOS)
     /// Whether a typed key selects rows by type select, like NSTableView's
     /// `tableView(_:shouldTypeSelectFor:withCurrentSearch:)`: `false` lets the
     /// key go on to the next responder. `searchString` is the search typed
     /// so far, `nil` before one began.
     func tableView(_ tableView: NGTableView, shouldTypeSelectFor event: NSEvent, withCurrentSearch searchString: String?) -> Bool
+    #endif
     /// The first row in `startRow..<endRow` matching what was typed, or -1,
     /// like NSTableView's `tableView(_:nextTypeSelectMatchFromRow:toRow:for:)`.
     /// Rows here are display indexes (see `NGTableView.row(atDisplayIndex:)`),
@@ -262,12 +272,15 @@ public protocol NGTableViewDelegate: AnyObject {
     /// (the default) shows the whole text of a cell too narrow for it, a
     /// mark's label or a media cell's text; an empty string shows none.
     func tableView(_ tableView: NGTableView, toolTipForRow row: Int, column: NGTableColumn) -> String?
+    #if os(macOS)
     /// Actions a swipe across a row shows at an edge, like NSTableView's
     /// `tableView(_:rowActionsForRow:edge:)`; none by default.
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction]
+    #endif
     /// Whether the user may edit a cell of an editable column, like
     /// NSTableView's `tableView(_:shouldEdit:row:)`.
     func tableView(_ tableView: NGTableView, shouldEdit tableColumn: NGTableColumn, row: Int) -> Bool
+    #if os(macOS)
     /// The context menu for a right-click (or Control-click) in the rows. The
     /// table adds no items of its own: build the menu with your app's actions.
     ///
@@ -284,16 +297,17 @@ public protocol NGTableViewDelegate: AnyObject {
     /// - Returns: The menu, or `nil` for the table's `menu` (like an
     ///   `NSTableView`'s, with `clickedRow` set), if it has one.
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu?
+    #endif
     /// A tint for a row's background instead of the alternating stripes, e.g. a
     /// pale green for profitable campaigns. Use light, translucent colors (like
-    /// `NSColor.systemGreen.withAlphaComponent(0.12)`) so text stays readable,
+    /// `NGColor.systemGreen.withAlphaComponent(0.12)`) so text stays readable,
     /// and return the same color objects each time (e.g. static constants):
     /// this is asked for every visible row while scrolling.
     /// Selected rows show the selection color instead.
-    func tableView(_ tableView: NGTableView, backgroundColorForRow row: Int) -> NSColor?
+    func tableView(_ tableView: NGTableView, backgroundColorForRow row: Int) -> NGColor?
     /// A bright mark a few points wide at the leading edge of a row, e.g. a
     /// campaign's status. Purely decorative; `nil` shows none.
-    func tableView(_ tableView: NGTableView, markerColorForRow row: Int) -> NSColor?
+    func tableView(_ tableView: NGTableView, markerColorForRow row: Int) -> NGColor?
     /// Called when summaries computed in the background (see
     /// `NGTableView.synchronousSummaryLimit`) are ready and shown.
     func tableViewDidUpdateSummary(_ tableView: NGTableView)
@@ -392,16 +406,20 @@ public extension NGTableViewDelegate {
     func tableView(_ tableView: NGTableView, userCanChangeVisibilityOf column: NGTableColumn) -> Bool { true }
     func tableView(_ tableView: NGTableView, userDidChangeVisibilityOf columns: [NGTableColumn]) {}
     func tableView(_ tableView: NGTableView, typeSelectStringFor tableColumn: NGTableColumn?, row: Int) -> String? { nil }
+    #if os(macOS)
     func tableView(_ tableView: NGTableView, shouldTypeSelectFor event: NSEvent, withCurrentSearch searchString: String?) -> Bool { true }
+    #endif
     func tableView(_ tableView: NGTableView, nextTypeSelectMatchFromRow startRow: Int, toRow endRow: Int, for searchString: String) -> Int {
         tableView.typeSelectMatch(from: startRow, to: endRow, for: searchString)
     }
     func tableView(_ tableView: NGTableView, toolTipForRow row: Int, column: NGTableColumn) -> String? { nil }
     func tableView(_ tableView: NGTableView, shouldEdit tableColumn: NGTableColumn, row: Int) -> Bool { true }
+    #if os(macOS)
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] { [] }
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu? { nil }
-    func tableView(_ tableView: NGTableView, backgroundColorForRow row: Int) -> NSColor? { nil }
-    func tableView(_ tableView: NGTableView, markerColorForRow row: Int) -> NSColor? { nil }
+    #endif
+    func tableView(_ tableView: NGTableView, backgroundColorForRow row: Int) -> NGColor? { nil }
+    func tableView(_ tableView: NGTableView, markerColorForRow row: Int) -> NGColor? { nil }
     func tableViewDidUpdateSummary(_ tableView: NGTableView) {}
     func tableView(_ tableView: NGTableView, titleFor group: NGRowGroup) -> String? { nil }
     func tableViewGroupDidExpand(_ notification: Notification) {}

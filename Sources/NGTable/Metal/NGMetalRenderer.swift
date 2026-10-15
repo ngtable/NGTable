@@ -384,6 +384,12 @@ final class NGMetalRenderer {
     #endif
 
     /// The same for a resolved Core Graphics color.
+    #if os(iOS)
+    static func premultiplied(_ color: UIColor) -> SIMD4<Float> {
+        premultiplied(color.cgColor)
+    }
+    #endif
+
     static func premultiplied(_ color: CGColor) -> SIMD4<Float> {
         guard let rgb = color.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil),
               let components = rgb.components, components.count >= 4 else { return .zero }

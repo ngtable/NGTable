@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Cell ranges, like a spreadsheet's, with navigation by cell: Shift with the
 // arrow keys, a Shift-click or a drag extends a rectangle of cells from the
@@ -90,7 +94,7 @@ extension NGTableView {
     }
 
     /// The visible column at a point in the window, if any.
-    func columnID(atWindowLocation location: NSPoint) -> String? {
+    func columnID(atWindowLocation location: CGPoint) -> String? {
         let point = convert(location, from: nil)
         guard let region = regions.first(where: { !$0.isHidden && $0.frame.contains(point) }) else { return nil }
         let x = Double(region.canvas.convert(location, from: nil).x)

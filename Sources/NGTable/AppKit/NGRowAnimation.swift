@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Animated row changes, like NSTableView's `withAnimation:`: when a batch
 // that asked for animation (or moved rows by the table's own sort, with
@@ -113,7 +117,7 @@ extension NGTableView {
         // Out of a window a display link doesn't run (and would keep the
         // table alive): everything is at its place at once.
         // With Reduce Motion, rows change at once.
-        guard window != nil, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+        guard window != nil, !NGSystem.reducesMotion,
               !offsets.isEmpty || !appearing.isEmpty || !disappearing.isEmpty else {
             disappearing.forEach(recycle)
             return

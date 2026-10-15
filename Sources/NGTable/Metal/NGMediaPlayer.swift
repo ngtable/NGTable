@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import AVFoundation
 import CoreVideo
 import ImageIO
@@ -47,7 +51,7 @@ final class NGMediaPlayer {
     }
 
     /// Starts once the file is downloaded (the still shows meanwhile).
-    func start(in view: NSView, device: MTLDevice, pixelSize: (width: Int, height: Int)) {
+    func start(in view: NGPlatformView, device: MTLDevice, pixelSize: (width: Int, height: Int)) {
         guard let motion = media.motion else { return }
         // The view weakly too: a download outlives a closed window.
         task = Task { [weak self, weak view] in
@@ -95,7 +99,7 @@ final class NGMediaPlayer {
 
     // MARK: Video
 
-    private func playVideo(_ file: URL, device: MTLDevice, in view: NSView) {
+    private func playVideo(_ file: URL, device: MTLDevice, in view: NGPlatformView) {
         var cache: CVMetalTextureCache?
         CVMetalTextureCacheCreate(nil, nil, device, nil, &cache)
         guard let cache else { return }
@@ -138,7 +142,7 @@ final class NGMediaPlayer {
 
     // MARK: GIF
 
-    private func animate(_ frames: [(texture: MTLTexture, delay: Double)], in view: NSView) {
+    private func animate(_ frames: [(texture: MTLTexture, delay: Double)], in view: NGPlatformView) {
         self.frames = frames
         animationStart = CACurrentMediaTime()
         startLink(in: view)
@@ -193,7 +197,7 @@ final class NGMediaPlayer {
 
     // MARK: Display link
 
-    private func startLink(in view: NSView) {
+    private func startLink(in view: NGPlatformView) {
         link?.invalidate()
         let link = view.displayLink(target: NGMediaPlayerLinkTarget(self), selector: #selector(NGMediaPlayerLinkTarget.step(_:)))
         link.add(to: .main, forMode: .common)

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // The cell under the pointer (`hoveredCell`) and the delegate's enter and exit
 // calls. AppKit only reports pointer movement when the mouse moves, so the
@@ -8,13 +12,13 @@ import AppKit
 
 extension NGTableView {
     /// Finds the cell at a point of the window (`nil`: outside the rows).
-    func updateHoveredCell(atWindowPoint windowPoint: NSPoint?) {
+    func updateHoveredCell(atWindowPoint windowPoint: CGPoint?) {
         pointerWindowLocation = windowPoint
         setHoveredCell(windowPoint.flatMap(cell(atWindowPoint:)))
     }
 
     /// The cell at a point of the window, by geometry only.
-    private func cell(atWindowPoint windowPoint: NSPoint) -> NGCellPosition? {
+    private func cell(atWindowPoint windowPoint: CGPoint) -> NGCellPosition? {
         guard window != nil, !ignoresUserInput else { return nil }
         let point = convert(windowPoint, from: nil)
         let row = row(at: point), column = column(at: point)
@@ -22,6 +26,7 @@ extension NGTableView {
         return NGCellPosition(row: row, columnID: tableColumns[column].id)
     }
 
+    #if os(macOS)
     /// Finds the cell under a resting pointer again (the rows moved under it).
     /// Runs after every scroll step and layout pass: the window server is only
     /// asked whether another window covers the table when the cell changes.
@@ -69,6 +74,7 @@ extension NGTableView {
         }
         setHoveredCell(cell)
     }
+    #endif
 
     /// The motion under the pointer follows the cell's value: a reloaded row
     /// that shows the same media keeps playing (in the new cell object),

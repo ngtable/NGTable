@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Drawing conditional formats (`NGConditionalFormat`): data bars and color
 // scales under a number cell's text, or its text in a rule's color. Automatic

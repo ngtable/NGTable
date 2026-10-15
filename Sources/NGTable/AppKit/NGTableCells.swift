@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Rows and cells of the visible area: which rows and columns are in view,
 // placing row backgrounds and cells (the Metal renderer's frame model),
@@ -238,7 +242,7 @@ extension NGTableView {
     }
 
     /// Shows content in a header row's cell (made from the pool if needed).
-    func placeGroupCell(_ key: NGCellKey, content: NGCellContent, frame: NSRect, in canvas: NGCanvasView) {
+    func placeGroupCell(_ key: NGCellKey, content: NGCellContent, frame: CGRect, in canvas: NGCanvasView) {
         let layer: NGDrawnCell
         if let existing = visibleCells[key] {
             layer = existing
@@ -267,7 +271,7 @@ extension NGTableView {
     private static let cellLayerPoolLimit = 128
     /// The frame of the cell at a point of a region's canvas, if it has a
     /// tool tip (see `cellToolTip(at:in:)`).
-    func cellToolTipFrame(at point: NSPoint, in region: NGRegionView) -> NSRect? {
+    func cellToolTipFrame(at point: CGPoint, in region: NGRegionView) -> CGRect? {
         guard !ignoresUserInput, let (cell, _) = cellUnderPoint(point, in: region),
               cellToolTip(at: point, in: region) != nil else { return nil }
         return cell.cellFrame
@@ -276,7 +280,7 @@ extension NGTableView {
     /// The tool tip of the cell at a point of a region's canvas: the
     /// delegate's, or a mark's label, a media cell's text, or the whole text
     /// of a cell too narrow for it (like NSTableView's expansion tool tips).
-    func cellToolTip(at point: NSPoint, in region: NGRegionView) -> String? {
+    func cellToolTip(at point: CGPoint, in region: NGRegionView) -> String? {
         guard let (cell, column) = cellUnderPoint(point, in: region) else { return nil }
         let row = Int(floor(rowGeometry.position(atY: point.y)))
         let source = sourceRow(row)
@@ -305,7 +309,7 @@ extension NGTableView {
     }
 
     /// The visible cell at a point of a region's canvas, and its column.
-    private func cellUnderPoint(_ point: NSPoint, in region: NGRegionView) -> (NGDrawnCell, NGTableColumn)? {
+    private func cellUnderPoint(_ point: CGPoint, in region: NGRegionView) -> (NGDrawnCell, NGTableColumn)? {
         // Canvas coordinates are the geometry's (scrolling columns start after the leading region).
         guard rowHeight > 0, let columnFrame = geometry[region.pin].column(atX: Double(point.x)) else { return nil }
         let row = Int(floor(rowGeometry.position(atY: point.y)))
@@ -315,7 +319,7 @@ extension NGTableView {
     }
 
     /// The text a text-like cell shows and its font, as the renderer draws it.
-    private func displayedText(of cell: NGDrawnCell) -> (String, NSFont)? {
+    private func displayedText(of cell: NGDrawnCell) -> (String, NGFont)? {
         let style = metalStyle
         switch cell.content {
         case .text(let text, _, let monospacedDigits): return text.isEmpty ? nil : (text, monospacedDigits ? style.digitFont : style.textFont)
@@ -332,7 +336,7 @@ extension NGTableView {
         visibleRows[key] = view
         let keepsColors = keepingColors && existing != nil
 
-        var frame = NSRect(
+        var frame = CGRect(
             x: region.pin == .none ? layoutMetrics.leadingWidth : 0,
             y: rowGeometry.top(of: row),
             width: region.pin == .none ? centerCanvasWidth - layoutMetrics.leadingWidth : region.canvas.frame.width,
@@ -392,8 +396,8 @@ extension NGTableView {
     }
 
     /// Marker colors of the visible rows in the outermost leading region (for tests).
-    func rowBackgroundMarkerColors() -> [Int: NSColor] {
-        var colors: [Int: NSColor] = [:]
+    func rowBackgroundMarkerColors() -> [Int: NGColor] {
+        var colors: [Int: NGColor] = [:]
         for (key, layer) in visibleRows {
             if let color = layer.markerColor { colors[key.row] = color }
         }
@@ -407,7 +411,7 @@ extension NGTableView {
     private func placeCell(row: Int, column: PlacedColumn, in canvas: NGCanvasView) {
         let key = NGCellKey(row: row, column: column.ordinal)
         let cell = visibleCells[key] ?? makeCell(for: column.frame.column, ordinal: column.ordinal, row: row, readsValue: false)
-        let cellFrame = NSRect(x: column.x, y: rowGeometry.top(of: row), width: CGFloat(column.frame.width), height: rowGeometry.height(of: row))
+        let cellFrame = CGRect(x: column.x, y: rowGeometry.top(of: row), width: CGFloat(column.frame.width), height: rowGeometry.height(of: row))
         cell.regionPin = canvas.region?.pin
         cell.cellFrame = cellFrame
         cell.showsChoiceChevron = Self.showsChoiceChevron(column.frame.column)

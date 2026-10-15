@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Column filters: per-column conditions (`NGColumnFilter`) that the user sets
 // from the header, like a spreadsheet's. They are part of the table's filter:
@@ -192,7 +196,7 @@ extension NGTableView {
     }
 
     /// The column whose header the pointer is over (`nil`: none).
-    func updateHoveredHeaderColumn(at point: NSPoint?) {
+    func updateHoveredHeaderColumn(at point: CGPoint?) {
         let id = point.flatMap { column(atViewportPoint: $0)?.frame.column.id }
         guard id != hoveredHeaderColumnID else { return }
         hoveredHeaderColumnID = id
@@ -201,8 +205,8 @@ extension NGTableView {
 
     /// Where the filter button is in a column's title area: at its trailing end.
     /// - Parameter mirrored: At the title's left (right to left by default).
-    func filterButtonRect(inTitleRect rect: NSRect, mirrored: Bool? = nil) -> NSRect {
-        NSRect(x: (mirrored ?? isRightToLeft) ? rect.minX + NGMetrics.cellPadding : rect.maxX - NGMetrics.cellPadding - Self.filterButtonWidth,
+    func filterButtonRect(inTitleRect rect: CGRect, mirrored: Bool? = nil) -> CGRect {
+        CGRect(x: (mirrored ?? isRightToLeft) ? rect.minX + NGMetrics.cellPadding : rect.maxX - NGMetrics.cellPadding - Self.filterButtonWidth,
                y: rect.minY,
                width: Self.filterButtonWidth, height: rect.height)
     }
@@ -222,7 +226,7 @@ extension NGTableView {
         for pin in NGColumnPin.allCases {
             guard let frame = geometry[pin].columns.first(where: { $0.column.id == columnID }) else { continue }
             let band = columnLayout.hasGroups ? groupHeaderHeight : 0
-            let title = NSRect(x: viewport.origin(of: pin) + CGFloat(frame.x) + slideOffset(forColumnID: columnID), y: band,
+            let title = CGRect(x: viewport.origin(of: pin) + CGFloat(frame.x) + slideOffset(forColumnID: columnID), y: band,
                                width: CGFloat(frame.width), height: headerView.bounds.height - band)
             showColumnFilter(for: frame.column, relativeTo: filterButtonRect(inTitleRect: title), of: headerView)
             return true
@@ -230,8 +234,9 @@ extension NGTableView {
         return false
     }
 
+    #if os(macOS)
     /// Opens the filter of a column in a popover under its button.
-    func showColumnFilter(for column: NGTableColumn, relativeTo rect: NSRect, of view: NSView) {
+    func showColumnFilter(for column: NGTableColumn, relativeTo rect: CGRect, of view: NGPlatformView) {
         columnFilterPopover?.close()
         let popover = NSPopover()
         popover.behavior = .transient
@@ -239,6 +244,7 @@ extension NGTableView {
         popover.show(relativeTo: rect, of: view, preferredEdge: .maxY)
         columnFilterPopover = popover
     }
+    #endif
 
     /// Sets or clears one column's filter as the user does from the header:
     /// saves the layout and tells the delegate.

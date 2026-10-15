@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// How selected rows are highlighted.
 public enum NGSelectionHighlightStyle: Sendable {
@@ -35,7 +39,7 @@ public enum NGSelectionHighlightStyle: Sendable {
 ///   Text's typesetting, and only when something visible changed.
 /// - Scrollers are overlay scrollers the table places and reveals (legacy
 ///   scrollers when "Show scroll bars: Always" is set in System Settings).
-public final class NGTableView: NSView {
+public final class NGTableView: NGPlatformView {
     /// Supplies the rows and values. Setting it reloads the table. Held weakly:
     /// keep the data source alive yourself.
     public weak var dataSource: NGTableViewDataSource? {
@@ -167,7 +171,7 @@ public final class NGTableView: NSView {
     }
     var selectedHandleRange: (anchor: NGHandleCell, end: NGHandleCell)?
     /// A press on a draggable row, until it turns into a drag (see NGRowDragging.swift).
-    var rowDragPress: (location: NSPoint, ref: NGRowRef, wasSelected: Bool)?
+    var rowDragPress: (location: CGPoint, ref: NGRowRef, wasSelected: Bool)?
     /// The display row a drop opens a gap at (`.gap` feedback), and when it
     /// began to open.
     var dropGap: (displayRow: Int, start: CFTimeInterval)?
@@ -203,7 +207,11 @@ public final class NGTableView: NSView {
         didSet {
             guard isEnabled != oldValue else { return }
             alphaValue = isEnabled ? 1 : 0.5
+            #if os(macOS)
             if !isEnabled, window?.firstResponder === self { window?.makeFirstResponder(nil) }
+            #else
+            if !isEnabled { resignFirstResponder() }
+            #endif
             if !isEnabled { endEditing(committing: true) }
         }
     }
@@ -212,9 +220,11 @@ public final class NGTableView: NSView {
     /// width, `.automatic` prints them across pages in bands of whole
     /// columns (the columns pinned at the leading edge on every band),
     /// `.clip` cuts them off.
+    #if os(macOS)
     public var printPagination: NSPrintInfo.PaginationMode = .fit
     /// The app's own controllers in the print panel, after the table's options.
     public var printPanelAccessories: [NSViewController & NSPrintPanelAccessorizing] = []
+    #endif
     /// How a drop onto the table shows, like NSTableView's: `.regular` (and
     /// `.sourceList`, which looks the same) draws a line between rows or a
     /// highlight on the row, `.gap` opens a gap between the rows instead of
@@ -239,9 +249,12 @@ public final class NGTableView: NSView {
     var dropRetarget: (row: Int, operation: NSTableView.DropOperation)?
     /// Scrolls while a drag stays near the top or bottom of the rows.
     var dropScrollLink: CADisplayLink?
+    #if os(macOS)
     var dropScrollInfo: (any NSDraggingInfo)?
     var draggingSourceOperationMaskWithinApplication: NSDragOperation = .every
     var draggingSourceOperationMaskOutside: NSDragOperation = .copy
+    #endif
+    #if os(macOS)
     /// The cell being edited (see NGCellEditing.swift).
     var editor: NGCellEditor?
     /// Ends editing on Return, Tab and Escape.
@@ -253,6 +266,10 @@ public final class NGTableView: NSView {
         return delegate
     }
     var cellEditorDelegate: NGCellEditorDelegate?
+    #else
+    /// (Editing cells comes later on the iPad.)
+    var editor: NGCellEditor? { nil }
+    #endif
 
     /// Whether a cell is being edited.
     public var isEditingCell: Bool { editor != nil }
@@ -438,8 +455,8 @@ public final class NGTableView: NSView {
     /// Right to left: the visible width the scrolling columns were mirrored in.
     var mirroredCenterSpan: CGFloat = 0
     var horizontalGridLines = NGHorizontalGridLines.none
-    var gridLineColor = NSColor.gridColor
-    var cellSpacing = NSSize.zero
+    var gridLineColor = NGColor.gridColor
+    var cellSpacing = CGSize.zero
     /// See `columnAutoresizingStyle`.
     var autoresizingStyle = NSTableView.ColumnAutoresizingStyle.noColumnAutoresizing
     var lastAutoresizedWidth: CGFloat?
@@ -447,11 +464,13 @@ public final class NGTableView: NSView {
     var autoresizeCarry = 0.0
     /// Swipe actions (see NGRowSwipeActions.swift).
     var rowSwipe: NGRowSwipe?
-    var swipeCandidate: NSPoint?
+    var swipeCandidate: CGPoint?
     var swipeTookGesture = false
-    var rowActionButtons: NSView?
+    var rowActionButtons: NGPlatformView?
+    #if os(macOS)
     /// The choice menu being shown, and its record (see NGChoiceEditing.swift).
     var openChoiceMenu: (menu: NSMenu, ref: NGRowRef)?
+    #endif
 
     /// Whether several rows can be selected (with Shift, Command, dragging and
     /// Select All). With `false`, at most one row is selected.
@@ -1090,8 +1109,10 @@ public final class NGTableView: NSView {
 
     /// The column whose header is under the pointer (its filter button shows).
     var hoveredHeaderColumnID: String?
+    #if os(macOS)
     /// The open column filter, if any.
     var columnFilterPopover: NSPopover?
+    #endif
     /// Handles of the rows hidden with `hideRows(at:withAnimation:)`.
     var hiddenRowHandles = Set<Int>()
     /// A search index being built in slices (see `synchronousSearchLimit`),
@@ -2141,25 +2162,37 @@ public final class NGTableView: NSView {
     /// A custom view shown instead of `emptyStateText` while there are no rows
     /// (e.g. with an image and a button). It is sized to its fitting size and
     /// centered; use Auto Layout inside it.
-    public var emptyStateView: NSView? {
+    public var emptyStateView: NGPlatformView? {
         didSet {
             oldValue?.removeFromSuperview()
             needsLayout = true
         }
     }
 
+    #if os(macOS)
     private lazy var emptyStateLabel: NSTextField = {
         let label = NSTextField(labelWithString: "")
-        label.font = .systemFont(ofSize: NSFont.systemFontSize + 2, weight: .medium)
+        label.font = .systemFont(ofSize: NGFont.systemFontSize + 2, weight: .medium)
         label.textColor = .secondaryLabelColor
         label.alignment = .center
         label.lineBreakMode = .byWordWrapping
         label.maximumNumberOfLines = 3
         return label
     }()
+    #else
+    private lazy var emptyStateLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: NGFont.systemFontSize + 2, weight: .medium)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.lineBreakMode = .byWordWrapping
+        label.numberOfLines = 3
+        return label
+    }()
+    #endif
 
     /// The empty state view while it is shown.
-    var visibleEmptyStateView: NSView? {
+    var visibleEmptyStateView: NGPlatformView? {
         [emptyStateView, emptyStateLabel].compactMap { $0 }.first { $0.superview === self && !$0.isHidden }
     }
 
@@ -2167,7 +2200,7 @@ public final class NGTableView: NSView {
         // An update's spinner replaces the empty state once it fades in: it
         // may bring rows. Quick updates don't make the text flash.
         let isEmpty = numberOfRows == 0 && !isDataUpdateVeiled
-        let view: NSView? = emptyStateView ?? (emptyStateText?.isEmpty == false ? emptyStateLabel : nil)
+        let view: NGPlatformView? = emptyStateView ?? (emptyStateText?.isEmpty == false ? emptyStateLabel : nil)
         if emptyStateView != nil, emptyStateLabel.superview != nil {
             emptyStateLabel.removeFromSuperview()
         }
@@ -2182,7 +2215,7 @@ public final class NGTableView: NSView {
         }
         view.isHidden = false
         // The area between the header and the summary row.
-        let area = NSRect(x: 0, y: metrics.headerHeight, width: bounds.width,
+        let area = CGRect(x: 0, y: metrics.headerHeight, width: bounds.width,
                           height: max(0, bounds.height - metrics.headerHeight - metrics.summaryHeight))
         let maxWidth = max(0, area.width - 40)
         if view === emptyStateLabel {
@@ -2190,7 +2223,7 @@ public final class NGTableView: NSView {
         }
         var size = view.fittingSize
         size.width = min(size.width, maxWidth)
-        view.frame = NSRect(x: (area.midX - size.width / 2).rounded(), y: (area.midY - size.height / 2).rounded(),
+        view.frame = CGRect(x: (area.midX - size.width / 2).rounded(), y: (area.midY - size.height / 2).rounded(),
                             width: size.width, height: size.height)
     }
 
@@ -2305,7 +2338,11 @@ public final class NGTableView: NSView {
     // MARK: Views
 
     /// Translucent header material; rows scroll underneath it.
+    #if os(macOS)
     let headerBackground = NSVisualEffectView()
+    #else
+    let headerBackground = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
+    #endif
     let headerView = NGGridHeaderView()
     let leadingRegion = NGRegionView(pin: .leading)
     let centerRegion = NGRegionView(pin: .none)
@@ -2314,8 +2351,10 @@ public final class NGTableView: NSView {
     let trailingSeparator = NGColorView()
     let summaryBar = NGSummaryBarView(frame: .zero)
     // Legacy scrollers. NSScroller takes its orientation from the frame it is created with.
-    let verticalScroller = NSScroller(frame: NSRect(x: 0, y: 0, width: 16, height: 100))
-    let horizontalScroller = NSScroller(frame: NSRect(x: 0, y: 0, width: 100, height: 16))
+    #if os(macOS)
+    let verticalScroller = NSScroller(frame: CGRect(x: 0, y: 0, width: 16, height: 100))
+    let horizontalScroller = NSScroller(frame: CGRect(x: 0, y: 0, width: 100, height: 16))
+    #endif
     let verticalOverlayScroller = NGOverlayScroller(orientation: .vertical)
     let horizontalOverlayScroller = NGOverlayScroller(orientation: .horizontal)
 
@@ -2337,7 +2376,7 @@ public final class NGTableView: NSView {
 
     /// A mouse press on a column header that has not become a drag yet.
     struct HeaderPress {
-        var startLocation: NSPoint
+        var startLocation: CGPoint
         /// The column whose title was pressed (not a group's band): a click on it
         /// is reported on mouse up.
         var columnID: String?
@@ -2355,7 +2394,7 @@ public final class NGTableView: NSView {
         var unit: NGColumnReorder.Unit
         var pin: NGColumnPin
         /// Snapshot of the dragged columns (header, cells, summary) following the pointer.
-        var snapshot: NSView
+        var snapshot: NGPlatformView
         /// Pointer x relative to the snapshot's leading edge.
         var grabOffset: CGFloat
         /// Columns hidden while dragged, leaving an empty slot.
@@ -2372,7 +2411,9 @@ public final class NGTableView: NSView {
     var columnDragScrollLink: CADisplayLink?
 
     /// The window whose cursor rects are disabled during a header interaction.
+    #if os(macOS)
     weak var cursorRectsSuspendedWindow: NSWindow?
+    #endif
 
     var columnDrag: ColumnDrag?
 
@@ -2391,7 +2432,7 @@ public final class NGTableView: NSView {
     /// Whether the current mouse press selected rows and may extend by dragging.
     var tracksDragSelection = false
     /// Pointer location (window coordinates) while selecting rows by dragging.
-    var dragSelectionLocation: NSPoint?
+    var dragSelectionLocation: CGPoint?
     /// Scrolls while the pointer is dragged past the top or bottom of the rows.
     var dragSelectionLink: CADisplayLink?
 
@@ -2439,7 +2480,7 @@ public final class NGTableView: NSView {
     /// Whether another window covered the table at a screen position of the
     /// pointer (the window server is asked once per position, for a moment:
     /// windows move without the pointer moving).
-    var pointerCoverCheck: (location: NSPoint, isCovered: Bool, time: CFTimeInterval)?
+    var pointerCoverCheck: (location: CGPoint, isCovered: Bool, time: CFTimeInterval)?
     /// The control in a cell (a link) the mouse pressed, while it's held.
     var cellPress: (ref: NGRowRef, columnID: String)?
     /// The cell whose control the pointer is over, and whether the cursor
@@ -2447,7 +2488,7 @@ public final class NGTableView: NSView {
     weak var pointerOverCell: NGDrawnCell?
     var showsPointingHand = false
     /// Where the pointer last was (window coordinates), for an editable rating's preview.
-    var pointerWindowLocation: NSPoint? {
+    var pointerWindowLocation: CGPoint? {
         didSet { if isLiveSortPaused != wasLiveSortPaused { wasLiveSortPaused = isLiveSortPaused; resumeLiveSortIfNeeded() } }
     }
     /// Whether the live sort was held when the pointer last moved.
@@ -2457,12 +2498,14 @@ public final class NGTableView: NSView {
     var drawsIndeterminateProgress = false
     /// The time the indeterminate stripe is drawn at, for tests.
     var progressAnimationTimeForTesting: CFTimeInterval?
+    #if os(macOS)
     /// Takes a choice menu instead of popping it up (a modal loop), for tests.
     nonisolated(unsafe) static var choiceMenuShownForTesting: ((NSMenu) -> Void)?
+    #endif
     /// Opens links' URLs instead of the workspace, for tests.
     nonisolated(unsafe) static var openURLForTesting: ((URL) -> Void)?
     /// The pointer in window coordinates, for tests (no mouse there).
-    var pointerLocationForTesting: NSPoint?
+    var pointerLocationForTesting: CGPoint?
     /// Called on the main thread when a frame of the rows is on the screen:
     /// when it was drawn and when it showed (both `CACurrentMediaTime()`),
     /// for measuring how long data takes to show (a live feed's latency).
@@ -2512,8 +2555,10 @@ public final class NGTableView: NSView {
             if rowUpdateBatch?.displayIsStale == false { rowUpdateBatch!.cursor = cursorRow.flatMap(sourceRowIfAny) }
         }
     }
+    #if os(macOS)
     /// Scroll gestures are locked to the axis they start on.
     var scrollAxis: NSEvent.GestureAxis?
+    #endif
     /// Whether the current scroll gesture (and its momentum) goes to the
     /// view containing the table: it's on an axis with nothing to scroll.
     var forwardsScrollGesture = false
@@ -2522,11 +2567,13 @@ public final class NGTableView: NSView {
     var isLiveScrolling = false
     var liveScrollByScroller = false
     var liveScrollEndGeneration = 0
+    #if os(macOS)
     /// The events of the current gesture before its axis was known, for the
     /// container to get the whole gesture if it goes there.
     var scrollGestureStart: [NSEvent] = []
     var scrollerFadeTasks: [NSEvent.GestureAxis: Task<Void, Never>] = [:]
     var scrollerLastActivity: [NSEvent.GestureAxis: TimeInterval] = [:]
+    #endif
     /// Accessibility elements, kept stable for VoiceOver until data or columns change.
     var accessibilityRowCache: [Int: NGAccessibilityRow] = [:]
     var accessibilityHeaderCache: [String: NGAccessibilityColumnHeader] = [:]
@@ -2600,7 +2647,11 @@ public final class NGTableView: NSView {
     /// Counts the background copies: only the latest ends `isCopying`.
     var copyGeneration = 0
     /// Where `copy(_:)` puts the text (tests use a pasteboard of their own).
+    #if os(macOS)
     var copyPasteboard = NSPasteboard.general
+    #else
+    var copyPasteboard = UIPasteboard.general
+    #endif
 
     /// Whether the words of a search are being read (see `synchronousSearchLimit`).
     public internal(set) var isSearchingRows = false
@@ -2638,6 +2689,7 @@ public final class NGTableView: NSView {
         }
     }
 
+    #if os(macOS)
     private lazy var summaryProgress: NSProgressIndicator = {
         let indicator = NSProgressIndicator()
         indicator.style = .spinning
@@ -2646,6 +2698,14 @@ public final class NGTableView: NSView {
         indicator.isHidden = true
         return indicator
     }()
+    #else
+    private lazy var summaryProgress: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.hidesWhenStopped = true
+        indicator.isHidden = true
+        return indicator
+    }()
+    #endif
 
     /// The spinner's side (a mini control's fitting size, asked once).
     private var summaryProgressSize: CGFloat?
@@ -2679,7 +2739,7 @@ public final class NGTableView: NSView {
         }
         let size = summaryProgressSize ?? 10
         let bounds = summaryBar.contentView.bounds
-        summaryProgress.frame = NSRect(x: 6, y: ((bounds.height - size) / 2).rounded(), width: size, height: size)
+        summaryProgress.frame = CGRect(x: 6, y: ((bounds.height - size) / 2).rounded(), width: size, height: size)
     }
 
     var summaryTask: Task<Void, Never>?
@@ -2688,7 +2748,7 @@ public final class NGTableView: NSView {
     /// Display strings of the summary row, recomputed only when data, selection or scope change.
     var summaryTexts: [String: String] = [:]
 
-    public override init(frame frameRect: NSRect) {
+    public override init(frame frameRect: CGRect) {
         super.init(frame: frameRect)
         commonInit()
     }
@@ -2724,14 +2784,17 @@ public final class NGTableView: NSView {
             separator.color = .separatorColor
             addSubview(separator)
         }
+        #if os(macOS)
         headerBackground.material = .headerView
         headerBackground.blendingMode = .withinWindow
         headerBackground.state = .followsWindowActiveState
+        #endif
         addSubview(headerBackground)
         headerView.owner = self
         addSubview(headerView)
         summaryBar.contentView.owner = self
         addSubview(summaryBar)
+        #if os(macOS)
         setUpScrollers()
 
         NotificationCenter.default.addObserver(
@@ -2740,6 +2803,9 @@ public final class NGTableView: NSView {
             name: NSScroller.preferredScrollerStyleDidChangeNotification,
             object: nil
         )
+        #else
+        setUpTouch()
+        #endif
 
         rebuildColumns()
         setUpMetalRenderer()
@@ -2747,14 +2813,16 @@ public final class NGTableView: NSView {
 
     var regions: [NGRegionView] { [leadingRegion, centerRegion, trailingRegion] }
 
+    #if os(macOS)
     public override var isFlipped: Bool { true }
+    #endif
 
     /// Tests fix what otherwise depends on the screen, the window and System
     /// Settings: the pixel density, whether the selection is emphasized (key
     /// window and focus), and the accent color of emphasized selections.
     var scaleForTesting: CGFloat?
     var emphasisForTesting: Bool?
-    var accentColorForTesting: NSColor?
+    var accentColorForTesting: NGColor?
 
     // State of the sections in other files (stored properties stay in the class).
     /// Set while columns are only being reordered, so the rebuild keeps the scroll
@@ -2796,8 +2864,10 @@ public final class NGTableView: NSView {
     var sendsClickAction = false
     var typeSelectBuffer = ""
     var lastTypeSelectTime: TimeInterval = 0
+    #if os(macOS)
     /// The key event being interpreted, for the delegate's type select hook.
     var typeSelectEvent: NSEvent?
+    #endif
 
     // MARK: Public API
 
@@ -3036,7 +3106,7 @@ public final class NGTableView: NSView {
     /// scrolled out of view, hidden by the row filter, or the column is hidden.
     /// A partly visible cell gives its whole frame. For screen coordinates:
     /// `window.convertToScreen(table.convert(frame, to: nil))`.
-    public func frameOfCell(row: Int, columnID: String) -> NSRect? {
+    public func frameOfCell(row: Int, columnID: String) -> CGRect? {
         guard let placement = cellPlacement(row: row, columnID: columnID), !placement.isRegionHidden,
               !placement.frame.intersection(placement.visible).isEmpty else { return nil }
         return placement.frame
@@ -3045,18 +3115,18 @@ public final class NGTableView: NSView {
     /// Where a cell is, shown or not (in the table's coordinates), and the
     /// part of the table where its region shows rows (between the header and
     /// the summary row); `nil` if its row isn't shown or its column is hidden.
-    func cellPlacement(row: Int, columnID: String) -> (frame: NSRect, visible: NSRect, isRegionHidden: Bool)? {
+    func cellPlacement(row: Int, columnID: String) -> (frame: CGRect, visible: CGRect, isRegionHidden: Bool)? {
         guard let displayRow = displayRow(forSourceRow: row), displayRow < numberOfRows else { return nil }
         for (pin, region) in [(NGColumnPin.leading, leadingRegion), (.none, centerRegion), (.trailing, trailingRegion)] {
             guard let column = geometry[pin].columns.first(where: { $0.column.id == columnID }) else { continue }
-            let inCanvas = NSRect(x: CGFloat(column.x) + slideOffset(forColumnID: columnID), y: rowGeometry.top(of: displayRow),
+            let inCanvas = CGRect(x: CGFloat(column.x) + slideOffset(forColumnID: columnID), y: rowGeometry.top(of: displayRow),
                                   width: CGFloat(column.width), height: rowGeometry.height(of: displayRow))
             let frame = convert(inCanvas, from: region.canvas)
             let metrics = layoutMetrics
             // Below the group headers floating at the top (other than its own).
             let cover = groupedDisplay == nil ? 0 : floatingHeadersCover(atOffset: contentOffset.y, except: displayRow)
             let top = metrics.headerHeight + cover
-            let visible = region.frame.intersection(NSRect(x: 0, y: top, width: bounds.width,
+            let visible = region.frame.intersection(CGRect(x: 0, y: top, width: bounds.width,
                                                            height: max(0, bounds.height - top - metrics.summaryHeight)))
             return (frame, visible, region.isHidden)
         }
@@ -3141,7 +3211,7 @@ public final class NGTableView: NSView {
         // drawing too). Without a renderer, by attributed strings.
         let shaper = metalRenderer?.shaper
         var measured: [ObjectIdentifier: (attributes: [NSAttributedString.Key: Any], texts: Set<String>)] = [:]
-        func width(of text: String, font: NSFont) -> CGFloat {
+        func width(of text: String, font: NGFont) -> CGFloat {
             guard !text.isEmpty else { return 0 }
             let key = ObjectIdentifier(font)
             if measured[key] == nil { measured[key] = ([.font: font], []) }
@@ -3154,8 +3224,8 @@ public final class NGTableView: NSView {
         // Room for the sort indicator, which appears next to the title.
         var widest = width(of: column.title, font: .systemFont(ofSize: tableStyle.titleFontSize)) + 14
         if let dataSource {
-            let textFont = NSFont.systemFont(ofSize: size)
-            let digitFont = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)
+            let textFont = NGFont.systemFont(ofSize: size)
+            let digitFont = NGFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)
             // Measuring is linear in rows; cap it so a double-click stays instant.
             // In a batch that moved rows, display rows don't mean the data
             // source's rows yet: its rows are measured as they are.
@@ -3178,8 +3248,8 @@ public final class NGTableView: NSView {
                 if case .media(let media) = value {
                     // The picture and the widest line beside it.
                     let lines = media.lines.map { line in
-                        width(of: line.text, font: line.style == .title ? NSFont.systemFont(ofSize: size, weight: .medium)
-                                                                         : NSFont.preferredFont(forTextStyle: .caption1))
+                        width(of: line.text, font: line.style == .title ? NGFont.systemFont(ofSize: size, weight: .medium)
+                                                                         : NGFont.preferredFont(forTextStyle: .caption1))
                     }
                     widest = max(widest, NGMetrics.mediaInset + media.thumbnailSize.width + NGMetrics.mediaTextSpacing
                                  + (lines.max() ?? 0) + NGMetrics.mediaInset - 2 * NGMetrics.cellPadding)
@@ -3204,6 +3274,7 @@ public final class NGTableView: NSView {
     public var typeSelectColumnID: String?
 }
 
+#if os(macOS)
 extension NGTableView: NSMenuItemValidation {
     public func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
@@ -3217,5 +3288,6 @@ extension NGTableView: NSMenuItemValidation {
         }
     }
 }
+#endif
 
 #endif

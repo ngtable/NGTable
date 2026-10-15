@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // The table's look beyond the system defaults (see `NGTableView.tableStyle`
 // and `density`): the cells' and the header's font sizes, the text,
@@ -14,18 +18,18 @@ public struct NGTableStyle: Hashable {
     public var fontSize: CGFloat?
     /// The size of the column titles (the small system size by default).
     public var headerFontSize: CGFloat?
-    public var textColor: NSColor?
-    public var secondaryTextColor: NSColor?
+    public var textColor: NGColor?
+    public var secondaryTextColor: NGColor?
     /// Behind the rows (`controlBackgroundColor` by default).
-    public var backgroundColor: NSColor?
+    public var backgroundColor: NGColor?
     /// Alternating row backgrounds, with `usesAlternatingRowBackgroundColors`.
-    public var stripeColors: [NSColor]?
+    public var stripeColors: [NGColor]?
     /// Group header rows' background.
-    public var groupRowColor: NSColor?
+    public var groupRowColor: NGColor?
 
-    public init(fontSize: CGFloat? = nil, headerFontSize: CGFloat? = nil, textColor: NSColor? = nil,
-                secondaryTextColor: NSColor? = nil, backgroundColor: NSColor? = nil, stripeColors: [NSColor]? = nil,
-                groupRowColor: NSColor? = nil) {
+    public init(fontSize: CGFloat? = nil, headerFontSize: CGFloat? = nil, textColor: NGColor? = nil,
+                secondaryTextColor: NGColor? = nil, backgroundColor: NGColor? = nil, stripeColors: [NGColor]? = nil,
+                groupRowColor: NGColor? = nil) {
         self.fontSize = fontSize
         self.headerFontSize = headerFontSize
         self.textColor = textColor
@@ -36,8 +40,12 @@ public struct NGTableStyle: Hashable {
     }
 
     /// The cells' font size.
-    var cellFontSize: CGFloat { fontSize ?? NSFont.systemFontSize }
-    var titleFontSize: CGFloat { headerFontSize ?? NSFont.systemFontSize(for: .small) }
+    var cellFontSize: CGFloat { fontSize ?? NGFont.systemFontSize }
+    #if os(macOS)
+    var titleFontSize: CGFloat { headerFontSize ?? NGFont.systemFontSize(for: .small) }
+    #else
+    var titleFontSize: CGFloat { headerFontSize ?? NGFont.smallSystemFontSize }
+    #endif
 }
 
 /// How much room rows give their text, like Finder's and Mail's list sizes.
@@ -64,7 +72,7 @@ extension NGTableView {
 
     /// The row height for a density with the style's font.
     func rowHeight(for density: NGTableDensity) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: tableStyle.cellFontSize)
+        let font = NGFont.systemFont(ofSize: tableStyle.cellFontSize)
         // With the room `intercellSpacing` adds between rows.
         return NGLineHeights.height(of: font) + 2 * density.padding + cellSpacing.height
     }

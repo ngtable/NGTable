@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Selecting columns instead of rows, like NSTableView's column selection:
 // with `allowsColumnSelection` a click on a column's header selects it
@@ -58,6 +62,7 @@ extension NGTableView {
         setColumnSelection(ids, last: lastSelectedColumnID == all[column].id ? nil : lastSelectedColumnID)
     }
 
+    #if os(macOS)
     /// A click on a header: selects its column, Command toggles it, Shift
     /// extends from the last column selected; the delegate may refuse it.
     func selectColumnByClicking(_ column: NGTableColumn, modifiers: NSEvent.ModifierFlags) {
@@ -76,6 +81,7 @@ extension NGTableView {
             setColumnSelection([column.id], last: column.id)
         }
     }
+    #endif
 
     /// Sets the selected columns (deselecting the rows) and tells of it.
     private func setColumnSelection(_ ids: Set<String>, last: String?) {
@@ -112,7 +118,7 @@ extension NGTableView {
         let color = columnSelectionTint(style)
         for frame in geometry[region.pin].columns where selectedColumnIDs.contains(frame.column.id) {
             let x = origin.x + CGFloat(frame.x) + slideOffset(forColumnID: frame.column.id)
-            let rect = NSRect(x: x, y: clip.minY, width: CGFloat(frame.width), height: clip.height)
+            let rect = CGRect(x: x, y: clip.minY, width: CGFloat(frame.width), height: clip.height)
             let visible = rect.intersection(clip)
             guard !visible.isEmpty else { continue }
             quads.append(NGMetalRenderer.rectangle(visible, scale: scale, color: color, clip: visible))

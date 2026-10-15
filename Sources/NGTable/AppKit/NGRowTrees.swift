@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Rows as a tree (`NGTableView.rowTree`), like NSOutlineView: each row names
 // its parent by identity, and the display rows are the rows of expanded
@@ -419,7 +423,7 @@ extension NGTableView {
 
     /// Whether a click in the window hits the triangle of a row; the row's
     /// handle if so.
-    func treeDisclosureHit(atWindowLocation location: NSPoint, displayRow: Int) -> Int? {
+    func treeDisclosureHit(atWindowLocation location: CGPoint, displayRow: Int) -> Int? {
         guard isShowingRowTree, let columnID = outlineColumnID, let groupedDisplay,
               displayRow >= 0, displayRow < groupedDisplay.count,
               let column = tableColumns.first(where: { $0.id == columnID }),
@@ -427,7 +431,7 @@ extension NGTableView {
         let row = sourceRow(displayRow)
         guard let frame = frameOfCell(row: row, columnID: columnID) else { return nil }
         let x = frame.minX + NGMetrics.cellPadding + CGFloat(outline.level) * NGMetrics.groupIndent
-        var box = NSRect(x: x - 4, y: frame.minY, width: NGMetrics.disclosureWidth + 8, height: frame.height)
+        var box = CGRect(x: x - 4, y: frame.minY, width: NGMetrics.disclosureWidth + 8, height: frame.height)
         // Right to left, mirrored within the cell, like what it draws.
         if isRightToLeft { box.origin.x = frame.minX + frame.maxX - box.maxX }
         return box.contains(convert(location, from: nil)) ? groupedDisplay[displayRow] : nil

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Layout of the table (`NGTableView.layout()`): the header, the frozen and
 // scrolling regions, the summary bar and the scrollers are placed in one pass
@@ -46,6 +50,7 @@ extension NGTableView {
         scaleForTesting ?? window?.backingScaleFactor ?? Self.mainScreenScale
     }
 
+    #if os(macOS)
     /// The main screen's scale, for tables outside windows (printing, tests):
     /// asking `NSScreen.main` each layout pass asked the window server,
     /// ~3 ms. Asked again when the screens change.
@@ -61,6 +66,9 @@ extension NGTableView {
         keptMainScreenScale = scale
         return scale
     }
+    #else
+    private static var mainScreenScale: CGFloat { UIScreen.main.scale }
+    #endif
     private static var keptMainScreenScale: CGFloat?
     private static var screenObserver: (any NSObjectProtocol)?
 
@@ -75,8 +83,22 @@ extension NGTableView {
         return (value * scale).rounded() / scale
     }
 
+    #if os(macOS)
     public override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
+        backingPropertiesDidChange()
+    }
+
+    /// Dynamic colors are resolved for the appearance a frame is drawn in, so
+    /// light/dark and accent changes draw a new frame.
+    public override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        appearanceDidChange()
+    }
+    #endif
+
+    /// The screen's pixel density changed (another screen).
+    func backingPropertiesDidChange() {
         layoutMetalLayer()
         // Hairlines and glyphs depend on the screen's pixel density.
         setNeedsMetalFrame()
@@ -86,10 +108,8 @@ extension NGTableView {
         headerView.needsDisplay = true
     }
 
-    /// Dynamic colors are resolved for the appearance a frame is drawn in, so
-    /// light/dark and accent changes draw a new frame.
-    public override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
+    /// Light or dark, or the accent color, changed.
+    func appearanceDidChange() {
         // The same rows and cells in other colors.
         setNeedsMetalFrame()
         setNeedsChromeFrame(headerView)
@@ -108,8 +128,8 @@ extension NGTableView {
         let centerContentWidth = CGFloat(geometry.center.width)
 
         // Legacy scrollers take space; overlay scrollers float over the content.
-        if NSScroller.preferredScrollerStyle == .legacy {
-            let thickness = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
+        if Self.usesLegacyScrollers {
+            let thickness = Self.legacyScrollerWidth
             let fixedWidth = metrics.leadingWidth + metrics.trailingWidth
             var needsVertical = metrics.contentHeight + metrics.summaryHeight > metrics.bodyHeight
             let needsHorizontal = centerContentWidth > bounds.width - fixedWidth - (needsVertical ? thickness : 0)
@@ -141,16 +161,33 @@ extension NGTableView {
         return metrics
     }
 
-    public override func setFrameSize(_ newSize: NSSize) {
+    #if os(macOS)
+    /// Scrollers that take space (the Mac's "always show scroll bars"), and their width.
+    static var usesLegacyScrollers: Bool { NSScroller.preferredScrollerStyle == .legacy }
+    static var legacyScrollerWidth: CGFloat { NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) }
+
+    public override func setFrameSize(_ newSize: CGSize) {
         super.setFrameSize(newSize)
         needsLayout = true
     }
+    #else
+    static var usesLegacyScrollers: Bool { false }
+    static var legacyScrollerWidth: CGFloat { 0 }
+    #endif
 
     /// The canvases' heights grow and shrink in steps of this many points.
     static let canvasHeightStep: CGFloat = 4096
 
+    #if os(macOS)
     public override func layout() {
         super.layout()
+        layOutTable()
+    }
+    #endif
+
+    /// The layout pass: the regions, the rows and cells in view, the header
+    /// and summary (from `layout()` on the Mac, `layoutSubviews()` on the iPad).
+    func layOutTable() {
         isInLayoutPass = true
         passIsRightToLeft = isRightToLeft
         defer {
@@ -183,12 +220,12 @@ extension NGTableView {
         let showsGrid = showsGrid
         headerView.isHidden = !showsGrid || hidesHeader
         headerBackground.isHidden = !showsGrid || hidesHeader
-        headerView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: top)
+        headerView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: top)
         headerBackground.frame = headerView.frame
         // Regions span the full height so rows can scroll underneath the header.
-        leadingRegion.frame = NSRect(x: metrics.leadingX, y: 0, width: metrics.leadingWidth, height: bounds.height)
-        centerRegion.frame = NSRect(x: metrics.centerX, y: 0, width: metrics.centerWidth, height: bounds.height)
-        trailingRegion.frame = NSRect(x: metrics.trailingX, y: 0, width: metrics.trailingWidth, height: bounds.height)
+        leadingRegion.frame = CGRect(x: metrics.leadingX, y: 0, width: metrics.leadingWidth, height: bounds.height)
+        centerRegion.frame = CGRect(x: metrics.centerX, y: 0, width: metrics.centerWidth, height: bounds.height)
+        trailingRegion.frame = CGRect(x: metrics.trailingX, y: 0, width: metrics.trailingWidth, height: bounds.height)
         leadingRegion.isHidden = !showsGrid || geometry.leading.isEmpty
         centerRegion.isHidden = !showsGrid
         trailingRegion.isHidden = !showsGrid || geometry.trailing.isEmpty
@@ -197,12 +234,12 @@ extension NGTableView {
         // Between the frozen regions and the scrolling one.
         let leadingEdge = isRightToLeft ? metrics.leadingX : metrics.leadingWidth - hairline
         let trailingEdge = isRightToLeft ? metrics.trailingX + metrics.trailingWidth - hairline : metrics.trailingX
-        leadingSeparator.frame = NSRect(x: leadingEdge, y: top, width: hairline, height: metrics.bodyHeight)
+        leadingSeparator.frame = CGRect(x: leadingEdge, y: top, width: hairline, height: metrics.bodyHeight)
         trailingSeparator.isHidden = trailingRegion.isHidden
-        trailingSeparator.frame = NSRect(x: trailingEdge, y: top, width: hairline, height: metrics.bodyHeight)
+        trailingSeparator.frame = CGRect(x: trailingEdge, y: top, width: hairline, height: metrics.bodyHeight)
 
         summaryBar.isHidden = !showsSummaryBar
-        summaryBar.frame = NSRect(x: 0, y: bounds.height - metrics.summaryHeight, width: bounds.width, height: metrics.summaryHeight)
+        summaryBar.frame = CGRect(x: 0, y: bounds.height - metrics.summaryHeight, width: bounds.width, height: metrics.summaryHeight)
         layoutSummaryProgress()
         layoutDataUpdateOverlay()
 
@@ -215,8 +252,8 @@ extension NGTableView {
         // past the rows hit no row, as below a short table).
         let canvasHeight = max(metrics.bodyHeight, (metrics.contentHeight / Self.canvasHeightStep).rounded(.up) * Self.canvasHeightStep)
         for (canvas, width) in [(leadingRegion.canvas, metrics.leadingWidth), (centerRegion.canvas, centerCanvasWidth),
-                                (trailingRegion.canvas, metrics.trailingWidth)] where canvas.frame.size != NSSize(width: width, height: canvasHeight) {
-            canvas.setFrameSize(NSSize(width: width, height: canvasHeight))
+                                (trailingRegion.canvas, metrics.trailingWidth)] where canvas.frame.size != CGSize(width: width, height: canvasHeight) {
+            canvas.setFrameSize(CGSize(width: width, height: canvasHeight))
         }
         layoutGridLines(height: canvasHeight)
 
@@ -361,10 +398,12 @@ extension NGTableView {
         autosaveLayoutState()
     }
 
+    #if os(macOS)
     public override func viewDidEndLiveResize() {
         super.viewDidEndLiveResize()
         flushLayoutAutosave()
     }
+    #endif
 
     func autosaveLayoutState() {
         guard let autosaveKey, let data = try? PropertyListEncoder().encode(columnLayoutState) else { return }

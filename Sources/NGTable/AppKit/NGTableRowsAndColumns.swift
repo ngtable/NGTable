@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // NSTableView's API for rows and columns that the rest of NGTable doesn't
 // need itself: hiding rows, the frames of rows and columns, which rows and
@@ -66,9 +70,9 @@ extension NGTableView {
     // MARK: Frames
 
     /// The rows area: between the header and the summary row.
-    private var rowsArea: NSRect {
+    private var rowsArea: CGRect {
         let metrics = layoutMetrics
-        return NSRect(x: 0, y: metrics.headerHeight, width: bounds.width,
+        return CGRect(x: 0, y: metrics.headerHeight, width: bounds.width,
                       height: max(0, bounds.height - metrics.headerHeight - metrics.summaryHeight))
     }
 
@@ -76,11 +80,11 @@ extension NGTableView {
     /// NSTableView's `rect(ofRow:)`: rows scrolled out of view give frames
     /// outside the visible area. `NSZeroRect` for a row that isn't shown
     /// (filtered out, hidden, in a collapsed group, out of range).
-    public func rect(ofRow row: Int) -> NSRect {
+    public func rect(ofRow row: Int) -> CGRect {
         guard let displayRow = displayRow(forSourceRow: row), displayRow < numberOfRows else { return .zero }
-        let inCanvas = NSRect(x: 0, y: rowGeometry.top(of: displayRow), width: 1, height: rowGeometry.height(of: displayRow))
+        let inCanvas = CGRect(x: 0, y: rowGeometry.top(of: displayRow), width: 1, height: rowGeometry.height(of: displayRow))
         let frame = convert(inCanvas, from: centerRegion.canvas)
-        return NSRect(x: 0, y: frame.minY, width: bounds.width, height: rowGeometry.height(of: displayRow))
+        return CGRect(x: 0, y: frame.minY, width: bounds.width, height: rowGeometry.height(of: displayRow))
     }
 
     /// The frame of a column in the table's coordinates, over the rows area
@@ -88,15 +92,15 @@ extension NGTableView {
     /// `rect(ofColumn:)`: a scrolling column scrolled out of view gives a
     /// frame outside the visible area. `NSZeroRect` for a hidden column or an
     /// index out of range.
-    public func rect(ofColumn column: Int) -> NSRect {
+    public func rect(ofColumn column: Int) -> CGRect {
         let all = tableColumns
         guard column >= 0, column < all.count else { return .zero }
         let id = all[column].id
         for (pin, region) in [(NGColumnPin.leading, leadingRegion), (.none, centerRegion), (.trailing, trailingRegion)] {
             guard let frame = geometry[pin].columns.first(where: { $0.column.id == id }) else { continue }
-            let x = convert(NSPoint(x: CGFloat(frame.x) + slideOffset(forColumnID: id), y: 0), from: region.canvas).x
+            let x = convert(CGPoint(x: CGFloat(frame.x) + slideOffset(forColumnID: id), y: 0), from: region.canvas).x
             let area = rowsArea
-            return NSRect(x: x, y: area.minY, width: CGFloat(frame.width), height: area.height)
+            return CGRect(x: x, y: area.minY, width: CGFloat(frame.width), height: area.height)
         }
         return .zero
     }
@@ -105,7 +109,7 @@ extension NGTableView {
     /// scrolled out of view included, if the rect reaches them), like
     /// NSTableView's `rows(in:)`, as row indexes rather than a range: shown
     /// rows needn't be consecutive data source rows (filter, sort, groups).
-    public func rowIndexes(in rect: NSRect) -> IndexSet {
+    public func rowIndexes(in rect: CGRect) -> IndexSet {
         guard rowHeight > 0, numberOfRows > 0, !rect.isEmpty else { return [] }
         let inCanvas = convert(rect, to: centerRegion.canvas)
         let rowLayout = rowGeometry
@@ -128,7 +132,7 @@ extension NGTableView {
 
     /// The columns (indexes in `tableColumns`) a rect of the table's
     /// coordinates covers horizontally, like NSTableView's `columnIndexes(in:)`.
-    public func columnIndexes(in rect: NSRect) -> IndexSet {
+    public func columnIndexes(in rect: CGRect) -> IndexSet {
         var indexes = IndexSet()
         for column in tableColumns.indices {
             let frame = self.rect(ofColumn: column)

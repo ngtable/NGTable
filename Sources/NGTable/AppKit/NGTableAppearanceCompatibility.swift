@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // NSTableView's appearance properties by their names, mapped onto the
 // table's own: the header shown or hidden (`headerView = nil` in
@@ -48,7 +52,7 @@ extension NGTableView {
     }
 
     /// The color of the grid lines, like NSTableView's (`.gridColor` by default).
-    public var gridColor: NSColor {
+    public var gridColor: NGColor {
         get { gridLineColor }
         set {
             gridLineColor = newValue
@@ -58,21 +62,23 @@ extension NGTableView {
 
     // MARK: Colors and spacing
 
+    #if os(macOS)
     /// The color behind the rows, like NSTableView's (the table style's
     /// background, `controlBackgroundColor` by default).
-    public var backgroundColor: NSColor {
+    public var backgroundColor: NGColor {
         get { tableStyle.backgroundColor ?? .controlBackgroundColor }
         set { tableStyle.backgroundColor = newValue }
     }
+    #endif
 
     /// Room between cells, like NSTableView's `intercellSpacing`, added to
     /// the table's own: the width keeps the cells' content further from the
     /// column edges (half on each side), the height makes rows taller.
     /// `.zero` (the default) is the table's own spacing.
-    public var intercellSpacing: NSSize {
+    public var intercellSpacing: CGSize {
         get { cellSpacing }
         set {
-            let spacing = NSSize(width: max(0, newValue.width), height: max(0, newValue.height))
+            let spacing = CGSize(width: max(0, newValue.width), height: max(0, newValue.height))
             guard spacing != cellSpacing else { return }
             let extraHeight = spacing.height - cellSpacing.height
             cellSpacing = spacing
@@ -121,10 +127,10 @@ extension NGTableView {
     /// `frameOfCell(atColumn:row:)`: also for rows and columns scrolled out
     /// of view (`frameOfCell(row:columnID:)` gives only visible cells).
     /// `NSZeroRect` for a row or column that isn't shown.
-    public func frameOfCell(atColumn column: Int, row: Int) -> NSRect {
+    public func frameOfCell(atColumn column: Int, row: Int) -> CGRect {
         let columnFrame = rect(ofColumn: column), rowFrame = rect(ofRow: row)
         guard !columnFrame.isEmpty, !rowFrame.isEmpty else { return .zero }
-        return NSRect(x: columnFrame.minX, y: rowFrame.minY, width: columnFrame.width, height: rowFrame.height)
+        return CGRect(x: columnFrame.minX, y: rowFrame.minY, width: columnFrame.width, height: rowFrame.height)
     }
 
     // MARK: Drawing
@@ -141,7 +147,7 @@ extension NGTableView {
             let edge = isRightToLeft ? CGFloat(column.x) : CGFloat(column.maxX) - 1
             let x = origin.x + edge + slideOffset(forColumnID: column.column.id)
             guard x + 1 > clip.minX, x < clip.maxX else { continue }
-            quads.append(NGMetalRenderer.rectangle(NSRect(x: x, y: clip.minY, width: 1, height: clip.height),
+            quads.append(NGMetalRenderer.rectangle(CGRect(x: x, y: clip.minY, width: 1, height: clip.height),
                                                    scale: scale, color: color, clip: clip))
         }
     }
@@ -155,13 +161,13 @@ extension NGTableView {
             let frame = row.frame.offsetBy(dx: origin.x, dy: origin.y)
             let y = frame.maxY - line
             if horizontalGridLines == .solid {
-                quads.append(NGMetalRenderer.rectangle(NSRect(x: clip.minX, y: y, width: clip.width, height: line),
+                quads.append(NGMetalRenderer.rectangle(CGRect(x: clip.minX, y: y, width: clip.width, height: line),
                                                        scale: scale, color: color, clip: clip))
             } else {
                 // Dashes scroll with the columns (from the canvas's origin, not the visible edge).
                 var x = clip.minX - (clip.minX - origin.x).truncatingRemainder(dividingBy: 4)
                 while x < clip.maxX {
-                    quads.append(NGMetalRenderer.rectangle(NSRect(x: x, y: y, width: 2, height: line), scale: scale, color: color, clip: clip))
+                    quads.append(NGMetalRenderer.rectangle(CGRect(x: x, y: y, width: 2, height: line), scale: scale, color: color, clip: clip))
                     x += 4
                 }
             }
@@ -170,6 +176,7 @@ extension NGTableView {
 }
 
 extension NGTableView {
+    #if os(macOS)
     /// Right to left (`.rightToLeft`), the table is mirrored: the first column
     /// at the right, leading frozen columns at the right edge and trailing ones
     /// at the left, the vertical scroller at the left, and each cell's content
@@ -187,15 +194,14 @@ extension NGTableView {
             setNeedsMetalFrame()
         }
     }
+    #endif
 }
 
 /// Horizontal grid lines (see `NGTableView.gridStyleMask`).
 enum NGHorizontalGridLines {
     case none, solid, dashed
 }
-#endif
 
-#if os(macOS)
 extension NGTableView {
     // MARK: Column autoresizing
 
@@ -216,11 +222,13 @@ extension NGTableView {
         distributeColumnWidth(freeColumnWidth, among: [last])
     }
 
+    #if os(macOS)
     /// Makes the columns fill the table's width, the room shared equally
     /// among the resizable ones, like NSTableView's `sizeToFit()`.
     public func sizeToFit() {
         distributeColumnWidth(freeColumnWidth, among: columnLayout.allColumns.filter(\.isResizable))
     }
+    #endif
 
     /// The room left beside the columns in the table's width (negative when
     /// they are wider).

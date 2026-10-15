@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Selection: how selected rows look (focus, key window, system colors, and
 // moving between windows), mouse and programmatic selection with
@@ -24,7 +28,7 @@ extension NGTableView {
         isEmphasized && (isDisplayRowSelected(row) || isKeyboardGroupRow(row))
     }
 
-    func rowColor(_ row: Int) -> NSColor {
+    func rowColor(_ row: Int) -> NGColor {
         if row < numberOfRows, isDisplayRowSelected(row) || isKeyboardGroupRow(row) {
             return isEmphasized ? accentColorForTesting ?? .selectedContentBackgroundColor : .unemphasizedSelectedContentBackgroundColor
         }
@@ -35,7 +39,7 @@ extension NGTableView {
             return tint
         }
         guard usesAlternatingRowBackgroundColors else { return .clear }
-        let stripes = tableStyle.stripeColors.flatMap { $0.isEmpty ? nil : $0 } ?? NSColor.alternatingContentBackgroundColors
+        let stripes = tableStyle.stripeColors.flatMap { $0.isEmpty ? nil : $0 } ?? NGColor.alternatingContentBackgroundColors
         return stripes[row % stripes.count]
     }
 
@@ -50,7 +54,11 @@ extension NGTableView {
         layoutVisibleContent()
     }
 
+    #if os(macOS)
     public override var acceptsFirstResponder: Bool { isEnabled }
+    #else
+    public override var canBecomeFirstResponder: Bool { isEnabled }
+    #endif
 
     public override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
@@ -69,6 +77,7 @@ extension NGTableView {
         return result
     }
 
+    #if os(macOS)
     public override func viewWillMove(toWindow newWindow: NSWindow?) {
         super.viewWillMove(toWindow: newWindow)
         setHoveredCell(nil)
@@ -108,10 +117,12 @@ extension NGTableView {
             cellLayerPool.removeAll()
             clearChangeHighlights()
             finishRowAnimation()
-            NotificationCenter.default.removeObserver(self, name: NSColor.systemColorsDidChangeNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: NGColor.systemColorsDidChangeNotification, object: nil)
         }
     }
+    #endif
 
+    #if os(macOS)
     public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let window else { return }
@@ -130,10 +141,11 @@ extension NGTableView {
             rebuildSummaryCalculators(reusingSourceValues: true)
             updateSummary()
         }
-        NotificationCenter.default.removeObserver(self, name: NSColor.systemColorsDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NGColor.systemColorsDidChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(systemColorsDidChange(_:)),
-                                               name: NSColor.systemColorsDidChangeNotification, object: nil)
+                                               name: NGColor.systemColorsDidChangeNotification, object: nil)
     }
+    #endif
 
     /// The accent and highlight colors changed in System Settings: resolved
     /// colors are resolved again.
@@ -318,7 +330,7 @@ extension NGTableView {
 
     /// The content row under a window location (may be out of range).
     /// Measured in the canvas, which is where rows are actually drawn.
-    func row(atWindowLocation location: NSPoint) -> Int {
+    func row(atWindowLocation location: CGPoint) -> Int {
         displayRow(atCanvasY: centerRegion.canvas.convert(location, from: nil).y)
     }
 
@@ -329,6 +341,7 @@ extension NGTableView {
         return Int(floor(rowGeometry.position(atY: y)))
     }
 
+    #if os(macOS)
     func rowsMouseDown(_ event: NSEvent, in region: NGRegionView) {
         // Display rows don't mean the data source's rows in a batch that moved them.
         guard !ignoresUserInput else { return }
@@ -465,13 +478,17 @@ extension NGTableView {
         tracksDragSelection = true
         notePressForRowDrag(event, displayRow: row, wasSelected: wasSelected, isDraggable: isDraggable)
     }
+    #endif
 
+    #if os(macOS)
     /// Sends an action message to `target` (or along the responder chain).
     private func sendAction(_ action: Selector?) {
         guard let action else { return }
         NSApp.sendAction(action, to: target, from: self)
     }
+    #endif
 
+    #if os(macOS)
     func rowsMouseDragged(_ event: NSEvent) {
         if dragControlPress(event) { return }
         // Draggable rows drag instead of extending the selection.
@@ -491,7 +508,9 @@ extension NGTableView {
             stopDragSelectionScroll()
         }
     }
+    #endif
 
+    #if os(macOS)
     func rowsMouseUp(_ event: NSEvent) {
         defer { isPressingRows = false }
         if endControlPress(event) { return }
@@ -511,6 +530,7 @@ extension NGTableView {
             if !ignoresUserInput { sendAction(action) }
         }
     }
+    #endif
 
     /// How far the dragging pointer is above (negative) or below (positive) the visible rows.
     private func dragSelectionOverflow() -> CGFloat {
@@ -535,6 +555,7 @@ extension NGTableView {
         cursorRow = row
     }
 
+    #if os(macOS)
     @objc private func stepDragSelectionScroll(_ link: CADisplayLink) {
         let overflow = dragSelectionOverflow()
         guard overflow != 0, NSEvent.pressedMouseButtons & 1 != 0 else {
@@ -548,17 +569,20 @@ extension NGTableView {
         setContentOffset(CGPoint(x: contentOffset.x, y: contentOffset.y + step))
         extendDragSelection()
     }
+    #endif
 
     func stopDragSelectionScroll() {
         dragSelectionLink?.invalidate()
         dragSelectionLink = nil
     }
 
+    #if os(macOS)
     func column(at event: NSEvent, in region: NGRegionView) -> NGTableColumn? {
         // Canvas x is the columns' own coordinate space (document x for the center).
         let x = Double(region.canvas.convert(event.locationInWindow, from: nil).x)
         return geometry[region.pin].column(atX: x)?.column
     }
+    #endif
 
     // MARK: Columns and hit testing (NSTableView API)
 
@@ -578,20 +602,24 @@ extension NGTableView {
     /// Number of leaf columns, hidden ones included.
     public var numberOfColumns: Int { tableColumns.count }
 
+    #if os(macOS)
     /// The column with an identifier, like `NSTableView`'s.
     public func tableColumn(withIdentifier identifier: NSUserInterfaceItemIdentifier) -> NGTableColumn? {
         tableColumns.first { $0.id == identifier.rawValue }
     }
+    #endif
 
+    #if os(macOS)
     /// The index in `tableColumns` of the column with an identifier, or -1.
     public func column(withIdentifier identifier: NSUserInterfaceItemIdentifier) -> Int {
         tableColumns.firstIndex { $0.id == identifier.rawValue } ?? -1
     }
+    #endif
 
     /// The data source row at a point in the table's coordinates, or -1 (in
     /// the header or summary row, below the last row, or outside), like
     /// `NSTableView.row(at:)`.
-    public func row(at point: NSPoint) -> Int {
+    public func row(at point: CGPoint) -> Int {
         let metrics = layoutMetrics
         guard rowHeight > 0, bounds.contains(point), point.y >= metrics.headerHeight,
               point.y < bounds.height - metrics.summaryHeight else { return -1 }
@@ -601,13 +629,13 @@ extension NGTableView {
 
     /// The index in `tableColumns` of the column at a point in the table's
     /// coordinates (rows or header), or -1, like `NSTableView.column(at:)`.
-    public func column(at point: NSPoint) -> Int {
+    public func column(at point: CGPoint) -> Int {
         guard bounds.contains(point), let region = regions.first(where: { !$0.isHidden && $0.frame.contains(point) }) else {
             return -1
         }
         let x = Double(region.canvas.convert(point, from: self).x)
         guard let column = geometry[region.pin].column(atX: x)?.column else { return -1 }
-        return self.column(withIdentifier: column.identifier)
+        return tableColumns.firstIndex { $0.id == column.id } ?? -1
     }
 
     // MARK: Copy
@@ -617,7 +645,17 @@ extension NGTableView {
     /// Selections of more than `synchronousCopyLimit` values are read in
     /// slices and formatted on all cores: the text reaches the pasteboard a
     /// moment later (`isCopying`), and the app stays responsive.
+    #if os(macOS)
     @IBAction public func copy(_ sender: Any?) {
+        copySelection()
+    }
+    #else
+    public override func copy(_ sender: Any?) {
+        copySelection()
+    }
+    #endif
+
+    func copySelection() {
         guard !ignoresUserInput else { return }
         // A range of cells (or the focused cell) copies its block; a large
         // one in the background, like rows.
@@ -643,9 +681,13 @@ extension NGTableView {
 
     private func putOnPasteboard(_ text: String) {
         let pasteboard = copyPasteboard
+        #if os(macOS)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         pasteboard.setString(text, forType: .tabularText)
+        #else
+        pasteboard.string = text
+        #endif
     }
 
     /// Reads the values on the main actor (the data source lives there) in

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import Metal
 import QuartzCore
 
@@ -41,7 +45,7 @@ extension NGTableView {
     @discardableResult
     func layoutMetalLayer() -> Bool {
         guard let metalLayer else { return false }
-        if metalLayer.superlayer !== layer, let layer { layer.addSublayer(metalLayer) }
+        if metalLayer.superlayer !== layer, let layer = layer as CALayer? { layer.addSublayer(metalLayer) }
         let scale = displayScale
         // Whole pixels, rounded up like the chrome's: a fractional size would
         // be cut. The layer is as large as its pixels (past the bounds by
@@ -49,7 +53,7 @@ extension NGTableView {
         let drawableSize = CGSize(width: max(1, (bounds.width * scale).rounded(.up)), height: max(1, (bounds.height * scale).rounded(.up)))
         let size = CGSize(width: drawableSize.width / scale, height: drawableSize.height / scale)
         // Its top at the view's (the layer's y grows upward unless flipped).
-        let y = layer?.isGeometryFlipped == true ? bounds.minY : bounds.maxY - size.height
+        let y = (layer as CALayer?)?.isGeometryFlipped == true ? bounds.minY : bounds.maxY - size.height
         let frame = CGRect(origin: CGPoint(x: bounds.minX, y: y), size: size)
         // Every layout pass comes here: only a new size or scale needs a frame.
         guard metalLayer.frame != frame || metalLayer.contentsScale != scale || metalLayer.drawableSize != drawableSize else { return false }
@@ -93,9 +97,13 @@ extension NGTableView {
     /// a tab not selected, not ordered in, or the app hidden.
     var isWindowUnseen: Bool {
         guard let window, !drawsWhileUnseenForTesting else { return false }
+        #if os(macOS)
         if window.isMiniaturized || NSApp.isHidden || !window.isVisible { return true }
         if let group = window.tabGroup, group.windows.count > 1, group.selectedWindow !== window { return true }
         return !window.occlusionState.contains(.visible)
+        #else
+        return !window.isVisible
+        #endif
     }
 
     /// Number of frames drawn (for tests).
@@ -164,7 +172,7 @@ extension NGTableView {
         // invalidates the glyphs of the earlier ones too.
         let quads = renderer.quadsSurvivingAtlasResets {
             var quads = buildMetalQuads(renderer: renderer, scale: scale)
-            let chrome: [(view: NSView, quads: [NGMetalQuad])] = [
+            let chrome: [(view: NGPlatformView, quads: [NGMetalQuad])] = [
                 (headerView, headerQuads(renderer: renderer, scale: scale)),
                 (summaryBar.contentView, summaryQuads(renderer: renderer, scale: scale)),
             ]
@@ -477,7 +485,7 @@ extension NGTableView {
 
     /// Text wrapped onto at most `lineLimit` lines, one under another: the
     /// first where a one-line row puts its text (see `wrappedTextHeight`).
-    private func appendWrappedText(_ text: String, font: NSFont, alignment: NSTextAlignment, lineLimit: Int, in frame: CGRect,
+    private func appendWrappedText(_ text: String, font: NGFont, alignment: NSTextAlignment, lineLimit: Int, in frame: CGRect,
                                    clip: CGRect, renderer: NGMetalRenderer, scale: CGFloat, color: SIMD4<Float>,
                                    to quads: inout [NGMetalQuad]) {
         guard !text.isEmpty else { return }
@@ -542,7 +550,7 @@ extension NGTableView {
         }
         let textColor = colorOverride ?? (highlighted ? style.highlightedText : style.text)
         // Text: the quads drawn last time when nothing they depend on changed.
-        let font: NSFont? = switch cell.content {
+        let font: NGFont? = switch cell.content {
         case .text(_, _, let monospacedDigits): monospacedDigits ? style.digitFont : style.textFont
         case .number: style.digitFont
         case .subtotal: style.boldDigitFont
@@ -624,10 +632,7 @@ extension NGTableView {
         guard let image = Self.choiceChevronImage else { return 0 }
         let size = image.size
         guard let entry = renderer.atlas.icon("choice-chevron", size: size, scale: scale, draw: { context in
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-            image.draw(in: CGRect(origin: .zero, size: size))
-            NSGraphicsContext.restoreGraphicsState()
+            image.draw(into: context, in: CGRect(origin: .zero, size: size))
         }) else { return 0 }
         let x = frame.maxX - NGMetrics.cellPadding - size.width
         renderer.appendIcon(entry, at: CGPoint(x: x, y: (frame.midY - size.height / 2).rounded()), clip: clip.intersection(frame),
@@ -636,9 +641,9 @@ extension NGTableView {
     }
 
     /// `chevron.up.chevron.down`, small and semibold like a pop-up button's.
-    static let choiceChevronImage: NSImage? = NSImage(systemSymbolName: "chevron.up.chevron.down", accessibilityDescription: nil)?
-        .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: NGMetrics.choiceChevronPointSize, weight: .semibold)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white])))
+    static var choiceChevronImage: NGSymbolImage? {
+        NGSymbolImage.named("chevron.up.chevron.down", pointSize: NGMetrics.choiceChevronPointSize, weight: .semibold)
+    }
 
     /// Stars: `value` filled, the rest outlined; a preview (the value a click
     /// would set) fainter.
@@ -652,10 +657,7 @@ extension NGTableView {
             let name = filled ? "star.fill" : "star"
             guard let image = NGCellDrawing.markImage(name),
                   let entry = renderer.atlas.icon("mark:\(name)", size: image.size, scale: scale, draw: { context in
-                      NSGraphicsContext.saveGraphicsState()
-                      NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-                      image.draw(in: CGRect(origin: .zero, size: image.size))
-                      NSGraphicsContext.restoreGraphicsState()
+                      image.draw(into: context, in: CGRect(origin: .zero, size: image.size))
                   }) else { continue }
             var color = highlighted ? (filled ? style.highlightedMark : style.highlightedMark * 0.45)
                 : filled ? style.markColor(.orange) : style.color(.tertiaryLabelColor)
@@ -766,10 +768,7 @@ extension NGTableView {
         let textColor = style.color(!button.isEnabled ? .disabledControlTextColor : button.role == .destructive ? .systemRed : .controlTextColor)
         if let symbol, let name = button.symbolName,
            let entry = renderer.atlas.icon("mark:\(name)", size: symbol.size, scale: scale, draw: { context in
-               NSGraphicsContext.saveGraphicsState()
-               NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-               symbol.draw(in: CGRect(origin: .zero, size: symbol.size))
-               NSGraphicsContext.restoreGraphicsState()
+               symbol.draw(into: context, in: CGRect(origin: .zero, size: symbol.size))
            }) {
             renderer.appendIcon(entry, at: CGPoint(x: layout.symbolX, y: (layout.bezel.midY - symbol.size.height / 2).rounded()),
                                 clip: clip, scale: scale, color: textColor, to: &quads)
@@ -798,7 +797,7 @@ extension NGTableView {
     }
 
     /// Under a link's title as laid out (`nil` until it is).
-    static func linkUnderline(in frame: CGRect, alignment: NSTextAlignment, text: NGLaidOutText?, font: NSFont,
+    static func linkUnderline(in frame: CGRect, alignment: NSTextAlignment, text: NGLaidOutText?, font: NGFont,
                               scale: CGFloat) -> CGRect? {
         guard let text, text.shaped.width > 0 else { return nil }
         let x = Self.textOrigin(width: text.shaped.width, available: text.width, alignment: alignment)
@@ -935,10 +934,7 @@ extension NGTableView {
         let size = image.size
         let rect = NGCellDrawing.markRect(size: size, alignment: alignment, in: CGRect(origin: .zero, size: frame.size))
         guard let entry = renderer.atlas.icon("mark:\(mark.symbolName)", size: size, scale: scale, draw: { context in
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-            image.draw(in: CGRect(origin: .zero, size: size))
-            NSGraphicsContext.restoreGraphicsState()
+            image.draw(into: context, in: CGRect(origin: .zero, size: size))
         }) else { return }
         let color = highlighted ? style.highlightedMark : style.markColor(mark.color)
         renderer.appendIcon(entry, at: CGPoint(x: frame.minX + rect.minX, y: frame.minY + rect.minY), clip: clip, scale: scale,
@@ -983,17 +979,17 @@ extension NGTableView {
 /// Fonts and colors of one frame, resolved for the table's appearance once.
 @MainActor
 final class MetalStyle {
-    let textFont: NSFont
-    let digitFont: NSFont
+    let textFont: NGFont
+    let digitFont: NGFont
     let tagFont = NGCellDrawing.tagFont
-    let boldTextFont: NSFont
-    let boldDigitFont: NSFont
-    let headerFont: NSFont
-    let mediaTitleFont: NSFont
-    let mediaCaptionFont = NSFont.preferredFont(forTextStyle: .caption1)
-    let groupHeaderFont: NSFont
+    let boldTextFont: NGFont
+    let boldDigitFont: NGFont
+    let headerFont: NGFont
+    let mediaTitleFont: NGFont
+    let mediaCaptionFont = NGFont.preferredFont(forTextStyle: .caption1)
+    let groupHeaderFont: NGFont
     /// The background behind the rows.
-    let background: NSColor
+    let background: NGColor
     private let tableStyle: NGTableStyle
 
     let text: SIMD4<Float>
@@ -1002,22 +998,22 @@ final class MetalStyle {
     let highlightedTagFill: SIMD4<Float>
     let highlightedMark: SIMD4<Float>
     private let palette: NGCellPalette
-    private let appearance: NSAppearance
+    private let appearance: NGAppearance
     /// Row colors are a few objects (stripes, selection, tints): resolved once
     /// each. The colors are kept, so their identifiers can't be reused by others.
-    private var colors: [ObjectIdentifier: (color: NSColor, value: SIMD4<Float>)] = [:]
+    private var colors: [ObjectIdentifier: (color: NGColor, value: SIMD4<Float>)] = [:]
     private var tags: [NGNamedColor: (text: SIMD4<Float>, fill: SIMD4<Float>)] = [:]
     private var marks: [NGNamedColor?: SIMD4<Float>] = [:]
 
     private struct Key: Hashable {
-        let appearance: NSAppearance.Name
+        let appearance: NGAppearance.Name
         let style: NGTableStyle
     }
 
     /// Styles by appearance and table style, made once (fonts, resolved colors).
     private static var styles: [Key: MetalStyle] = [:]
 
-    static func resolved(for appearance: NSAppearance, style tableStyle: NGTableStyle = NGTableStyle()) -> MetalStyle {
+    static func resolved(for appearance: NGAppearance, style tableStyle: NGTableStyle = NGTableStyle()) -> MetalStyle {
         let key = Key(appearance: appearance.name, style: tableStyle)
         if let style = styles[key] { return style }
         // Apps keep a few styles; stay small if they make new ones.
@@ -1032,7 +1028,7 @@ final class MetalStyle {
         styles.removeAll()
     }
 
-    private init(appearance: NSAppearance, style tableStyle: NGTableStyle) {
+    private init(appearance: NGAppearance, style tableStyle: NGTableStyle) {
         self.appearance = appearance
         self.tableStyle = tableStyle
         let size = tableStyle.cellFontSize, titleSize = tableStyle.titleFontSize
@@ -1057,12 +1053,12 @@ final class MetalStyle {
         highlightedTagFill = NGMetalRenderer.premultiplied(palette.highlightedTagFill)
         var mark = SIMD4<Float>(1, 1, 1, 1)
         appearance.performAsCurrentDrawingAppearance {
-            mark = NGMetalRenderer.premultiplied(NSColor.alternateSelectedControlTextColor.cgColor)
+            mark = NGMetalRenderer.premultiplied(NGColor.alternateSelectedControlTextColor.cgColor)
         }
         highlightedMark = mark
     }
 
-    func color(_ color: NSColor) -> SIMD4<Float> {
+    func color(_ color: NGColor) -> SIMD4<Float> {
         if let resolved = colors[ObjectIdentifier(color)] { return resolved.value }
         var resolved = SIMD4<Float>.zero
         appearance.performAsCurrentDrawingAppearance {

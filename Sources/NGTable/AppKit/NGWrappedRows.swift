@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Rows as high as their wrapped text. When a shown column wraps text
 // (`NGTableColumn.wrapsText`) and the delegate doesn't give heights

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Floating group headers (`floatsGroupRows`): while a group is scrolled into,
 // its header stays at the top of the rows, under its parent's, until the next

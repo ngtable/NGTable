@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Collapsing and expanding groups by keyboard, like NSOutlineView: with
 // grouped rows, Up and Down stop on group header rows too (the header is
@@ -86,10 +90,12 @@ extension NGTableView {
         return true
     }
 
+    #if os(macOS)
     /// Whether the key event being handled has Option down.
     var currentEventHasOption: Bool {
         NSApp.currentEvent?.modifierFlags.contains(.option) ?? false
     }
+    #endif
 
     /// Whether a display row is the header the keyboard is on (drawn selected).
     func isKeyboardGroupRow(_ row: Int) -> Bool {

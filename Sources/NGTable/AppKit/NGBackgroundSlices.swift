@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Work done on the main actor in slices (reading values for a sort,
 // summaries, a search, a grouping, measuring wrapped rows, a copy) shares

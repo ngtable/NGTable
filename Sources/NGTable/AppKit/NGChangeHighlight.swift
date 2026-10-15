@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Highlighting changed values, like trading screens: when a targeted update
 // changes the value of a visible cell in a column with a `changeHighlight`,
@@ -100,7 +104,7 @@ extension NGTableView {
             // Full for a moment, then fading out.
             let hold = 0.15
             let fade = progress < hold ? 1 : pow(1 - (progress - hold) / (1 - hold), 2)
-            let base: NSColor = switch flash.kind {
+            let base: NGColor = switch flash.kind {
             case .changed: .controlAccentColor
             case .up: .systemGreen
             case .down: .systemRed

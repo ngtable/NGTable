@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import os
 
 /// Updating data: while the app loads new data (another period, a refresh
@@ -72,6 +76,7 @@ extension NGTableView {
     /// flash; the table ignores the user right away.
     private static let dataUpdateFadeDelay: TimeInterval = 0.15
 
+    #if os(macOS)
     private func beginDataUpdate() {
         // What the user was doing acts on rows that are about to change.
         if isHeaderInteracting || columnDrag != nil {
@@ -88,7 +93,7 @@ extension NGTableView {
         overlay.frame = bounds
         overlay.showsIndicator = showsDataUpdateIndicator
         overlay.text = dataUpdateText
-        overlay.indicatorCenter = NSPoint(x: bounds.midX, y: layoutMetrics.headerHeight
+        overlay.indicatorCenter = CGPoint(x: bounds.midX, y: layoutMetrics.headerHeight
             + max(0, bounds.height - layoutMetrics.headerHeight - layoutMetrics.summaryHeight) / 2)
         overlay.alphaValue = 0
         overlay.isHidden = false
@@ -112,7 +117,9 @@ extension NGTableView {
         }
         RunLoop.main.add(timer, forMode: .common)
     }
+    #endif
 
+    #if os(macOS)
     private func endDataUpdate() {
         let overlay = dataUpdateOverlay
         let generation = dataUpdateGeneration
@@ -131,7 +138,9 @@ extension NGTableView {
             }
         })
     }
+    #endif
 
+    #if os(macOS)
     /// The resize cursor and tool tips are off while updating.
     private func refreshPointerAreasForDataUpdate() {
         // Out of the way of hit testing as soon as the update ends, even while it fades.
@@ -140,18 +149,22 @@ extension NGTableView {
         window?.invalidateCursorRects(for: dataUpdateOverlay)
         headerView.refreshToolTip()
     }
+    #endif
 
+    #if os(macOS)
     func layoutDataUpdateOverlay() {
         guard isShowingDataUpdate else { return }
         dataUpdateOverlay.frame = bounds
-        dataUpdateOverlay.indicatorCenter = NSPoint(x: bounds.midX, y: layoutMetrics.headerHeight
+        dataUpdateOverlay.indicatorCenter = CGPoint(x: bounds.midX, y: layoutMetrics.headerHeight
             + max(0, bounds.height - layoutMetrics.headerHeight - layoutMetrics.summaryHeight) / 2)
     }
+    #endif
 }
 
+#if os(macOS)
 /// Covers the table while its data updates: a veil of the window's background
 /// color, which pales it, and a wall for every mouse and trackpad event.
-final class NGDataUpdateOverlay: NSView {
+final class NGDataUpdateOverlay: NGPlatformView {
     /// Whether events stop here (off while the veil fades out).
     var blocksInput = true
 
@@ -178,17 +191,20 @@ final class NGDataUpdateOverlay: NSView {
     }
 
     /// The middle of the rows area, where the spinner and caption go.
-    var indicatorCenter: NSPoint = .zero {
+    var indicatorCenter: CGPoint = .zero {
         didSet { layoutIndicator() }
     }
 
+    #if os(macOS)
     private var indicator: NSProgressIndicator?
+    #endif
     /// Whether the spinner and caption are showing (after the fade-in delay).
     private var isShowingProgress = false
 
+    #if os(macOS)
     private lazy var label: NSTextField = {
         let label = NSTextField(wrappingLabelWithString: "")
-        label.font = .systemFont(ofSize: NSFont.systemFontSize)
+        label.font = .systemFont(ofSize: NGFont.systemFontSize)
         label.textColor = .secondaryLabelColor
         label.alignment = .center
         label.maximumNumberOfLines = 2
@@ -196,6 +212,7 @@ final class NGDataUpdateOverlay: NSView {
         plate.addSubview(label)
         return label
     }()
+    #endif
 
     /// The spinner and caption sit on a plate, readable over the pale rows.
     private lazy var plate: NGDataUpdatePlate = {
@@ -205,7 +222,7 @@ final class NGDataUpdateOverlay: NSView {
         return plate
     }()
 
-    override init(frame frameRect: NSRect) {
+    override init(frame frameRect: CGRect) {
         super.init(frame: frameRect)
         wantsLayer = true
         layerContentsRedrawPolicy = .onSetNeedsDisplay
@@ -221,7 +238,7 @@ final class NGDataUpdateOverlay: NSView {
     override var wantsUpdateLayer: Bool { true }
 
     override func updateLayer() {
-        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.6).cgColor
+        layer?.backgroundColor = NGColor.windowBackgroundColor.withAlphaComponent(0.6).cgColor
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -229,6 +246,7 @@ final class NGDataUpdateOverlay: NSView {
         needsDisplay = true
     }
 
+    #if os(macOS)
     func startIndicator() {
         isShowingProgress = true
         label.isHidden = (text ?? "").isEmpty
@@ -246,6 +264,7 @@ final class NGDataUpdateOverlay: NSView {
         layoutIndicator()
         indicator.startAnimation(nil)
     }
+    #endif
 
     func stopIndicator() {
         isShowingProgress = false
@@ -257,7 +276,7 @@ final class NGDataUpdateOverlay: NSView {
     private func layoutIndicator() {
         let spinner = showsIndicator && isShowingProgress ? indicator.map { $0.fittingSize } ?? .zero : .zero
         let showsLabel = !label.isHidden
-        let padding = NSSize(width: 18, height: 14)
+        let padding = CGSize(width: 18, height: 14)
         let spacing: CGFloat = spinner.height > 0 && showsLabel ? 8 : 0
         var labelSize = CGSize.zero
         if showsLabel {
@@ -265,24 +284,27 @@ final class NGDataUpdateOverlay: NSView {
             labelSize = label.fittingSize
             labelSize.width = min(ceil(labelSize.width), label.preferredMaxLayoutWidth)
         }
-        let content = NSSize(width: max(spinner.width, labelSize.width), height: spinner.height + spacing + labelSize.height)
+        let content = CGSize(width: max(spinner.width, labelSize.width), height: spinner.height + spacing + labelSize.height)
         plate.isHidden = content.height == 0
-        let plateSize = NSSize(width: content.width + 2 * padding.width, height: content.height + 2 * padding.height)
-        plate.frame = NSRect(x: (indicatorCenter.x - plateSize.width / 2).rounded(), y: (indicatorCenter.y - plateSize.height / 2).rounded(),
+        let plateSize = CGSize(width: content.width + 2 * padding.width, height: content.height + 2 * padding.height)
+        plate.frame = CGRect(x: (indicatorCenter.x - plateSize.width / 2).rounded(), y: (indicatorCenter.y - plateSize.height / 2).rounded(),
                              width: plateSize.width, height: plateSize.height)
-        indicator?.frame = NSRect(x: ((plateSize.width - spinner.width) / 2).rounded(), y: padding.height,
+        indicator?.frame = CGRect(x: ((plateSize.width - spinner.width) / 2).rounded(), y: padding.height,
                                   width: spinner.width, height: spinner.height)
-        label.frame = NSRect(x: ((plateSize.width - labelSize.width) / 2).rounded(), y: padding.height + spinner.height + spacing,
+        label.frame = CGRect(x: ((plateSize.width - labelSize.width) / 2).rounded(), y: padding.height + spinner.height + spacing,
                              width: labelSize.width, height: labelSize.height)
     }
 
-    override func hitTest(_ point: NSPoint) -> NSView? {
+    override func hitTest(_ point: CGPoint) -> NGPlatformView? {
         blocksInput ? super.hitTest(point).map { _ in self } : nil
     }
 
+    #if os(macOS)
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    #endif
 
     // Every event that reaches the overlay ends here.
+    #if os(macOS)
     override func mouseDown(with event: NSEvent) {}
     override func mouseDragged(with event: NSEvent) {}
     override func mouseUp(with event: NSEvent) {}
@@ -294,17 +316,20 @@ final class NGDataUpdateOverlay: NSView {
     override func magnify(with event: NSEvent) {}
     override func swipe(with event: NSEvent) {}
     override func menu(for event: NSEvent) -> NSMenu? { nil }
+    #endif
 
+    #if os(macOS)
     override func resetCursorRects() {
         if blocksInput {
             addCursorRect(bounds, cursor: .arrow)
         }
     }
+    #endif
 }
 /// The rounded plate under the spinner and caption, in the window's
 /// background color, like the panels of system progress.
-final class NGDataUpdatePlate: NSView {
-    override init(frame frameRect: NSRect) {
+final class NGDataUpdatePlate: NGPlatformView {
+    override init(frame frameRect: CGRect) {
         super.init(frame: frameRect)
         wantsLayer = true
         layerContentsRedrawPolicy = .onSetNeedsDisplay
@@ -325,8 +350,8 @@ final class NGDataUpdatePlate: NSView {
     override var wantsUpdateLayer: Bool { true }
 
     override func updateLayer() {
-        layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-        layer?.borderColor = NSColor.separatorColor.cgColor
+        layer?.backgroundColor = NGColor.windowBackgroundColor.cgColor
+        layer?.borderColor = NGColor.separatorColor.cgColor
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -339,4 +364,5 @@ final class NGDataUpdatePlate: NSView {
         layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
     }
 }
+#endif
 #endif

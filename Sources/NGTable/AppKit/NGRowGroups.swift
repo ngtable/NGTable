@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Row grouping (`NGTableView.rowGrouping`). Groups are a display layer on top
 // of the row filter: the filter decides which data source rows are shown, the
@@ -730,7 +734,7 @@ extension NGTableView {
 
     /// The group whose header row is at a point in the table's coordinates,
     /// or `nil` (like `row(at:)`, which gives -1 for header rows).
-    public func group(at point: NSPoint) -> NGRowGroup? {
+    public func group(at point: CGPoint) -> NGRowGroup? {
         let metrics = layoutMetrics
         guard rowHeight > 0, bounds.contains(point), point.y >= metrics.headerHeight,
               point.y < bounds.height - metrics.summaryHeight else { return nil }
@@ -815,7 +819,7 @@ extension NGTableView {
     // MARK: Header rows
 
     /// A stable color object (rows compare them by identity).
-    static let groupRowColor = NSColor.tertiarySystemFill
+    static let groupRowColor = NGColor.tertiarySystemFill
 
     /// Where the title of header rows goes: across the leading frozen
     /// columns (their subtotals give way to it; the title has the row count),
@@ -911,14 +915,14 @@ extension NGTableView {
                     let key = NGCellKey(row: row, column: span.ordinal)
                     guard needed.insert(key).inserted else { continue }
                     placeGroupCell(key, content: groupTitleContent(ofNode: index),
-                                   frame: NSRect(x: span.x, y: rowGeometry.top(of: row), width: span.width, height: rowHeight),
+                                   frame: CGRect(x: span.x, y: rowGeometry.top(of: row), width: span.width, height: rowHeight),
                                    in: region.canvas)
                 } else if let text = subtotals[id] {
                     let key = NGCellKey(row: row, column: column.ordinal)
                     needed.insert(key)
                     let alignment = column.frame.column.alignment.textAlignment(isNumeric: true, layoutDirection: contentLayoutDirection)
                     placeGroupCell(key, content: .subtotal(text, alignment: alignment),
-                                   frame: NSRect(x: column.x, y: rowGeometry.top(of: row), width: CGFloat(column.frame.width), height: rowHeight),
+                                   frame: CGRect(x: column.x, y: rowGeometry.top(of: row), width: CGFloat(column.frame.width), height: rowHeight),
                                    in: region.canvas)
                 }
             }
@@ -948,6 +952,7 @@ extension NGTableView {
 
     // MARK: Menu
 
+    #if os(macOS)
     /// The context menu of a header row: the table's own, as for the summary row.
     func groupMenu(forNode index: Int) -> NSMenu {
         let group = groupTree.nodes[index].group
@@ -969,19 +974,26 @@ extension NGTableView {
         menu.addItem(expandAll)
         return menu
     }
+    #endif
 
+    #if os(macOS)
     @objc private func toggleGroupFromMenu(_ sender: NSMenuItem) {
         guard let group = (sender.representedObject as? GroupMenuTarget)?.group else { return }
         setGroup(group, expanded: !isGroupExpanded(group), includingChildren: false)
     }
+    #endif
 
+    #if os(macOS)
     @objc private func collapseAllGroupsFromMenu(_ sender: NSMenuItem) {
         collapseGroup(nil, collapseChildren: true)
     }
+    #endif
 
+    #if os(macOS)
     @objc private func expandAllGroupsFromMenu(_ sender: NSMenuItem) {
         expandGroup(nil, expandChildren: true)
     }
+    #endif
 }
 
 /// A group carried by a menu item (`representedObject` takes objects).

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Named views: layouts the user saves under a name and switches between, like
 // a spreadsheet's or a mail app's saved views. A view is the column layout
@@ -129,6 +133,7 @@ extension NGTableView {
 
     // MARK: Header menu
 
+    #if os(macOS)
     /// The "Views" submenu of the header's context menu.
     func namedViewsMenuItem() -> NSMenuItem? {
         guard allowsNamedViews else { return nil }
@@ -164,24 +169,30 @@ extension NGTableView {
         item.submenu = menu
         return item
     }
+    #endif
 
+    #if os(macOS)
     @objc private func applyNamedView(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
         applyView(named: name)
     }
+    #endif
 
+    #if os(macOS)
     @objc private func removeNamedView(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
         removeView(named: name)
     }
+    #endif
 
+    #if os(macOS)
     /// Asks for a name, then saves the view.
     @objc private func saveNamedView(_ sender: Any?) {
         let alert = NSAlert()
         alert.messageText = String(localized: "Save View", bundle: .module, comment: "Save view dialog: title.")
         alert.informativeText = String(localized: "The columns, sort, filters and grouping are saved under this name.",
                                        bundle: .module, comment: "Save view dialog: what is saved.")
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        let field = NSTextField(frame: CGRect(x: 0, y: 0, width: 240, height: 24))
         field.stringValue = currentViewName ?? ""
         alert.accessoryView = field
         alert.addButton(withTitle: String(localized: "Save", bundle: .module, comment: "Save view dialog: the default button."))
@@ -198,5 +209,6 @@ extension NGTableView {
             save(alert.runModal())
         }
     }
+    #endif
 }
 #endif

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Editing by choosing instead of typing:
 // - An editable column's Boolean cells show a check box. A click on it, Space
@@ -33,7 +37,7 @@ extension NGTableView {
     }
 
     /// Whether a click in the window hits a cell's check box (with a little slack around it).
-    func checkBoxHit(atWindowLocation location: NSPoint, row: Int, columnID: String) -> Bool {
+    func checkBoxHit(atWindowLocation location: CGPoint, row: Int, columnID: String) -> Bool {
         guard let column = tableColumns.first(where: { $0.id == columnID }), isCheckBox(row: row, column: column),
               let frame = frameOfCell(row: row, columnID: columnID),
               let image = NGCellDrawing.markImage(Self.checkBoxMark(false).symbolName) else { return false }
@@ -47,6 +51,7 @@ extension NGTableView {
 
     // MARK: Choices
 
+    #if os(macOS)
     /// The menu of a cell's choices: their titles as displayed, the current
     /// one checked; choosing one sets it.
     func choiceMenu(row: Int, column: NGTableColumn) -> NSMenu? {
@@ -67,7 +72,9 @@ extension NGTableView {
         }
         return menu
     }
+    #endif
 
+    #if os(macOS)
     /// Opens the choices under the cell.
     func showChoiceMenu(row: Int, column: NGTableColumn) -> Bool {
         guard let menu = choiceMenu(row: row, column: column), let frame = frameOfCell(row: row, columnID: column.id) else { return false }
@@ -80,10 +87,12 @@ extension NGTableView {
             showMenuForTesting(menu)
             return true
         }
-        menu.popUp(positioning: nil, at: NSPoint(x: frame.minX, y: frame.maxY), in: self)
+        menu.popUp(positioning: nil, at: CGPoint(x: frame.minX, y: frame.maxY), in: self)
         return true
     }
+    #endif
 
+    #if os(macOS)
     @objc func chooseEditChoice(_ sender: NSMenuItem) {
         guard let choice = sender.representedObject as? NGChoice,
               let column = tableColumns.first(where: { $0.id == choice.columnID }),
@@ -95,15 +104,18 @@ extension NGTableView {
         guard old != choices[choice.index] else { return }
         setValue(choices[choice.index], row: row, column: column, undoValue: old)
     }
+    #endif
 
+    #if os(macOS)
     /// A tag's color as a dot in the menu.
     private static func choiceDot(_ color: NGNamedColor) -> NSImage {
-        NSImage(size: NSSize(width: 10, height: 10), flipped: false) { rect in
+        NSImage(size: CGSize(width: 10, height: 10), flipped: false) { rect in
             color.systemColor.setFill()
             NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
             return true
         }
     }
+    #endif
 }
 
 /// A menu item's choice: the record, the column and the value's index.

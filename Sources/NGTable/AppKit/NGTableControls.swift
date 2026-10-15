@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Controls drawn in cells (links, buttons): the pointer over them (the link
 // underlined, the pointing hand), a press tracked like a button's (released
@@ -9,23 +13,27 @@ import AppKit
 
 extension NGTableView {
     /// A link being pressed, darker (like a link in a web view).
-    static let pressedLinkColor = NSColor(name: nil) { appearance in
-        let base = NSColor.linkColor.usingColorSpace(.sRGB) ?? .linkColor
+    #if os(macOS)
+    static let pressedLinkColor = NGColor(name: nil) { appearance in
+        let base = NGColor.linkColor.usingColorSpace(.sRGB) ?? .linkColor
         return appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             ? base.blended(withFraction: 0.3, of: .white) ?? base
             : base.blended(withFraction: 0.3, of: .black) ?? base
     }
+    #else
+    static let pressedLinkColor = UIColor { traits in
+        let base = UIColor.link.resolvedColor(with: traits)
+        var (red, green, blue, alpha): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        base.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let toward: CGFloat = traits.userInterfaceStyle == .dark ? 1 : 0
+        return UIColor(red: red * 0.7 + toward * 0.3, green: green * 0.7 + toward * 0.3, blue: blue * 0.7 + toward * 0.3, alpha: alpha)
+    }
+    #endif
 
     /// A push button's border, its fill and its fill pressed, in both appearances.
-    static let buttonBorderColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 1, alpha: 0.14) : NSColor(white: 0, alpha: 0.16)
-    }
-    static let buttonFillColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.40, alpha: 1) : NSColor(white: 1, alpha: 1)
-    }
-    static let pressedButtonFillColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.52, alpha: 1) : NSColor(white: 0.86, alpha: 1)
-    }
+    static let buttonBorderColor = NGColor.dynamic(light: NGColor(white: 0, alpha: 0.16), dark: NGColor(white: 1, alpha: 0.14))
+    static let buttonFillColor = NGColor.dynamic(light: NGColor(white: 1, alpha: 1), dark: NGColor(white: 0.40, alpha: 1))
+    static let pressedButtonFillColor = NGColor.dynamic(light: NGColor(white: 0.86, alpha: 1), dark: NGColor(white: 0.52, alpha: 1))
 
     /// Whether a cell's content is a control the table tracks.
     static func isControl(_ content: NGCellContent) -> Bool {
@@ -44,7 +52,7 @@ extension NGTableView {
 
     /// Whether a point of the window is on a cell's control: a link fills
     /// its cell, a button is its bezel (beside it, the click selects).
-    func isOnControl(_ cell: NGDrawnCell, atWindowLocation location: NSPoint, row: Int, columnID: String) -> Bool {
+    func isOnControl(_ cell: NGDrawnCell, atWindowLocation location: CGPoint, row: Int, columnID: String) -> Bool {
         switch cell.content {
         case .link:
             return true
@@ -64,7 +72,7 @@ extension NGTableView {
     /// The rating a point of the window would set in a cell: the star under
     /// it (counted from the leading one), 0 just before the first one, `nil`
     /// away from the stars.
-    func rating(atWindowLocation location: NSPoint, maximum: Int, alignment: NSTextAlignment, row: Int, columnID: String) -> Int? {
+    func rating(atWindowLocation location: CGPoint, maximum: Int, alignment: NSTextAlignment, row: Int, columnID: String) -> Int? {
         guard maximum > 0, let frame = frameOfCell(row: row, columnID: columnID) else { return nil }
         let stars = Self.ratingStars(maximum: maximum, alignment: alignment, in: CGRect(origin: .zero, size: frame.size))
         guard let first = stars.first, let last = stars.last else { return nil }
@@ -78,7 +86,7 @@ extension NGTableView {
 
     /// Sets an editable rating to the value at a point (with Undo); whether it did.
     @discardableResult
-    func setRating(atWindowLocation location: NSPoint, row: Int, columnID: String) -> Bool {
+    func setRating(atWindowLocation location: CGPoint, row: Int, columnID: String) -> Bool {
         guard let cell = visibleCell(sourceRow: row, columnID: columnID), case .rating(_, let maximum, true, let alignment) = cell.content,
               let value = rating(atWindowLocation: location, maximum: maximum, alignment: alignment, row: row, columnID: columnID) else { return false }
         return setRating(value, row: row, columnID: columnID)
@@ -110,6 +118,7 @@ extension NGTableView {
         return visibleCells[NGCellKey(row: displayRow, column: columnOrdinal(of: columnID))]
     }
 
+    #if os(macOS)
     /// The control under the pointer shows it (and the cursor is the
     /// pointing hand). After the pointer moved, the rows scrolled or changed.
     func syncControlUnderPointer() {
@@ -134,7 +143,9 @@ extension NGTableView {
             (hand ? NSCursor.pointingHand : NSCursor.arrow).set()
         }
     }
+    #endif
 
+    #if os(macOS)
     /// A plain press on a control: tracked until the mouse is released
     /// (`true`: the table took the press).
     func beginControlPress(_ event: NSEvent, displayRow: Int, columnID: String?) -> Bool {
@@ -149,7 +160,9 @@ extension NGTableView {
         clickedColumn = -1
         return true
     }
+    #endif
 
+    #if os(macOS)
     /// The pressed control looks pressed while the mouse is over it.
     func dragControlPress(_ event: NSEvent) -> Bool {
         guard let press = cellPress else { return false }
@@ -157,7 +170,9 @@ extension NGTableView {
         visibleCell(sourceRow: row, columnID: press.columnID)?.isPressed = isControl(at: event, row: row, columnID: press.columnID)
         return true
     }
+    #endif
 
+    #if os(macOS)
     /// Released over the pressed control: it acts.
     func endControlPress(_ event: NSEvent) -> Bool {
         guard let press = cellPress.take() else { return false }
@@ -172,7 +187,9 @@ extension NGTableView {
         syncControlUnderPointer()
         return true
     }
+    #endif
 
+    #if os(macOS)
     private func isControl(at event: NSEvent, row: Int, columnID: String) -> Bool {
         guard row >= 0, let displayRow = displayRow(forSourceRow: row),
               self.row(atWindowLocation: event.locationInWindow) == displayRow,
@@ -180,6 +197,7 @@ extension NGTableView {
               let cell = visibleCell(sourceRow: row, columnID: columnID) else { return false }
         return isOnControl(cell, atWindowLocation: event.locationInWindow, row: row, columnID: columnID)
     }
+    #endif
 
     /// What a control does: a link calls the delegate (by default it opens
     /// its URL). `false` if the cell has no control.
@@ -210,7 +228,7 @@ extension NGTableView {
         if let openURLForTesting {
             openURLForTesting(url)
         } else {
-            NSWorkspace.shared.open(url)
+            NGSystem.open(url)
         }
     }
 
@@ -225,6 +243,7 @@ extension NGTableView {
         }
     }
 
+    #if os(macOS)
     /// What VoiceOver calls a control cell (a link or a button), `nil` for other cells.
     func controlRoleDescription(row: Int, columnID: String) -> String? {
         guard row >= 0, row < numberOfSourceRows, let column = columnLayout.columnsByID[columnID],
@@ -235,5 +254,6 @@ extension NGTableView {
         default: return nil
         }
     }
+    #endif
 }
 #endif
