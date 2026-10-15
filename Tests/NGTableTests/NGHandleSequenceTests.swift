@@ -123,7 +123,7 @@ struct NGHandleSequenceTests {
         expectMatches(sequence, reference, "start")
         for round in 0..<9000 {
             switch generator.next() % 4 {
-            case 0, 1 where !absent.isEmpty:
+            case 0 where !absent.isEmpty, 1 where !absent.isEmpty:
                 let index = Int(generator.next() % UInt64(reference.count + 1))
                 let handle = absent.removeLast()
                 sequence.insert(handle, at: index)
