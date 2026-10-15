@@ -19,7 +19,7 @@ NGTable is a Swift package for macOS 14 and later.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ngtable/NGTable", from: "1.0.0"),  // or .package(path: "../NGTable")
+    .package(url: "https://github.com/ngtable/NGTable", from: "1.1.0"),  // or .package(path: "../NGTable")
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["NGTable"]),
