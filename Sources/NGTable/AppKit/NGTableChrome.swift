@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import Metal
 import QuartzCore
 import os
@@ -63,8 +67,8 @@ final class NGMetalSurface {
     }
 
     /// Covers `view` at `scale`; a new size or scale needs a frame.
-    func layout(in view: NSView, scale: CGFloat) {
-        guard let host = view.layer else { return }
+    func layout(in view: NGPlatformView, scale: CGFloat) {
+        guard let host = view.layer as CALayer? else { return }
         if layer.superlayer !== host { host.addSublayer(layer) }
         let bounds = view.bounds
         let drawableSize = CGSize(width: max(1, (bounds.width * scale).rounded(.up)), height: max(1, (bounds.height * scale).rounded(.up)))
@@ -95,7 +99,7 @@ final class NGMetalSurface {
 extension NGTableView {
     /// The header or the summary row needs drawing again (their views were
     /// asked to redraw).
-    func setNeedsChromeFrame(_ view: NSView) {
+    func setNeedsChromeFrame(_ view: NGPlatformView) {
         if view === headerView {
             headerSurface?.needsFrame = true
         } else {
@@ -105,7 +109,7 @@ extension NGTableView {
     }
 
     /// The header's or the summary's view changed size.
-    func layoutChromeSurface(of view: NSView) {
+    func layoutChromeSurface(of view: NGPlatformView) {
         let surface = view === headerView ? headerSurface : summarySurface
         surface?.layout(in: view, scale: displayScale)
     }
@@ -142,7 +146,7 @@ extension NGTableView {
             let region = geometry[pin]
             guard !region.isEmpty else { continue }
             let range = viewport.clipRange(of: pin, regionWidth: CGFloat(region.width))
-            let clip = NSRect(x: range.lowerBound, y: 0, width: range.upperBound - range.lowerBound, height: bounds.height)
+            let clip = CGRect(x: range.lowerBound, y: 0, width: range.upperBound - range.lowerBound, height: bounds.height)
             guard clip.width > 0 else { continue }
             // Clipping keeps scrolled center titles out of the frozen parts.
             appendHeaderRegion(region, originX: viewport.origin(of: pin), clip: clip, top: 0, height: bounds.height,
@@ -150,11 +154,11 @@ extension NGTableView {
             if pin != .none {
                 // The frozen region's edge toward the scrolling columns.
                 let edgeX = (pin == .leading) != isRightToLeft ? clip.maxX - hairline : clip.minX
-                quads.append(NGMetalRenderer.rectangle(NSRect(x: edgeX, y: 0, width: hairline, height: bounds.height),
+                quads.append(NGMetalRenderer.rectangle(CGRect(x: edgeX, y: 0, width: hairline, height: bounds.height),
                                                        scale: scale, color: separator))
             }
         }
-        quads.append(NGMetalRenderer.rectangle(NSRect(x: 0, y: bounds.maxY - hairline, width: bounds.width, height: hairline),
+        quads.append(NGMetalRenderer.rectangle(CGRect(x: 0, y: bounds.maxY - hairline, width: bounds.width, height: hairline),
                                                scale: scale, color: separator))
         return quads
     }
@@ -180,14 +184,14 @@ extension NGTableView {
                 .filter { self.columnLayout.groupIDByColumnID[$0.column.id] == group.groupID }
                 .map { self.slideOffset(forColumnID: $0.column.id) })
             let groupOffset = memberOffsets.count == 1 ? memberOffsets.first ?? 0 : 0
-            let rect = NSRect(x: originX + CGFloat(group.x) + groupOffset, y: top, width: CGFloat(group.width), height: band)
+            let rect = CGRect(x: originX + CGFloat(group.x) + groupOffset, y: top, width: CGFloat(group.width), height: band)
             let visible = rect.intersection(clip)
             if visible.width > 2 * NGMetrics.cellPadding {
                 appendHeaderText(group.title, in: visible.insetBy(dx: NGMetrics.cellPadding, dy: 0), alignment: .center,
                                  font: style.groupHeaderFont, color: text, clip: clip, renderer: renderer, scale: scale, to: &quads)
             }
             // Underline spanning the group's columns.
-            quads.append(NGMetalRenderer.rectangle(NSRect(x: rect.minX + NGMetrics.cellPadding, y: rect.maxY - hairline,
+            quads.append(NGMetalRenderer.rectangle(CGRect(x: rect.minX + NGMetrics.cellPadding, y: rect.maxY - hairline,
                                                           width: rect.width - 2 * NGMetrics.cellPadding, height: hairline),
                                                    scale: scale, color: separator, clip: clip))
         }
@@ -196,7 +200,7 @@ extension NGTableView {
         for frame in drawableColumns(of: region, originX: originX, visibleRect: clip) where !isHiddenForDrag(frame.column.id) {
             let column = frame.column
             let x = originX + CGFloat(frame.x) + slideOffset(forColumnID: column.id)
-            let rect = NSRect(x: x, y: top + band, width: CGFloat(frame.width), height: height - band)
+            let rect = CGRect(x: x, y: top + band, width: CGFloat(frame.width), height: height - band)
             guard rect.intersects(clip) else { continue }
             if selectedColumnIDs.contains(column.id) {
                 quads.append(NGMetalRenderer.rectangle(rect, scale: scale, color: columnSelectionTint(style), clip: rect.intersection(clip)))
@@ -217,7 +221,7 @@ extension NGTableView {
                     let indicatorWidth: CGFloat = 12
                     // Secondary sorts show dimmed, so the first one stands out.
                     appendSortIndicator(ascending: sort.ascending, isPrimary: sort.index == 0,
-                                        in: NSRect(x: textRect.maxX - indicatorWidth, y: rect.minY, width: indicatorWidth, height: rect.height),
+                                        in: CGRect(x: textRect.maxX - indicatorWidth, y: rect.minY, width: indicatorWidth, height: rect.height),
                                         clip: clip, renderer: renderer, scale: scale, style: style, to: &quads)
                     textRect.size.width -= indicatorWidth + 2
                 }
@@ -236,25 +240,25 @@ extension NGTableView {
             let dividerX = isRightToLeft ? rect.minX : rect.maxX - hairline
             let isGrouped = columnLayout.groupIDByColumnID[column.id] != nil
             let dividerTop = (isGrouped ? band : 0) + separatorInset
-            quads.append(NGMetalRenderer.rectangle(NSRect(x: dividerX, y: top + dividerTop,
+            quads.append(NGMetalRenderer.rectangle(CGRect(x: dividerX, y: top + dividerTop,
                                                           width: hairline, height: height - separatorInset - dividerTop),
                                                    scale: scale, color: separator, clip: clip))
         }
     }
 
     /// One line centered vertically in `rect`, aligned and truncated to its width.
-    private func appendHeaderText(_ text: String, in rect: CGRect, alignment: NSTextAlignment, font: NSFont, color: SIMD4<Float>,
+    private func appendHeaderText(_ text: String, in rect: CGRect, alignment: NSTextAlignment, font: NGFont, color: SIMD4<Float>,
                                   clip: CGRect, renderer: NGMetalRenderer, scale: CGFloat, to quads: inout [NGMetalQuad]) {
         let lineTop = rect.midY - Self.lineHeight(of: font) / 2
         renderer.appendLine(text, font: font, alignment: alignment, in: rect, baseline: lineTop + font.ascender, scale: scale,
                             color: color, clip: clip, to: &quads)
     }
 
-    private static var lineHeights: [NSFont: CGFloat] = [:]
+    private static var lineHeights: [NGFont: CGFloat] = [:]
 
     /// A font's single-line text height, as AppKit lays a line out (measured
     /// once per font).
-    private static func lineHeight(of font: NSFont) -> CGFloat {
+    private static func lineHeight(of font: NGFont) -> CGFloat {
         if let height = lineHeights[font] { return height }
         let height = ceil(NSAttributedString(string: "Xg", attributes: [.font: font]).size().height)
         lineHeights[font] = height
@@ -266,10 +270,7 @@ extension NGTableView {
         guard let image = Self.sortIndicatorImage(ascending: ascending) else { return }
         let size = image.size
         guard let entry = renderer.atlas.icon(ascending ? "sort.up" : "sort.down", size: size, scale: scale, draw: { context in
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-            image.draw(in: CGRect(origin: .zero, size: size))
-            NSGraphicsContext.restoreGraphicsState()
+            image.draw(into: context, in: CGRect(origin: .zero, size: size))
         }) else { return }
         let color = style.color(isPrimary ? .secondaryLabelColor : .tertiaryLabelColor)
         renderer.appendIcon(entry, at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2), clip: clip,
@@ -285,10 +286,7 @@ extension NGTableView {
         guard let image = Self.symbolImage(name) else { return }
         let size = image.size
         guard let entry = renderer.atlas.icon(name, size: size, scale: scale, draw: { context in
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-            image.draw(in: CGRect(origin: .zero, size: size))
-            NSGraphicsContext.restoreGraphicsState()
+            image.draw(into: context, in: CGRect(origin: .zero, size: size))
         }) else { return }
         let color = style.color(isActive ? .controlAccentColor : .tertiaryLabelColor)
         renderer.appendIcon(entry, at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2), clip: clip,
@@ -296,28 +294,13 @@ extension NGTableView {
     }
 
     /// White symbols for the header, made once (tinted when drawn).
-    private static var symbolImages: [String: NSImage] = [:]
-
-    private static func symbolImage(_ name: String) -> NSImage? {
-        if let image = symbolImages[name] { return image }
-        let configuration = NSImage.SymbolConfiguration(pointSize: 11, weight: .regular)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(configuration)
-        symbolImages[name] = image
-        return image
+    private static func symbolImage(_ name: String) -> NGSymbolImage? {
+        NGSymbolImage.named(name, pointSize: 11, weight: .regular)
     }
 
     /// White chevrons, made once (tinted when drawn).
-    private static var sortIndicatorImages: [Bool: NSImage] = [:]
-
-    private static func sortIndicatorImage(ascending: Bool) -> NSImage? {
-        if let image = sortIndicatorImages[ascending] { return image }
-        let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-        let image = NSImage(systemSymbolName: ascending ? "chevron.up" : "chevron.down", accessibilityDescription: nil)?
-            .withSymbolConfiguration(configuration)
-        sortIndicatorImages[ascending] = image
-        return image
+    private static func sortIndicatorImage(ascending: Bool) -> NGSymbolImage? {
+        NGSymbolImage.named(ascending ? "chevron.up" : "chevron.down", pointSize: 9, weight: .semibold)
     }
 
     // MARK: Summary
@@ -332,12 +315,12 @@ extension NGTableView {
             let region = geometry[pin]
             guard !region.isEmpty else { continue }
             let range = viewport.clipRange(of: pin, regionWidth: CGFloat(region.width))
-            let clip = NSRect(x: range.lowerBound, y: bounds.minY, width: range.upperBound - range.lowerBound, height: bounds.height)
+            let clip = CGRect(x: range.lowerBound, y: bounds.minY, width: range.upperBound - range.lowerBound, height: bounds.height)
             guard clip.width > 0 else { continue }
             let originX = viewport.origin(of: pin)
             for frame in drawableColumns(of: region, originX: originX, visibleRect: clip) where !isHiddenForDrag(frame.column.id) {
                 let x = originX + CGFloat(frame.x) + slideOffset(forColumnID: frame.column.id)
-                let rect = NSRect(x: x, y: bounds.minY, width: CGFloat(frame.width), height: bounds.height)
+                let rect = CGRect(x: x, y: bounds.minY, width: CGFloat(frame.width), height: bounds.height)
                 appendSummaryText(for: frame.column, in: rect, clip: clip, renderer: renderer, scale: scale, style: style, to: &quads)
             }
         }
@@ -349,10 +332,10 @@ extension NGTableView {
         guard let text = summaryTexts[column.id], columnRect.intersects(clip) else { return }
         // Values being recomputed dim; values that depend on the selection are
         // highlighted so the user notices the scope.
-        let color: NSColor = isSummaryProgressVisible && showsSummaryProgress ? .tertiaryLabelColor
+        let color: NGColor = isSummaryProgressVisible && showsSummaryProgress ? .tertiaryLabelColor
             : summaryScope == .allRows ? .labelColor : accentColorForTesting ?? .controlAccentColor
         appendHeaderText(text, in: columnRect.insetBy(dx: NGMetrics.cellPadding, dy: 0),
-                         alignment: column.alignment.textAlignment(isNumeric: true, layoutDirection: userInterfaceLayoutDirection),
+                         alignment: column.alignment.textAlignment(isNumeric: true, layoutDirection: layoutDirection),
                          font: style.boldDigitFont, color: style.color(color), clip: clip, renderer: renderer, scale: scale, to: &quads)
     }
 }

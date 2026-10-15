@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Sorting by header clicks, and the summary row: calculators for the
 // summarized columns (computed in the background for large tables, updated
@@ -775,7 +779,9 @@ extension NGTableView {
         if groupedDisplay != nil, groupSubtotalsVersion != summaryValuesVersion {
             refreshGroupRows()
         }
+        #if os(macOS)
         summaryBar.contentView.toolTip = summaryScopeTitles[summaryScope]
+        #endif
         // Drawn again only when a text changed (a feed's batch of values out
         // of the summarized columns drew it every tick).
         if texts != summaryTexts {
@@ -788,6 +794,7 @@ extension NGTableView {
         }
     }
 
+    #if os(macOS)
     /// The summary row's context menu: which rows the summaries count.
     func makeSummaryScopeMenu() -> NSMenu {
         let menu = NSMenu()
@@ -810,5 +817,6 @@ extension NGTableView {
         summaryScope = NGSummaryScope.allCases[sender.tag]
         delegate?.tableView(self, summaryScopeDidChange: summaryScope)
     }
+    #endif
 }
 #endif

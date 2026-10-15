@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import QuartzCore
 
 /// A running elastic animation of the vertical overscroll.
@@ -37,6 +41,7 @@ extension NGTableView {
         return displayed < 0 ? -raw : raw
     }
 
+    #if os(macOS)
     func handleElasticPhases(of event: NSEvent) {
         if event.phase.contains(.mayBegin) || event.phase.contains(.began) {
             // Grabbing during an animation stops it; the pull continues from there.
@@ -54,7 +59,9 @@ extension NGTableView {
             }
         }
     }
+    #endif
 
+    #if os(macOS)
     func scrollVerticallyWithElasticity(by deltaY: CGFloat, event: NSEvent) {
         let interval = max(1.0 / 120, event.timestamp - lastScrollEventTimestamp)
         lastScrollEventTimestamp = event.timestamp
@@ -97,6 +104,7 @@ extension NGTableView {
             setVerticalOverscroll(rubberBand(rawVerticalOverscroll))
         }
     }
+    #endif
 
     func setVerticalOverscroll(_ value: CGFloat) {
         guard value != verticalOverscroll else { return }

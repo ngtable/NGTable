@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// What a batch of row updates changed, in data source rows. Every update
 /// maps the indexes kept so far right away; reading values, filtering,
@@ -837,9 +841,11 @@ extension NGTableView {
     /// closes, and the focused cell and cell range go (they would come back
     /// on whichever record gets the handle next).
     private func endInteractionsWithRemovedRecords() {
+        #if os(macOS)
         if let editor, row(of: editor.ref) < 0 { endEditing(committing: false) }
         if let rowSwipe, row(of: rowSwipe.ref) < 0 { closeRowActions() }
         if let openChoiceMenu, row(of: openChoiceMenu.ref) < 0 { openChoiceMenu.menu.cancelTracking() }
+        #endif
         if let focusedHandleCell, position(of: focusedHandleCell) == nil { self.focusedHandleCell = nil }
         if let range = selectedHandleRange, position(of: range.anchor) == nil || position(of: range.end) == nil {
             selectedHandleRange = nil

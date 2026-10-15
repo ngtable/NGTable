@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import UniformTypeIdentifiers
 
 // Exporting the table to a file (see NGTableExport.swift for the formats):
@@ -60,6 +64,7 @@ extension NGTableView {
         }
     }
 
+    #if os(macOS)
     /// Asks where to save the rows shown, as an Excel workbook or CSV, and
     /// exports them there: an action for an "Export…" menu item, which goes
     /// to the table through the responder chain.
@@ -96,6 +101,7 @@ extension NGTableView {
             }
         }
     }
+    #endif
 
     /// Reads the rows and writes them into `sink`: a chunk written off the
     /// main thread while the next is read, the summary row last.
@@ -146,24 +152,32 @@ extension NGTableView {
         try await Task.detached(priority: .userInitiated) { try writer.finish(summary: summary) }.value
     }
 }
+#if os(macOS)
 /// The save panel's format menu: sets the panel's file type.
 @MainActor
 final class NGExportFormatChooser: NSObject {
+    #if os(macOS)
     private weak var panel: NSSavePanel?
+    #endif
     private let formats: [NGExportFormat]
     private(set) var format: NGExportFormat
 
+    #if os(macOS)
     init(panel: NSSavePanel, formats: [NGExportFormat]) {
         self.panel = panel
         self.formats = formats
         format = formats.first ?? .xlsx
     }
+    #endif
 
+    #if os(macOS)
     @objc func formatChanged(_ sender: NSPopUpButton) {
         format = formats[max(0, min(formats.count - 1, sender.indexOfSelectedItem))]
         if let type = UTType(filenameExtension: format.fileExtension) {
             panel?.allowedContentTypes = [type]
         }
     }
+    #endif
 }
+#endif
 #endif

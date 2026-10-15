@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import Metal
 
 // Media cells (`NGCellValue.media`): the picture at the cell's leading edge,
@@ -19,11 +23,12 @@ extension NGTableView {
     /// Where the picture of a visible media cell is, in the table's
     /// coordinates, e.g. for Quick Look to zoom from it. `nil` if the cell
     /// isn't in view or has no media value.
-    public func frameOfMediaThumbnail(row: Int, columnID: String) -> NSRect? {
+    public func frameOfMediaThumbnail(row: Int, columnID: String) -> CGRect? {
         guard let (media, cell) = visibleMedia(row: row, columnID: columnID) else { return nil }
         return mediaThumbnailFrame(of: media, inCell: cell)
     }
 
+    #if os(macOS)
     /// The still picture of a visible media cell as it shows it (cropped to
     /// the thumbnail), or `nil` while it isn't loaded.
     public func mediaThumbnailImage(row: Int, columnID: String) -> NSImage? {
@@ -35,9 +40,10 @@ extension NGTableView {
               let image = still.image else { return nil }
         return NSImage(cgImage: image, size: media.thumbnailSize)
     }
+    #endif
 
     /// The media value of a visible cell (a data source row) and its frame in the table.
-    private func visibleMedia(row: Int, columnID: String) -> (NGMedia, NSRect)? {
+    private func visibleMedia(row: Int, columnID: String) -> (NGMedia, CGRect)? {
         guard let displayRow = displayRow(forSourceRow: row),
               let cell = visibleCells[NGCellKey(row: displayRow, column: columnOrdinal(of: columnID))],
               case .media(let media) = cell.content, let frame = frameOfCell(row: row, columnID: columnID) else { return nil }
@@ -88,7 +94,7 @@ extension NGTableView {
         if let badge = media.badge {
             let rect = CGRect(x: thumbnail.minX + 4, y: thumbnail.minY + 4, width: 18, height: 14)
             quads.append(NGMetalRenderer.roundedRectangle(rect, radius: 4, corners: allCorners, scale: scale,
-                                                          color: NGMetalRenderer.premultiplied(NSColor.black.withAlphaComponent(0.55)),
+                                                          color: NGMetalRenderer.premultiplied(NGColor.black.withAlphaComponent(0.55)),
                                                           clip: clip))
             appendSymbol(badge, pointSize: 10, weight: .semibold, centeredIn: rect, color: SIMD4(repeating: 1), clip: clip,
                          renderer: renderer, scale: scale, to: &quads)
@@ -100,9 +106,9 @@ extension NGTableView {
                                   renderer: NGMetalRenderer, scale: CGFloat, style: MetalStyle, to quads: inout [NGMetalQuad]) {
         let width = frame.maxX - NGMetrics.mediaInset - x
         guard width > 0 else { return }
-        var blocks: [(shaped: [NGShapedText], font: NSFont, color: SIMD4<Float>)] = []
+        var blocks: [(shaped: [NGShapedText], font: NGFont, color: SIMD4<Float>)] = []
         for line in lines where !line.text.isEmpty {
-            let font: NSFont
+            let font: NGFont
             let color: SIMD4<Float>
             switch line.style {
             case .title:
@@ -118,7 +124,7 @@ extension NGTableView {
             blocks.append((renderer.shaper.shapeLines(line.text, font: font, width: width, maximumLines: line.maximumLines), font, color))
         }
         guard !blocks.isEmpty else { return }
-        let lineHeight = { (font: NSFont) in ceil(font.ascender - font.descender + font.leading) }
+        let lineHeight = { (font: NGFont) in ceil(font.ascender - font.descender + font.leading) }
         let height = blocks.reduce(0) { $0 + CGFloat($1.shaped.count) * lineHeight($1.font) }
             + NGMetrics.mediaLineSpacing * CGFloat(blocks.count - 1)
         var y = (frame.midY - height / 2).rounded()
@@ -134,30 +140,19 @@ extension NGTableView {
     }
 
     /// An SF Symbol drawn white into the atlas once, tinted, centered on whole pixels.
-    func appendSymbol(_ name: String, pointSize: CGFloat, weight: NSFont.Weight, centeredIn rect: CGRect, color: SIMD4<Float>,
+    func appendSymbol(_ name: String, pointSize: CGFloat, weight: NGFont.Weight, centeredIn rect: CGRect, color: SIMD4<Float>,
                       clip: CGRect, renderer: NGMetalRenderer, scale: CGFloat, to quads: inout [NGMetalQuad]) {
         guard let image = Self.symbolImage(name, pointSize: pointSize, weight: weight) else { return }
         let size = image.size
         guard let entry = renderer.atlas.icon("symbol:\(name):\(pointSize):\(weight.rawValue)", size: size, scale: scale, draw: { context in
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-            image.draw(in: CGRect(origin: .zero, size: size))
-            NSGraphicsContext.restoreGraphicsState()
+            image.draw(into: context, in: CGRect(origin: .zero, size: size))
         }) else { return }
         renderer.appendIcon(entry, at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2), clip: clip,
                             scale: scale, color: color, to: &quads)
     }
 
-    private static var symbolImages: [String: NSImage] = [:]
-
-    private static func symbolImage(_ name: String, pointSize: CGFloat, weight: NSFont.Weight) -> NSImage? {
-        let key = "\(name):\(pointSize):\(weight.rawValue)"
-        if let image = symbolImages[key] { return image }
-        let configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: weight)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(configuration)
-        symbolImages[key] = image
-        return image
+    private static func symbolImage(_ name: String, pointSize: CGFloat, weight: NGFont.Weight) -> NGSymbolImage? {
+        NGSymbolImage.named(name, pointSize: pointSize, weight: weight)
     }
 
     /// The part of a texture that fills `size` keeping its proportions

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import os
 
 // Live sorting by the table (`sortsRows`): the table orders the rows by its

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // What the table draws, as values: each visible cell and row background is a
 // small object the layout passes place, move and reuse (`NGDrawnCell`,
@@ -250,8 +254,8 @@ final class NGRowBackground {
     var frame: CGRect = .zero {
         didSet { if frame != oldValue { NGFrameModel.noteChange() } }
     }
-    private(set) var color: NSColor?
-    private(set) var markerColor: NSColor?
+    private(set) var color: NGColor?
+    private(set) var markerColor: NGColor?
     private(set) var cornerRadius: CGFloat = 0
     private(set) var maskedCorners: CACornerMask = []
     var isHidden = false {
@@ -260,7 +264,7 @@ final class NGRowBackground {
 
     /// Colors are compared by identity: apps give the same color objects, and
     /// dynamic colors are resolved when drawn (for the current appearance).
-    func setColors(_ color: NSColor, marker: NSColor?) {
+    func setColors(_ color: NGColor, marker: NGColor?) {
         guard color !== self.color || marker !== markerColor else { return }
         self.color = color
         markerColor = marker
@@ -283,7 +287,7 @@ struct NGCellTextMetrics: Sendable {
     let tagLineHeight: CGFloat
 
     @MainActor static let shared = NGCellTextMetrics(
-        textLineHeight: ceil(NSAttributedString(string: "Xg", attributes: [.font: NSFont.systemFont(ofSize: NSFont.systemFontSize)]).size().height),
+        textLineHeight: ceil(NSAttributedString(string: "Xg", attributes: [.font: NGFont.systemFont(ofSize: NGFont.systemFontSize)]).size().height),
         tagLineHeight: NSAttributedString(string: "Xg", attributes: [.font: NGCellDrawing.tagFont]).size().height
     )
 }
@@ -306,9 +310,9 @@ final class NGCellPalette: @unchecked Sendable {
         self.tags = tags
     }
 
-    @MainActor private static var palettes: [NSAppearance.Name: NGCellPalette] = [:]
+    @MainActor private static var palettes: [NGAppearance.Name: NGCellPalette] = [:]
 
-    @MainActor static func resolved(for appearance: NSAppearance) -> NGCellPalette {
+    @MainActor static func resolved(for appearance: NGAppearance) -> NGCellPalette {
         if let palette = palettes[appearance.name] { return palette }
         var palette: NGCellPalette?
         appearance.performAsCurrentDrawingAppearance {
@@ -317,11 +321,11 @@ final class NGCellPalette: @unchecked Sendable {
                 tags[color] = (color.systemColor.cgColor, color.systemColor.withAlphaComponent(0.16).cgColor)
             }
             palette = NGCellPalette(
-                text: NSColor.labelColor.cgColor,
-                secondaryText: NSColor.secondaryLabelColor.cgColor,
+                text: NGColor.labelColor.cgColor,
+                secondaryText: NGColor.secondaryLabelColor.cgColor,
                 // On an emphasized selection text, tags and marks turn white.
-                highlightedText: NSColor.alternateSelectedControlTextColor.cgColor,
-                highlightedTagFill: NSColor.white.withAlphaComponent(0.22).cgColor,
+                highlightedText: NGColor.alternateSelectedControlTextColor.cgColor,
+                highlightedTagFill: NGColor.white.withAlphaComponent(0.22).cgColor,
                 tags: tags
             )
         }
@@ -338,7 +342,7 @@ final class NGCellPalette: @unchecked Sendable {
 /// Fonts, shapes and measuring of default cells.
 @MainActor
 extension NGCellDrawing {
-    static let tagFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium)
+    static let tagFont = NGFont.systemFont(ofSize: NGFont.smallSystemFontSize, weight: .medium)
 
 
     /// A disclosure chevron like an outline view's: pointing to the trailing
@@ -374,35 +378,16 @@ extension NGCellDrawing {
         return CGRect(x: x, y: ((bounds.height - size.height) / 2).rounded(), width: size.width, height: size.height)
     }
 
-    /// White symbol images by name (tinted when drawn), made once.
-    private static var markImages: [String: NSImage] = [:]
-
     /// A checked check box: a filled square with the checkmark cut out (the
     /// atlas tints icons in one color, which would fill a symbol's checkmark too).
     static let checkedBoxName = "ngtable.checkbox.checked"
 
-    static func markImage(_ name: String) -> NSImage? {
-        if let image = markImages[name] { return image }
-        let configuration = NSImage.SymbolConfiguration(pointSize: NGMetrics.markPointSize, weight: .medium)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
+    /// White symbol images by name (tinted when drawn), made once.
+    static func markImage(_ name: String) -> NGSymbolImage? {
         if name == checkedBoxName {
-            guard let box = NSImage(systemSymbolName: "square.fill", accessibilityDescription: nil)?.withSymbolConfiguration(configuration),
-                  let check = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?
-                    .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: NGMetrics.markPointSize * 0.62, weight: .bold)
-                        .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))) else { return nil }
-            let image = NSImage(size: box.size, flipped: false) { rect in
-                box.draw(in: rect)
-                let size = check.size
-                check.draw(in: NSRect(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2, width: size.width, height: size.height),
-                           from: .zero, operation: .destinationOut, fraction: 1)
-                return true
-            }
-            markImages[name] = image
-            return image
+            return NGSymbolImage.box(cutting: "checkmark", pointSize: NGMetrics.markPointSize, weight: .medium, key: checkedBoxName)
         }
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(configuration)
-        markImages[name] = image
-        return image
+        return NGSymbolImage.named(name, pointSize: NGMetrics.markPointSize, weight: .medium)
     }
 
     /// The column width that shows all tags, for autofitting: measured by

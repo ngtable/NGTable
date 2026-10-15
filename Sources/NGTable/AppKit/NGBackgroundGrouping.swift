@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Grouping a large table without holding the main thread. Most of grouping
 // is reading every row's key from the data source (the groups themselves

@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// Supplies rows and cell values to an `NGTableView`.
 ///
@@ -296,7 +300,7 @@ public protocol NGTableViewDelegate: AnyObject {
     #endif
     /// A tint for a row's background instead of the alternating stripes, e.g. a
     /// pale green for profitable campaigns. Use light, translucent colors (like
-    /// `NSColor.systemGreen.withAlphaComponent(0.12)`) so text stays readable,
+    /// `NGColor.systemGreen.withAlphaComponent(0.12)`) so text stays readable,
     /// and return the same color objects each time (e.g. static constants):
     /// this is asked for every visible row while scrolling.
     /// Selected rows show the selection color instead.

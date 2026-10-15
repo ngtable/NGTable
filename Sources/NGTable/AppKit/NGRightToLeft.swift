@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Right to left: the layout is mirrored (see `NGGridGeometry` and the layout
 // metrics), and so is what each cell and column title draws, within its
@@ -11,7 +15,7 @@ import AppKit
 extension NGTableView {
     /// The direction content is laid out in before it is mirrored: always
     /// left to right (mirroring makes it right to left).
-    var contentLayoutDirection: NSUserInterfaceLayoutDirection { .leftToRight }
+    var contentLayoutDirection: NGLayoutDirection { .leftToRight }
 
     /// Draws content with `draw`, then, right to left, mirrors it within `frame`.
     func appendMirrored(in frame: CGRect, clip: CGRect, renderer: NGMetalRenderer, scale: CGFloat,
