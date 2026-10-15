@@ -1060,6 +1060,23 @@ public final class NGTableView: NSView {
     /// (`columnFilterRowsToCheck`); a reload or new columns drop them.
     var columnFilterPasses: [String: (filter: NGColumnFilter, passes: [Bool])] = [:]
     var columnFilterRowsToCheck = IndexSet()
+    /// Rank filters as ranges, by column id, with the rows and values they
+    /// were found for (`summaryRowsMoved`, `columnFilterValuesVersion`).
+    var rankRanges: [String: (filter: NGColumnFilter, range: NGColumnFilter, rowsMoved: Int, valuesVersion: Int)] = [:]
+    /// Counts the times filtered columns' values changed.
+    var columnFilterValuesVersion = 0
+    /// "Now" for date periods (for tests).
+    var filterDateForTesting: Date?
+
+    /// The calendar the date filters' periods are in (`NGColumnFilter.dates`):
+    /// the user's (time zone, first weekday) by default.
+    public var calendar: Calendar = .current {
+        didSet {
+            guard calendar != oldValue, columnFilters.values.contains(where: { if case .dates = $0 { true } else { false } }) else { return }
+            filterNeedsFullEvaluation = true
+            applyRowFilter()
+        }
+    }
 
     /// The sort descriptors right after a header click reversed the first
     /// one: the next click on it removes it (see `sortByClicking`).
@@ -1821,6 +1838,7 @@ public final class NGTableView: NSView {
             // Without column filters nothing keeps their passes up to date:
             // a filter set again checks every row.
             columnFilterPasses = [:]
+            rankRanges = [:]
             columnFilterRowsToCheck = []
             rowMap = nil
             filteredRows = nil
@@ -2818,6 +2836,7 @@ public final class NGTableView: NSView {
         treeParentHandles = []
         treeSummaryFlips = []
         columnFilterPasses = [:]
+        rankRanges = [:]
         columnFilterRowsToCheck = []
         // The focused cell and cell range keep their row indexes, like the
         // selection (dropped beyond the rows); with identities the focused

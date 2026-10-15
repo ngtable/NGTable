@@ -33,6 +33,12 @@ extension NGTableView {
            displayRow(forSourceRow: cell.row) != nil, activateControl(row: cell.row, columnID: cell.columnID) {
             return
         }
+        // Option-Down Arrow opens the focused cell's column filter, like a spreadsheet's.
+        if !ignoresUserInput, navigatesByCell, allowsColumnFilters, event.keyCode == 125,
+           event.modifierFlags.intersection([.command, .control, .option, .shift]) == .option,
+           let cell = focusedCell, showFilter(forColumnID: cell.columnID) {
+            return
+        }
         if ignoresUserInput || startsWithSpaceOutsideTypeSelect(event) {
             super.keyDown(with: event)
             return

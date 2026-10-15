@@ -74,8 +74,9 @@ words. The totals follow the changed rows too.
 
 With ``NGTableView/allowsColumnFilters``, a column's header shows a filter
 button while the pointer is over it (and always while the column has a
-filter), like a spreadsheet's: number columns filter by a range, other
-columns by their values, checked in a list with counts. The filters are in
+filter), like a spreadsheet's: number columns filter by a range or the top
+or bottom rows, date columns by a period, other columns by their values,
+checked in a list with counts. The filters are in
 ``NGTableView/columnFilters`` (by column id), so the app can set them too:
 
 ```swift
@@ -85,6 +86,8 @@ table.columnFilters = [
     "network": .excluding(["Test"]),
     "spend": .range(min: 100, max: nil),
     "name": .contains("summer"),
+    "created": .dates(.lastDays(30)),
+    "profit": .top(10),
 ]
 ```
 
@@ -92,6 +95,23 @@ table.columnFilters = [
 unchecking a few values in the list gives `.excluding`, so values it doesn't
 show (it lists at most 1,000) or that arrive later stay shown; checking a few
 among many gives `.values`.
+
+`.dates` takes an ``NGDatePeriod``: today, yesterday, this or last week,
+month or year, the last days, or between two instants. Periods are days of
+``NGTableView/calendar`` (the user's time zone and first weekday by
+default), taken from the day the rows are filtered on: a table left open
+overnight shows yesterday's "today" until its rows change or the filter is
+set again. `.top(10)` and `.bottom(10)` show the rows with the 10 largest
+or smallest numbers of the column, and those tied with the last of them,
+like a spreadsheet's "Top 10": of all the rows, whatever the other filters
+show (so with another filter there may be fewer). They read the column
+again when rows come, go or move or its values change.
+
+By keyboard, Option-Down Arrow on a focused cell (``NGTableView/navigatesByCell``)
+opens its column's filter, like a spreadsheet; an app can open one from a
+menu with ``NGTableView/showFilter(forColumnID:)``. In the filter, Tab goes
+between the controls, Down Arrow from the search field into the values,
+and Space checks or unchecks the selected values.
 
 A row shows when it passes every column filter, the search and
 `isIncluded`. The table keeps whether each row passes each column filter: a

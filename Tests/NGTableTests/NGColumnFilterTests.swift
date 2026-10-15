@@ -338,5 +338,243 @@ struct NGColumnFilterTests {
         other.columnLayoutState = NGColumnLayoutState(order: ["name", "profit", "status"])
         #expect(other.columnFilters == table.columnFilters)
     }
+
+    /// The days of each period around a Thursday, in a calendar whose weeks
+    /// start on Monday.
+    @Test func datePeriods() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+        calendar.firstWeekday = 2
+        func day(_ text: String) -> Date { ISO8601DateFormatter().date(from: text + "T00:00:00Z")! }
+        let now = ISO8601DateFormatter().date(from: "2026-10-15T12:30:00Z")!
+        let expected: [(NGDatePeriod, String, String)] = [
+            (.today, "2026-10-15", "2026-10-16"), (.yesterday, "2026-10-14", "2026-10-15"),
+            (.thisWeek, "2026-10-12", "2026-10-19"), (.lastWeek, "2026-10-05", "2026-10-12"),
+            (.thisMonth, "2026-10-01", "2026-11-01"), (.lastMonth, "2026-09-01", "2026-10-01"),
+            (.thisYear, "2026-01-01", "2027-01-01"), (.lastYear, "2025-01-01", "2026-01-01"),
+            (.lastDays(7), "2026-10-09", "2026-10-16"), (.lastDays(1), "2026-10-15", "2026-10-16"),
+        ]
+        for (period, start, end) in expected {
+            let interval = period.interval(in: calendar, now: now)
+            #expect(interval.start == day(start) && interval.end == day(end), "\(period)")
+        }
+        #expect(NGDatePeriod.between(start: nil, end: day("2026-01-01")).interval(in: calendar).end == day("2026-01-01"))
+        #expect(NGColumnFilter.dates(.between(start: nil, end: nil)).isEmpty)
+    }
+
+    /// Rows whose dates are in a period show; the period follows the day
+    /// the rows are filtered on, and the table's calendar.
+    @Test func filteringByDates() throws {
+        @MainActor final class Dated: NGTableViewDataSource {
+            let dates: [Date]
+            init(_ dates: [Date]) { self.dates = dates }
+            func numberOfRows(in tableView: NGTableView) -> Int { dates.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
+                column.id == "date" ? .date(dates[row]) : .text("\(row)")
+            }
+        }
+        let now = ISO8601DateFormatter().date(from: "2026-10-15T12:30:00Z")!
+        // Every 6 hours, from 20 days ago.
+        let dated = Dated((0..<120).map { now.addingTimeInterval(Double($0 - 80) * 6 * 3_600) })
+        let table = NGTableView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        defer { withExtendedLifetime(dated) {} }
+        table.columns = [.column(NGTableColumn("name", title: "Name", width: 100)),
+                         .column(NGTableColumn("date", title: "Date", width: 120, format: .date(includesTime: true)))]
+        table.dataSource = dated
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+        calendar.firstWeekday = 2
+        table.calendar = calendar
+        table.filterDateForTesting = now
+        table.layoutSubtreeIfNeeded()
+        func expected(_ period: NGDatePeriod) -> [Int] {
+            let interval = period.interval(in: table.calendar, now: table.filterDateForTesting!)
+            return dated.dates.indices.filter { dated.dates[$0] >= interval.start! && dated.dates[$0] < interval.end! }
+        }
+        table.columnFilters = ["date": .dates(.today)]
+        #expect(shown(table) == expected(.today) && shown(table).count == 4)
+        table.columnFilters = ["date": .dates(.lastWeek)]
+        #expect(shown(table) == expected(.lastWeek) && shown(table).count == 28)
+        // The next day: "today" is another day once the rows are filtered again.
+        table.columnFilters = ["date": .dates(.today)]
+        table.filterDateForTesting = now.addingTimeInterval(86_400)
+        table.reloadData()
+        #expect(shown(table) == expected(.today) && shown(table).first == 82)
+        // Weeks from Sunday: other rows.
+        calendar.firstWeekday = 1
+        table.columnFilters = ["date": .dates(.thisWeek)]
+        let mondayWeek = expected(.thisWeek)
+        table.calendar = calendar
+        #expect(shown(table) == expected(.thisWeek) && shown(table) != mondayWeek)
+        // Values that aren't dates don't pass; between two instants.
+        table.columnFilters = ["date": .dates(.between(start: dated.dates[10], end: dated.dates[20]))]
+        #expect(shown(table) == Array(10..<20))
+        table.columnFilters = ["name": .dates(.today)]
+        #expect(table.numberOfRows == 0)
+    }
+
+    /// The rows with the largest or smallest numbers, those tied with the
+    /// last too, of all the rows; live changes and new rows move rows in
+    /// and out.
+    @Test func topAndBottom() {
+        let records = Records(count: 300)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        func expected(_ filter: NGColumnFilter) -> [Int] {
+            let profits = records.records.map(\.profit).sorted()
+            switch filter {
+            case .top(let count):
+                let threshold = profits[profits.count - count]
+                return records.records.indices.filter { records.records[$0].profit >= threshold }
+            case .bottom(let count):
+                let threshold = profits[count - 1]
+                return records.records.indices.filter { records.records[$0].profit <= threshold }
+            default: return []
+            }
+        }
+        table.columnFilters = ["profit": .top(10)]
+        #expect(shown(table) == expected(.top(10)))
+        #expect(shown(table).count >= 10)
+        table.columnFilters = ["profit": .bottom(25)]
+        #expect(shown(table) == expected(.bottom(25)))
+        // Of all rows, whatever another filter shows.
+        table.columnFilters["status"] = .values(["Active"])
+        #expect(shown(table) == expected(.bottom(25)).filter { records.records[$0].status == "Active" })
+        table.columnFilters["status"] = nil
+        var generator = SplitMix64(seed: 5)
+        for round in 0..<20 {
+            table.beginUpdates()
+            let row = Int(generator.next() % UInt64(records.records.count))
+            records.records[row].profit = Double(generator.next() % 400) - 200
+            table.reloadData(forRowIndexes: [row], columnIndexes: [1])
+            if round % 3 == 0 {
+                records.records.insert(.init(id: 1_000 + round, name: "New", profit: -150, status: "Active"), at: 7)
+                table.insertRows(at: [7])
+            }
+            if round % 4 == 0 {
+                records.records.remove(at: 3)
+                table.removeRows(at: [3])
+            }
+            table.endUpdates()
+            #expect(shown(table) == expected(.bottom(25)), "round \(round)")
+        }
+        // Values alone change who is among them: rows that didn't change come in.
+        let leaving = shown(table)
+        table.beginUpdates()
+        for row in leaving {
+            records.records[row].profit = 1_000
+            table.reloadData(forRowIndexes: [row], columnIndexes: [1])
+        }
+        table.endUpdates()
+        #expect(shown(table) == expected(.bottom(25)))
+        #expect(Set(shown(table)).isDisjoint(with: leaving))
+        // More than there are: all rows; none: none.
+        table.columnFilters = ["profit": .top(10_000)]
+        #expect(table.numberOfRows == records.records.count)
+        table.columnFilters = ["profit": .top(0)]
+        #expect(table.numberOfRows == 0)
+        #expect(NGTableView.rankRange([3, 1, 2, 2, 5], count: 2, largest: false) == .range(min: nil, max: 2))
+        #expect(NGTableView.rankRange([3, 1, 2, 2, 5], count: 2, largest: true) == .range(min: 3, max: nil))
+    }
+
+    /// The popover's number modes and date periods set the filters; opened
+    /// over a filter, they show it.
+    @Test func popoverModesAndPeriods() throws {
+        let records = Records(count: 100)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        table.allowsColumnFilters = true
+        func views<View: NSView>(_ type: View.Type, in view: NSView) -> [View] {
+            view.subviews.flatMap { (($0 as? View).map { [$0] } ?? []) + views(type, in: $0) }
+        }
+        let profit = try #require(table.tableColumns.first { $0.id == "profit" })
+        let numbers = NGColumnFilterViewController(table: table, column: profit)
+        let window = NSWindow(contentViewController: numbers)
+        defer { withExtendedLifetime(window) {} }
+        let mode = try #require(views(NSSegmentedControl.self, in: numbers.view).first)
+        mode.selectedSegment = 1
+        _ = mode.target?.perform(mode.action, with: mode)
+        #expect(table.columnFilters["profit"] == .top(10))
+        let count = try #require(views(NSTextField.self, in: numbers.view).first { $0.isEditable && !$0.isHidden && $0.superview?.isHidden == false })
+        count.stringValue = "5"
+        numbers.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: count))
+        #expect(table.columnFilters["profit"] == .top(5))
+        mode.selectedSegment = 2
+        _ = mode.target?.perform(mode.action, with: mode)
+        #expect(table.columnFilters["profit"] == .bottom(5))
+        let again = NGColumnFilterViewController(table: table, column: profit)
+        let againWindow = NSWindow(contentViewController: again)
+        defer { withExtendedLifetime(againWindow) {} }
+        #expect(views(NSSegmentedControl.self, in: again.view).first?.selectedSegment == 2)
+        #expect(views(NSTextField.self, in: again.view).contains { $0.stringValue == "5" })
+
+        // Dates: a period from the menu, or two days.
+        table.columns.append(.column(NGTableColumn("day", title: "Day", width: 100, format: .date(includesTime: false))))
+        let day = try #require(table.tableColumns.first { $0.id == "day" })
+        let dates = NGColumnFilterViewController(table: table, column: day)
+        let datesWindow = NSWindow(contentViewController: dates)
+        defer { withExtendedLifetime(datesWindow) {} }
+        let menu = try #require(views(NSPopUpButton.self, in: dates.view).first)
+        menu.selectItem(at: 3)
+        _ = menu.target?.perform(menu.action, with: menu)
+        #expect(table.columnFilters["day"] == .dates(.thisWeek))
+        menu.selectItem(at: menu.numberOfItems - 1)
+        _ = menu.target?.perform(menu.action, with: menu)
+        let pickers = views(NSDatePicker.self, in: dates.view)
+        #expect(pickers.count == 2)
+        let calendar = table.calendar
+        let first = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 2)))
+        let last = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 9, hour: 15)))
+        pickers[0].dateValue = first
+        pickers[1].dateValue = last
+        _ = pickers[1].target?.perform(pickers[1].action, with: pickers[1])
+        #expect(table.columnFilters["day"] == .dates(.between(start: first, end: calendar.date(from: DateComponents(year: 2026, month: 3, day: 10)))))
+        menu.selectItem(at: 0)
+        _ = menu.target?.perform(menu.action, with: menu)
+        #expect(table.columnFilters["day"] == nil)
+    }
+
+    /// By keyboard: Option-Down Arrow on a focused cell opens its column's
+    /// filter; Down Arrow goes from the search into the values, Space
+    /// unchecks and checks the selected ones.
+    @Test func filterByKeyboard() throws {
+        let records = Records(count: 100)
+        let table = makeTable(records)
+        defer { withExtendedLifetime(records) {} }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
+        defer { withExtendedLifetime(window) {} }
+        window.contentView = table
+        table.allowsColumnFilters = true
+        table.navigatesByCell = true
+        table.layoutSubtreeIfNeeded()
+        window.makeFirstResponder(table)
+        table.focusedCell = NGCellPosition(row: 0, columnID: "status")
+        func key(_ code: UInt16, _ characters: String, _ flags: NSEvent.ModifierFlags = []) -> NSEvent {
+            NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: window.windowNumber,
+                             context: nil, characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
+        }
+        table.keyDown(with: key(125, "\u{F701}", .option))
+        let controller = try #require(table.columnFilterPopover?.contentViewController as? NGColumnFilterViewController)
+        table.columnFilterPopover?.close()
+        // The controls themselves, in a window of their own.
+        let popoverWindow = NSWindow(contentViewController: controller)
+        defer { withExtendedLifetime(popoverWindow) {} }
+        func views<View: NSView>(_ type: View.Type, in view: NSView) -> [View] {
+            view.subviews.flatMap { (($0 as? View).map { [$0] } ?? []) + views(type, in: $0) }
+        }
+        let search = try #require(views(NSSearchField.self, in: controller.view).first)
+        let list = try #require(views(NGFilterValueList.self, in: controller.view).first)
+        popoverWindow.makeFirstResponder(search)
+        let editor = try #require(search.currentEditor() as? NSTextView)
+        #expect(controller.control(search, textView: editor, doCommandBy: #selector(NSResponder.moveDown(_:))))
+        #expect(popoverWindow.firstResponder === list && list.selectedRow == 0)
+        // The first value ("Active") unchecked, then checked again.
+        list.keyDown(with: key(49, " "))
+        #expect(table.columnFilters["status"] == .excluding(["Active"]))
+        list.keyDown(with: key(49, " "))
+        #expect(table.columnFilters["status"] == nil)
+        // Without navigation by cell, or on a column without filters, it isn't the table's.
+        #expect(!table.showFilter(forColumnID: "missing"))
+    }
 }
 #endif

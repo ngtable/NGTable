@@ -1189,6 +1189,7 @@ extension NGTableView {
             let changed = rowsToRead(forColumns: columnFilters.keys)
             filterRowsToCheck?.formUnion(changed)
             columnFilterRowsToCheck.formUnion(changed)
+            if !changed.isEmpty { columnFilterValuesVersion += 1 }
         }
         // Keys kept while not grouped (for grouping again, or shown while a
         // grouping's are read) are read again too.

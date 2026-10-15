@@ -116,6 +116,7 @@ loads records from a server, also read <doc:IntegratingIntoAnApp>.
 - <doc:FilteringAndSearch>
 - ``NGRowFilter``
 - ``NGColumnFilter``
+- ``NGDatePeriod``
 
 ### Grouping
 
