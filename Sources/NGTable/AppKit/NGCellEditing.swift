@@ -308,10 +308,10 @@ extension NGTableView {
             guard let number else { return nil }
             return .number(isPercent ? number / 100 : number)
         }
-        if case .date(let includesTime) = format {
+        if format.isDate {
+            let includesTime = if case .date(let time) = format { time } else { true }
             // As displayed first (`string(for:)`), then the usual styles.
-            let shown = Date.FormatStyle(date: .abbreviated, time: includesTime ? .shortened : .omitted).locale(.current)
-            if let date = try? shown.parse(trimmed) { return .date(date) }
+            if let date = try? format.dateStyle(locale: .current).parse(trimmed) { return .date(date) }
             for style in [DateFormatter.Style.medium, .short, .long] {
                 let formatter = DateFormatter()
                 formatter.dateStyle = style

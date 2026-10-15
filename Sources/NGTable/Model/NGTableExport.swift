@@ -194,6 +194,9 @@ enum NGTableExport {
             let symbol = formatter.currencySymbol ?? code
             return "[$\(symbol.replacingOccurrences(of: "]", with: ""))]#,##0" + fraction(formatter.maximumFractionDigits)
         case .date(let includesTime): return includesTime ? "yyyy-mm-dd hh:mm" : "yyyy-mm-dd"
+        case .time(let includesDate, let fractionDigits):
+            // Excel shows up to thousandths of a second.
+            return (includesDate ? "yyyy-mm-dd " : "") + "hh:mm:ss" + fraction(min(3, fractionDigits))
         }
     }
 
@@ -342,8 +345,7 @@ final class NGWorkbookWriter: NGExportWriter, @unchecked Sendable {
         // A count is a plain number, not in the column's currency, percent or date.
         summaryStyles = layout.columns.indices.map { layout.columns[$0].isCount ? styles.cellFormat(code: nil, bold: true) : boldNumberStyles[$0] }
         dateStyles = layout.columns.map { column -> Int in
-            let includesTime = if case .date(let time) = column.format { time } else { false }
-            return styles.cellFormat(code: includesTime ? "yyyy-mm-dd hh:mm" : "yyyy-mm-dd", bold: false)
+            styles.cellFormat(code: column.format.isDate ? NGTableExport.numberFormatCode(for: column.format) : "yyyy-mm-dd", bold: false)
         }
         self.styles = styles
         rowsPerSheet = max(1, layout.maxRowsPerSheet - 2)
@@ -398,7 +400,11 @@ final class NGWorkbookWriter: NGExportWriter, @unchecked Sendable {
             sheet += "<row r=\"\(excelRow)\">"
             for column in layout.columns.indices {
                 let ref = NGTableExport.cellReference(column: column, row: excelRow)
-                if let value = summary.values[column], value.isFinite {
+                if var value = summary.values[column], value.isFinite {
+                    // A summary of dates (not their count) as Excel's days.
+                    if layout.columns[column].format.isDate, !layout.columns[column].isCount {
+                        value = Self.excelDays(Date(timeIntervalSince1970: value))
+                    }
                     sheet += "<c r=\"\(ref)\" s=\"\(summaryStyles[column])\"><v>\(value)</v></c>"
                 } else if !summary.texts[column].isEmpty {
                     sheet += Self.inline(summary.texts[column], ref: ref, style: 1)
@@ -470,9 +476,7 @@ final class NGWorkbookWriter: NGExportWriter, @unchecked Sendable {
                     guard let last = sparkline.lastValue, last.isFinite else { continue }
                     sheet += "<c r=\"\(ref)\"\(numberStyle)><v>\(last)</v></c>"
                 case .date(let date):
-                    // Excel counts days from 1899-12-30, in local time.
-                    let local = date.timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT(for: date))
-                    sheet += "<c r=\"\(ref)\" s=\"\(dateStyles[column])\"><v>\(local / 86_400 + 25_569)</v></c>"
+                    sheet += "<c r=\"\(ref)\" s=\"\(dateStyles[column])\"><v>\(Self.excelDays(date))</v></c>"
                 case let value:
                     let text = layout.columns[column].format.string(for: value, locale: layout.locale)
                     if !text.isEmpty { sheet += Self.inline(text, ref: ref, style: 0) }
@@ -481,6 +485,12 @@ final class NGWorkbookWriter: NGExportWriter, @unchecked Sendable {
             sheet += "</row>"
         }
         return sheet
+    }
+
+    /// Excel counts days from 1899-12-30, in local time.
+    private static func excelDays(_ date: Date) -> Double {
+        let local = date.timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT(for: date))
+        return local / 86_400 + 25_569
     }
 
     func finish(summary: NGExportSummary?) throws {

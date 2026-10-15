@@ -17,7 +17,9 @@ explain a less obvious one ("Average of campaigns that ran"). Values are
 formatted with the column's format, except counts, which are whole numbers.
 Hide the row with ``NGTableView/showsSummaryRow``.
 
-Only `.number` values take part. Empty values, text, NaN and infinity are
+Only `.number` values take part, and dates: a column of dates counts them,
+and its minimum, maximum and average are dates (the earliest, the latest),
+shown in the column's date format. Empty values, text, NaN and infinity are
 left out, so a column where some rows have no value summarizes the others.
 
 ### Aggregates

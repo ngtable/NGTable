@@ -15,7 +15,7 @@ numbers and dates are written:
 | `.text(String)` | The text, truncated with "…" (or wrapped, see below) | Left out | Like Finder (`localizedStandardCompare`) |
 | `.number(Double)` | Formatted by the column's `format` | Included | Numerically; NaN last |
 | `.bool(Bool)` | "✓" for `true`, nothing for `false` (a check box in editable columns) | Left out | `false` first |
-| `.date(Date)` | Formatted by `.date(includesTime:)` | Left out | Chronologically |
+| `.date(Date)` | Formatted by `.date(includesTime:)` or `.time(includesDate:fractionDigits:)` | As its time (count, earliest, latest, mean) | Chronologically |
 | `.tags([NGTag])` | Colored capsules | Left out | By their titles |
 | `.mark(NGMark)` | An SF Symbol | Left out | By their labels |
 | `.media(NGMedia)` | A picture or video with lines of text | Left out | By its text |
@@ -70,6 +70,7 @@ row, copied text, search and VoiceOver:
 | `.currency(code: "EUR")` | `€1,234.50` | Spend, revenue |
 | `.percent(fractionDigits: 1)` | `12.5%` for `0.125` | ROI, CTR, conversion rates |
 | `.date(includesTime: true)` | `Sep 29, 2026 at 14:05` | Start dates, last changes |
+| `.time(fractionDigits: 3)` | `14:05:09.123` (`includesDate: true`: with the date) | Logs, events, trades |
 
 Formatting follows the user's locale, or the table's
 ``NGTableView/locale`` when you set one (cells, summaries, group titles,

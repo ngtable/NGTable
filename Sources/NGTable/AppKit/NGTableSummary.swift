@@ -168,7 +168,7 @@ extension NGTableView {
             var values = [Double](repeating: .nan, count: rowHandles.capacity)
             if !readNumbers(of: column, rows: 0..<handles.count, byHandle: handles, into: &values) {
                 for (row, handle) in handles.enumerated() {
-                    values[handle] = dataSource.tableView(self, valueFor: column, row: row).numericValue ?? .nan
+                    values[handle] = dataSource.tableView(self, valueFor: column, row: row).summaryNumber ?? .nan
                 }
             }
             maskTreeSummaryValues(&values)
@@ -364,7 +364,7 @@ extension NGTableView {
                 let end = min(capacity, next + 256)
                 for handle in next..<end where !build.read[handle] {
                     let row = row(ofHandle: handle)
-                    build.values[handle] = row >= 0 ? dataSource.tableView(self, valueFor: column, row: row).numericValue ?? .nan : .nan
+                    build.values[handle] = row >= 0 ? dataSource.tableView(self, valueFor: column, row: row).summaryNumber ?? .nan : .nan
                     build.read[handle] = true
                 }
                 next = end
@@ -397,7 +397,7 @@ extension NGTableView {
             for handle in changed.lazy.map(Int.init) where handle < values.count {
                 let row = row(ofHandle: handle)
                 values[handle] = row >= 0 && !treeExcludesFromSummaries(handle: handle)
-                    ? dataSource.tableView(self, valueFor: column, row: row).numericValue ?? .nan : .nan
+                    ? dataSource.tableView(self, valueFor: column, row: row).summaryNumber ?? .nan : .nan
             }
             summarySourceValues[columnID] = values
         }
