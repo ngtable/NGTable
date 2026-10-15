@@ -53,7 +53,12 @@ extension NGTableView {
         let drawableSize = CGSize(width: max(1, (bounds.width * scale).rounded(.up)), height: max(1, (bounds.height * scale).rounded(.up)))
         let size = CGSize(width: drawableSize.width / scale, height: drawableSize.height / scale)
         // Its top at the view's (the layer's y grows upward unless flipped).
+        #if os(macOS)
         let y = (layer as CALayer?)?.isGeometryFlipped == true ? bounds.minY : bounds.maxY - size.height
+        #else
+        // (A UIKit view's layer has its origin at the top.)
+        let y = bounds.minY
+        #endif
         let frame = CGRect(origin: CGPoint(x: bounds.minX, y: y), size: size)
         // Every layout pass comes here: only a new size or scale needs a frame.
         guard metalLayer.frame != frame || metalLayer.contentsScale != scale || metalLayer.drawableSize != drawableSize else { return false }
@@ -139,6 +144,8 @@ extension NGTableView {
         // A clear or translucent background shows what's behind the table.
         let isOpaque = base.w >= 0.999
         if metalLayer.isOpaque != isOpaque { metalLayer.isOpaque = isOpaque }
+        // (The simulator's drawables don't tell when they show.)
+        #if !targetEnvironment(simulator)
         if framePresented != nil {
             let drawnAt = CACurrentMediaTime()
             drawable.addPresentedHandler { [weak self] drawable in
@@ -148,6 +155,7 @@ extension NGTableView {
                 DispatchQueue.main.async { MainActor.assumeIsolated { self?.framePresented?(drawnAt, presentedAt) } }
             }
         }
+        #endif
         renderer.draw(quads, textures: metalTextures, into: drawable.texture,
                       clearColor: MTLClearColor(red: Double(base.x), green: Double(base.y), blue: Double(base.z),
                                                 alpha: isOpaque ? 1 : Double(base.w)),

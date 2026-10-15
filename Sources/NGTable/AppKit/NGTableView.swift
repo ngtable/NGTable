@@ -2338,6 +2338,14 @@ public final class NGTableView: NGPlatformView {
     // MARK: Views
 
     /// Translucent header material; rows scroll underneath it.
+    #if os(iOS)
+    /// Over the rows: its offset is the table's (momentum, the rubber band
+    /// and the scroll indicators are UIKit's); it holds no content.
+    let touchScrollView = UIScrollView()
+    var touchScrollDelegate: NGTouchScrollDelegate?
+    /// Set while the table moves the scroll view itself (not the finger).
+    var isSyncingTouchScroll = false
+    #endif
     #if os(macOS)
     let headerBackground = NSVisualEffectView()
     #else
