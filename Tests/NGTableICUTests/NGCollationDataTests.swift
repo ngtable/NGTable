@@ -87,10 +87,19 @@ struct NGCollationDataTests {
             return
         }
         let recorded = try String(contentsOf: Self.fixture, encoding: .utf8).split(separator: "\n").map(String.init)
-        #expect(lines.count == recorded.count)
-        #expect(lines.count > 1_500)
-        for (line, expected) in zip(lines, recorded) where line != expected {
-            Issue.record("\(line) instead of \(expected)")
+        // By collator: Foundation's locales differ a little between macOS
+        // (where the hashes were recorded) and iOS.
+        func identifier(_ line: String) -> String { String(line.prefix { $0 != "\t" }) }
+        let expected = Dictionary(recorded.map { (identifier($0), $0) }, uniquingKeysWith: { first, _ in first })
+        var unrecorded: [String] = []
+        for line in lines {
+            guard let recordedLine = expected[identifier(line)] else {
+                unrecorded.append(identifier(line))
+                continue
+            }
+            if line != recordedLine { Issue.record("\(line) instead of \(recordedLine)") }
         }
+        #expect(lines.count - unrecorded.count > 1_500)
+        #expect(unrecorded.count < 20, "not recorded: \(unrecorded)")
     }
 }
