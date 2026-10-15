@@ -6,7 +6,8 @@ import UIKit
 // a button or an editable rating acts; a check box toggles; otherwise the row
 // is selected (with a hardware keyboard, Command adds or removes a row and
 // Shift selects a range) and `action` is sent. A second tap edits an
-// editable cell or sends `doubleAction`.
+// editable cell or sends `doubleAction` (on a column's edge in the header,
+// fits the column).
 
 extension NGTableView {
     /// A tap at a point in the table's coordinates.
@@ -98,6 +99,11 @@ extension NGTableView {
     /// A second tap on the rows: an editable cell is edited, otherwise
     /// `doubleAction` is sent (also below the rows, with `clickedRow` -1).
     func doubleTapped(at point: CGPoint, modifiers: UIKeyModifierFlags = []) {
+        // On a column's edge in the header: the column fits its content.
+        if point.y < layoutMetrics.headerHeight, !hidesHeader {
+            _ = fitColumn(atHeaderPoint: point)
+            return
+        }
         guard !ignoresUserInput, point.y >= layoutMetrics.headerHeight,
               point.y < bounds.height - layoutMetrics.summaryHeight,
               modifiers.isDisjoint(with: [.command, .shift]) else { return }

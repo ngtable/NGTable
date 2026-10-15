@@ -24,9 +24,6 @@ extension NGTableView {
     func appendDropIndicator(style: MetalStyle, scale: CGFloat, to quads: inout [NGMetalQuad]) {}
 
     // The header's pointer (resizing and moving columns).
-    var isHeaderInteracting: Bool { false }
-    func cancelHeaderInteraction() {}
-    func endColumnDragForResize() {}
     func updateHeaderPointerAreas() {}
 
     // The pointer over cells.

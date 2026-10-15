@@ -303,5 +303,64 @@ struct NGTouchTests {
         #expect(summary?.children.count == NGSummaryScope.allCases.count)
         #expect((summary?.children.first as? UIAction)?.state == .on)
     }
+
+    // MARK: Columns by touch
+
+    @Test func draggingAnEdgeResizesAColumn() throws {
+        final class Widths: NGTableViewDelegate {
+            var resized: [(String, Double)] = []
+            func tableView(_ tableView: NGTableView, didResizeColumn column: NGTableColumn, width: Double) { resized.append((column.id, width)) }
+        }
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        let widths = Widths()
+        defer { withExtendedLifetime((window, widths)) {} }
+        table.delegate = widths
+        let y = table.layoutMetrics.headerHeight / 2
+        let edge = try #require(table.resizeHandles().first { $0.frame.column.id == "name" }?.edgeX)
+        // A finger beside the edge (farther than the Mac's pointer may be) still grabs it.
+        #expect(table.headerPanShouldBegin(at: CGPoint(x: edge + 8, y: y)))
+        table.headerPanBegan(at: CGPoint(x: edge + 8, y: y))
+        table.headerPanChanged(to: CGPoint(x: edge + 48, y: y))
+        #expect(table.width(ofColumnID: "name") == 190)
+        #expect(widths.resized.isEmpty)
+        table.headerPanEnded()
+        #expect(widths.resized.map(\.0) == ["name"])
+        #expect(widths.resized.map(\.1) == [190])
+        // A pan in the rows is the scroll view's.
+        #expect(!table.headerPanShouldBegin(at: point(ofRow: 2, in: table)))
+    }
+
+    @Test func draggingATitleMovesAColumn() async throws {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        let y = table.layoutMetrics.headerHeight / 2
+        #expect(table.headerPanShouldBegin(at: CGPoint(x: 60, y: y)))
+        table.headerPanBegan(at: CGPoint(x: 60, y: y))
+        #expect(table.isHeaderInteracting)
+        table.headerPanChanged(to: CGPoint(x: 200, y: y))
+        table.headerPanChanged(to: CGPoint(x: 240, y: y))
+        #expect(table.tableColumns.map(\.id) == ["value", "name"])
+        table.headerPanEnded()
+        #expect(!table.isHeaderInteracting)
+        // The lifted snapshot lands and goes.
+        try await waitWhile(timeout: .seconds(5), poll: .milliseconds(10)) { table.columnDrag != nil }
+        #expect(!table.subviews.contains { $0.frame.width == 150 && $0.layer.shadowOpacity > 0 })
+        // Fixed columns don't move.
+        table.allowsColumnReordering = false
+        #expect(!table.headerPanShouldBegin(at: CGPoint(x: 60, y: y)))
+    }
+
+    @Test func aDoubleTapOnAnEdgeFitsTheColumn() throws {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        let y = table.layoutMetrics.headerHeight / 2
+        let edge = try #require(table.resizeHandles().first { $0.frame.column.id == "name" }?.edgeX)
+        table.doubleTapped(at: CGPoint(x: edge - 8, y: y))
+        // "Row 199" is narrower than 150 points.
+        #expect((table.width(ofColumnID: "name") ?? 150) < 150)
+    }
 }
 #endif

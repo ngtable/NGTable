@@ -51,6 +51,10 @@ extension NGTableView {
         doubleTap.numberOfTapsRequired = 2
         addGestureRecognizer(doubleTap)
         addInteraction(UIContextMenuInteraction(delegate: delegate))
+        let headerPan = NGHeaderPanRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.headerPanned(_:)))
+        headerPan.delegate = delegate
+        headerPan.maximumNumberOfTouches = 1
+        addGestureRecognizer(headerPan)
     }
 
     /// Over the rows (under the header and the summary row), as large as the
