@@ -1,15 +1,19 @@
 # NGTable
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
+![iPadOS 17+](https://img.shields.io/badge/iPadOS-17%2B-blue)
 ![Swift 6.2+](https://img.shields.io/badge/Swift-6.2%2B-orange)
 ![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%20%2B%20commercial-lightgrey)
 
-A fast AppKit table for business data on macOS: frozen columns, column groups,
-a summary row with formulas, row grouping with subtotals, search and filters,
-live updates, and a selection that stays on the same records across reloads.
-The GPU draws it, and its API mirrors `NSTableView`, so apps migrate without
-reworking their patterns.
+A fast table for business data on macOS and iPad: frozen columns, column
+groups, a summary row with formulas, row grouping with subtotals, search and
+filters, live updates, and a selection that stays on the same records across
+reloads. The GPU draws it, and its API mirrors `NSTableView`, so apps migrate
+without reworking their patterns. One `NGTableView` class works in AppKit and
+in UIKit, with the same data source, delegate and features; on the iPad it
+takes touches, the pointer, a hardware keyboard and VoiceOver as the iPad's
+own controls do.
 
 > [!NOTE]
 > **Free for noncommercial use** (personal projects, study, research,
@@ -41,6 +45,22 @@ busy (less is more room for your app). Frames: screen updates a second.
 | Sorting 1,000,000 rows by a text column | 0.34 s with NGTableICU (2 s without), the screen keeps drawing | 1.9 s, the app stops for it | — |
 
 NGTable also sorts, filters, sums and highlights changes while doing it.
+
+On the iPad, [`Demos/iPadBench.swiftpm`](Demos/iPadBench.swiftpm) shows the
+same live rows in NGTable, UITableView, UICollectionView and SwiftUI's Table
+and List, and scrolls each down and up as fast as a flick for eight seconds.
+In the simulator (a Release build, 100,000 rows, 1,000 changes a second):
+
+| Scrolling, values changing | NGTable | SwiftUI Table | SwiftUI List | UICollectionView | UITableView |
+| --- | --- | --- | --- | --- | --- |
+| Frames a second (the worst second) | 60 (60) | 53 (37) | 52 (40) | 38 (14) | 25 (3) |
+| Longest frame | 18 ms | 83 ms | 83 ms | 217 ms | 496 ms |
+
+With a million rows and 10,000 changes a second NGTable still gets 60
+frames (59 in the worst second). The simulator has the Mac's keyboard
+attached, and with a keyboard iPadOS's focus system slows UIKit's tables
+while they scroll; measure on your device too (the bench's launch arguments
+run the test by themselves).
 
 ## Features
 
@@ -75,6 +95,11 @@ NGTable also sorts, filters, sums and highlights changes while doing it.
 - Native feel: overlay scrollers, elastic scrolling, Liquid Glass summary bar
   on macOS 26, dark mode, accent colors, keyboard navigation, type select,
   copying to spreadsheets, VoiceOver.
+- **On the iPad**: momentum scrolling, taps that select and act like clicks,
+  editing in place, context menus on a long press, swipe actions, columns
+  resized and moved by a finger, filters and choices in popovers, drag and
+  drop, export to the share sheet, the pointer's hover, a hardware keyboard,
+  VoiceOver's data table, and the summary row above the home indicator.
 - Fast with a million rows and hundreds of thousands of changes a second:
   the GPU (Metal) draws the rows from a glyph atlas, with Core Text's
   typesetting; changing a value costs no rasterization, and frames are drawn
@@ -102,7 +127,8 @@ background for large tables) or leaves sorting to your app like
 > Tables of a few thousand rows don't need it: they sort in milliseconds
 > either way. See "Sorting a million rows" in the documentation.
 
-In SwiftUI, `NGDataTable` works like `Table`:
+In SwiftUI on the Mac, `NGDataTable` works like `Table` (on the iPad it
+comes next; until then wrap `NGTableView` in a `UIViewRepresentable`):
 
 ```swift
 NGDataTable(campaigns, selection: $selection) {
@@ -114,8 +140,8 @@ NGDataTable(campaigns, selection: $selection) {
 ## Requirements
 
 - macOS 14 or later (Liquid Glass on macOS 26 and later)
-- iPadOS 17 or later builds the core (values, formats, summaries, sorting,
-  grouping, the renderer) and NGTableICU; the table view for iPad is coming
+- iPadOS 17 or later (the table view in UIKit; it builds for the iPhone too, but
+  is made for the iPad's width)
 - Swift 6.2 or later (Xcode 26 or later)
 
 ## Installation
@@ -208,6 +234,22 @@ final class CampaignsViewController: NSViewController {
 }
 ```
 
+On the iPad the same data source makes the table; put it in a
+`UIViewController` (`view = table`, or as a subview pinned to the edges:
+it keeps its summary row above the home indicator by itself). What the Mac
+does with the mouse the iPad does by touch:
+
+| On the Mac | On the iPad |
+| --- | --- |
+| Click, Command- and Shift-click | Tap (Command and Shift with a hardware keyboard) |
+| Double click | Double tap (edits an editable cell) |
+| Right-click menu: `tableView(_:menuForRows:clickedRow:column:)` returns an `NSMenu` | Long press: the same method returns a `UIMenu` |
+| Trackpad swipe across a row | Finger swipe (where the table can't scroll further sideways) |
+| Dragging a column's edge or title | The same, by a finger |
+| Filter button, Option-Down Arrow | The header menu's Filter item, the filter button of a filtered column |
+| `pasteboardWriterForRow`, `validateDrop`, `acceptDrop` | `itemsForBeginning`, `dropSessionDidUpdate`, `performDrop` (like `UITableView`'s) |
+| `exportDocument(_:)`: a save panel | `exportDocument(_:)`: the share sheet |
+
 ## Rules that matter
 
 1. Call `reloadData()` **immediately** after changing the data, before
@@ -223,12 +265,14 @@ final class CampaignsViewController: NSViewController {
    weakly in `NGRowFilter.isIncluded`.
 5. Keep `tableView(_:valueFor:row:)` a **cheap lookup**, and return static
    color constants for row tints and markers.
-6. Don't put the table in an `NSScrollView`: it scrolls by itself.
+6. Don't put the table in an `NSScrollView` or a `UIScrollView`: it scrolls
+   by itself.
 
 ## Documentation
 
 The package has full DocC documentation: API reference for every public type
-and member, and articles:
+and member, and articles (written for the Mac; on the iPad the API is the
+same, and the table above maps the interactions):
 
 | Article | Covers |
 | --- | --- |
