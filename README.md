@@ -125,7 +125,7 @@ URL, and add the `NGTable` library to your app target. In a `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ngtable/NGTable", from: "1.1.0"),
+    .package(url: "https://github.com/ngtable/NGTable", from: "1.2.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["NGTable"]),

@@ -10,10 +10,10 @@ import Foundation
 
 /// NGTable's version and its marker in a binary, on every platform.
 enum NGTableRelease {
-    nonisolated static let version = "1.1.0"
+    nonisolated static let version = "1.2.0"
     /// NGTable and its version as a string an app's binary keeps (the name of
     /// the Metal renderer's command queue, seen in a GPU frame capture).
-    nonisolated static let binaryMarker = "NGTable 1.1.0 Metal renderer"
+    nonisolated static let binaryMarker = "NGTable 1.2.0 Metal renderer"
 }
 
 #if os(macOS)
