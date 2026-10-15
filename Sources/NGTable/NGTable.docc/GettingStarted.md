@@ -28,6 +28,11 @@ targets: [
 
 Then `import NGTable` where you use it.
 
+A minor version may add cases to the enums that describe values, formats,
+filters and summaries (``NGValueFormat``, ``NGColumnFilter``,
+``NGCellValue``, ``NGAggregate`` and the like): keep a `default` in a
+`switch` over them, and updates won't stop your code from compiling.
+
 > Note: Linked as the binary `NGTable.xcframework`, NGTable's enums may get
 > new cases in later versions, so a `switch` over one needs `@unknown default`
 > (an error in Swift 6 without it). ``NGColumnItem``, ``NGDataColumnItem``,
