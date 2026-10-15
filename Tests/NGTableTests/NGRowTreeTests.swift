@@ -537,8 +537,11 @@ struct NGRowTreeTests {
         var nextID = 0
         func newID() -> String { nextID += 1; return "n\(nextID)" }
         var gone: [String] = []
-        items.items = (0..<300).map { index in
-            Items.Item(id: "r\(index)", parent: index % 10 == 0 ? nil : "r\(index - index % 10)", spend: Double(index * 7_919 % 10_007) + 0.5)
+        // (Typed step by step: Xcode 26.6's compiler gave up on it in one expression.)
+        items.items = (0..<300).map { (index: Int) -> Items.Item in
+            let parent: String? = index % 10 == 0 ? nil : "r\(index - index % 10)"
+            let spend: Double = Double(index * 7_919 % 10_007) + 0.5
+            return Items.Item(id: "r\(index)", parent: parent, spend: spend)
         }
         let table = makeTable(items)
         defer { withExtendedLifetime(items) {} }
