@@ -76,7 +76,6 @@ extension NGTableView {
     /// flash; the table ignores the user right away.
     private static let dataUpdateFadeDelay: TimeInterval = 0.15
 
-    #if os(macOS)
     private func beginDataUpdate() {
         // What the user was doing acts on rows that are about to change.
         if isHeaderInteracting || columnDrag != nil {
@@ -109,17 +108,19 @@ extension NGTableView {
                 guard let self, self.dataUpdateGeneration == generation else { return }
                 self.isDataUpdateVeiled = true
                 overlay.startIndicator()
+                #if os(macOS)
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.2
                     overlay.animator().alphaValue = 1
                 }
+                #else
+                UIView.animate(withDuration: 0.2) { overlay.alpha = 1 }
+                #endif
             }
         }
         RunLoop.main.add(timer, forMode: .common)
     }
-    #endif
 
-    #if os(macOS)
     private func endDataUpdate() {
         let overlay = dataUpdateOverlay
         let generation = dataUpdateGeneration
@@ -127,6 +128,7 @@ extension NGTableView {
         // the empty state comes back.
         isDataUpdateVeiled = false
         refreshPointerAreasForDataUpdate()
+        #if os(macOS)
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = overlay.alphaValue > 0 ? 0.15 : 0
             overlay.animator().alphaValue = 0
@@ -137,28 +139,32 @@ extension NGTableView {
                 overlay.stopIndicator()
             }
         })
+        #else
+        UIView.animate(withDuration: overlay.alpha > 0 ? 0.15 : 0, animations: { overlay.alpha = 0 }, completion: { [weak self] _ in
+            guard let self, self.dataUpdateGeneration == generation else { return }
+            overlay.isHidden = true
+            overlay.stopIndicator()
+        })
+        #endif
     }
-    #endif
 
-    #if os(macOS)
     /// The resize cursor and tool tips are off while updating.
     private func refreshPointerAreasForDataUpdate() {
         // Out of the way of hit testing as soon as the update ends, even while it fades.
         dataUpdateOverlay.blocksInput = isDataUpdateActive
+        #if os(macOS)
         window?.invalidateCursorRects(for: headerView)
         window?.invalidateCursorRects(for: dataUpdateOverlay)
         headerView.refreshToolTip()
+        #endif
     }
-    #endif
 
-    #if os(macOS)
     func layoutDataUpdateOverlay() {
         guard isShowingDataUpdate else { return }
         dataUpdateOverlay.frame = bounds
         dataUpdateOverlay.indicatorCenter = CGPoint(x: bounds.midX, y: layoutMetrics.headerHeight
             + max(0, bounds.height - layoutMetrics.headerHeight - layoutMetrics.summaryHeight) / 2)
     }
-    #endif
 }
 
 #if os(macOS)

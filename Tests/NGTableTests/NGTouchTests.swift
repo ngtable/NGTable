@@ -625,5 +625,27 @@ struct NGTouchTests {
         table.choose(NGChoice(ref: table.rowRef(ofRow: 1), columnID: "status", index: 2))
         #expect(status.statuses[1] == "Finished")
     }
+
+    // MARK: Updating data
+
+    @Test func theVeilCoversTheTableWhileDataUpdates() async throws {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        try await table.updatingData {
+            #expect(table.ignoresUserInput)
+            #expect(table.dataUpdateOverlay.superview === table)
+            #expect(table.dataUpdateOverlay.hitTest(CGPoint(x: 10, y: 100), with: nil) === table.dataUpdateOverlay)
+            // Taps meanwhile do nothing.
+            table.tapped(at: point(ofRow: 2, in: table))
+            #expect(table.selectedRowIndexes.isEmpty)
+            try await Task.sleep(for: .milliseconds(300))
+            #expect(table.dataUpdateOverlay.alpha > 0)
+        }
+        #expect(!table.ignoresUserInput)
+        #expect(table.dataUpdateOverlay.hitTest(CGPoint(x: 10, y: 100), with: nil) == nil)
+        table.tapped(at: point(ofRow: 2, in: table))
+        #expect(table.selectedRowIndexes == [2])
+    }
 }
 #endif
