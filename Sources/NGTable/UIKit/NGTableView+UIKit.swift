@@ -50,6 +50,7 @@ extension NGTableView {
         let doubleTap = UITapGestureRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.doubleTapped(_:)))
         doubleTap.numberOfTapsRequired = 2
         addGestureRecognizer(doubleTap)
+        addInteraction(UIContextMenuInteraction(delegate: delegate))
     }
 
     /// Over the rows (under the header and the summary row), as large as the
@@ -90,9 +91,11 @@ extension NGTableView {
     }
 }
 
-/// The scroll view's and the tap's delegate (an object: UIKit holds it).
+/// The scroll view's, the taps' and the context menus' delegate (an object: UIKit holds it).
 final class NGTouchScrollDelegate: NSObject, UIScrollViewDelegate {
     weak var table: NGTableView?
+    /// Where the open context menu was asked for (its preview is cut there).
+    var menuLocation: CGPoint?
 
     init(table: NGTableView) {
         self.table = table

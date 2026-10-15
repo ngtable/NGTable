@@ -814,8 +814,7 @@ extension NGTableView {
 
     @objc private func selectSummaryScope(_ sender: NSMenuItem) {
         guard NGSummaryScope.allCases.indices.contains(sender.tag) else { return }
-        summaryScope = NGSummaryScope.allCases[sender.tag]
-        delegate?.tableView(self, summaryScopeDidChange: summaryScope)
+        setSummaryScopeByUser(NGSummaryScope.allCases[sender.tag])
     }
     #endif
 }

@@ -297,6 +297,21 @@ public protocol NGTableViewDelegate: AnyObject {
     /// - Returns: The menu, or `nil` for the table's `menu` (like an
     ///   `NSTableView`'s, with `clickedRow` set), if it has one.
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu?
+    #else
+    /// The context menu for a long press (or a secondary click with a pointer)
+    /// in the rows. The table adds no items of its own: build the menu with
+    /// your app's actions.
+    ///
+    /// - Parameters:
+    ///   - tableView: The table that was pressed.
+    ///   - rows: The rows the menu acts on: the whole selection when the
+    ///     pressed row is selected, otherwise just the pressed row (which is
+    ///     outlined, while the selection stays as it is). Empty below the last row.
+    ///   - clickedRow: The row pressed, or `nil` below the last row. Also
+    ///     available as `tableView.clickedRow` while the actions run.
+    ///   - column: The column pressed.
+    /// - Returns: The menu, or `nil` for none.
+    func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu?
     #endif
     /// A tint for a row's background instead of the alternating stripes, e.g. a
     /// pale green for profitable campaigns. Use light, translucent colors (like
@@ -417,6 +432,8 @@ public extension NGTableViewDelegate {
     #if os(macOS)
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] { [] }
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu? { nil }
+    #else
+    func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu? { nil }
     #endif
     func tableView(_ tableView: NGTableView, backgroundColorForRow row: Int) -> NGColor? { nil }
     func tableView(_ tableView: NGTableView, markerColorForRow row: Int) -> NGColor? { nil }

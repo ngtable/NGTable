@@ -10,8 +10,6 @@ extension NGTableView {
     func typeSelectMatch(from start: Int, to end: Int, for prefix: String) -> Int { -1 }
 
     // Menus.
-    func rowsMenuDidClose() {}
-    func showMenuOutline(forRow row: Int) {}
     func showChoiceMenu(row: Int, column: NGTableColumn) -> Bool { false }
     func showColumnFilter(for column: NGTableColumn, relativeTo rect: CGRect, of view: NGPlatformView) {}
 

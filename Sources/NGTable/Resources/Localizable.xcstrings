@@ -122,6 +122,17 @@
         }
       }
     },
+    "Columns" : {
+      "comment" : "Header menu on the iPad: the columns to show.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Колонки"
+          }
+        }
+      }
+    },
     "CSV (Comma-Separated Values)" : {
       "comment" : "Export: the .csv format.",
       "localizations" : {
@@ -470,6 +481,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Только выделенные строки"
+          }
+        }
+      }
+    },
+    "Sort Ascending" : {
+      "comment" : "Header menu on the iPad: sorts by the column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По возрастанию"
+          }
+        }
+      }
+    },
+    "Sort Descending" : {
+      "comment" : "Header menu on the iPad: sorts by the column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По убыванию"
           }
         }
       }

@@ -67,7 +67,7 @@ final class Campaigns: NGTableViewDataSource {
     }
 }
 
-final class CampaignsViewController: UIViewController {
+final class CampaignsViewController: UIViewController, NGTableViewDelegate {
     private let table = NGTableView(frame: .zero)
     private let frameMeter = FrameMeterLabel()
     private let campaigns = Campaigns(count: 20_000)
@@ -88,6 +88,9 @@ final class CampaignsViewController: UIViewController {
             .column(NGTableColumn("created", title: "Created", width: 130, format: .date(includesTime: false), summary: .aggregate(.min))),
         ]
         table.dataSource = campaigns
+        table.delegate = self
+        table.allowsMultipleSelection = true
+        table.allowsUserGrouping = true
         table.sortsRows = true
         table.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(table)
@@ -114,6 +117,21 @@ final class CampaignsViewController: UIViewController {
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
+    }
+
+    /// A long press on rows: what an app would offer for them.
+    func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu? {
+        guard !rows.isEmpty else { return nil }
+        let title = rows.count == 1 ? campaigns.campaigns[rows.first!].name : "\(rows.count) campaigns"
+        let pause = UIAction(title: "Pause", image: UIImage(systemName: "pause.circle")) { [weak self] _ in
+            guard let self else { return }
+            for row in rows { self.campaigns.campaigns[row].status = "Paused" }
+            self.table.reloadData(forRowIndexes: rows, columnIndexes: [2])
+        }
+        let copy = UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+            UIPasteboard.general.string = rows.compactMap { self?.campaigns.campaigns[$0].name }.joined(separator: "\n")
+        }
+        return UIMenu(title: title, children: [pause, copy])
     }
 
     private func tick() {

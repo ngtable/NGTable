@@ -238,5 +238,70 @@ struct NGTouchTests {
         table.abortEditing()
         #expect(spend.values[5] == 10)
     }
+
+    // MARK: Context menus
+
+    /// The titles of a menu's actions, its inline sections flattened.
+    private func titles(_ menu: UIMenu?) -> [String] {
+        (menu?.children ?? []).flatMap { element -> [String] in
+            if let submenu = element as? UIMenu, submenu.options.contains(.displayInline) { return titles(submenu) }
+            return [element is UIMenu ? (element as! UIMenu).title + "…" : (element as? UIAction)?.title ?? "?"]
+        }
+    }
+
+    @Test func aRowsMenuComesFromTheDelegate() {
+        final class Menus: NGTableViewDelegate {
+            var asked: [(rows: IndexSet, clicked: Int?, column: String?)] = []
+            func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu? {
+                asked.append((rows, clickedRow, column?.id))
+                return UIMenu(children: [UIAction(title: "Archive") { _ in }])
+            }
+        }
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        let menus = Menus()
+        defer { withExtendedLifetime((window, menus)) {} }
+        table.delegate = menus
+        table.allowsMultipleSelection = true
+        table.selectRowIndexes([1, 2], byExtendingSelection: false)
+        // In the selection: for the selection.
+        #expect(titles(table.contextMenu(at: point(ofRow: 2, in: table))) == ["Archive"])
+        #expect(menus.asked.last?.rows == [1, 2])
+        #expect(menus.asked.last?.clicked == 2)
+        #expect(menus.asked.last?.column == "name")
+        #expect(table.menuOutline == nil)
+        // Another row: only it, outlined, the selection kept.
+        _ = table.contextMenu(at: point(ofRow: 5, in: table))
+        #expect(menus.asked.last?.rows == [5])
+        #expect(table.clickedRow == 5)
+        #expect(table.menuOutlineRow == 5)
+        #expect(table.selectedRowIndexes == [1, 2])
+        table.rowsMenuDidClose()
+        #expect(table.menuOutline == nil)
+    }
+
+    @Test func theHeaderAndSummaryHaveTheTablesMenus() {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        table.allowsColumnHiding = true
+        let valueTitle = CGPoint(x: 150 + 50, y: table.layoutMetrics.headerHeight / 2)
+        let header = titles(table.headerMenu(at: valueTitle))
+        #expect(header.prefix(2) == ["Sort Ascending", "Sort Descending"])
+        #expect(header.last == "Columns…")
+        let columns = table.headerMenu(at: valueTitle)?.children.last as? UIMenu
+        #expect(columns?.children.compactMap { ($0 as? UIAction)?.title } == ["Name", "Value"])
+        #expect(columns?.children.compactMap { ($0 as? UIAction)?.state } == [.on, .on])
+        table.sort(by: table.tableColumns[1], ascending: false)
+        #expect(table.sortDescriptors.map(\.key) == ["value"])
+        #expect(table.sortDescriptors.map(\.ascending) == [false])
+        // The header menu shows the sort.
+        let sorted = table.headerMenu(at: valueTitle)?.children.first as? UIMenu
+        #expect(sorted?.children.compactMap { ($0 as? UIAction)?.state } == [.off, .on])
+        // The summary row: which rows it sums.
+        let summary = table.contextMenu(at: CGPoint(x: 60, y: table.bounds.height - 5))
+        #expect(summary?.children.count == NGSummaryScope.allCases.count)
+        #expect((summary?.children.first as? UIAction)?.state == .on)
+    }
 }
 #endif
