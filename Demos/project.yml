@@ -1,6 +1,9 @@
-# NGTable's apps: the iPad demo and bench, and the Mac bench (live data, a
-# campaigns table, a network feed, Binance), as an Xcode project that uses
-# this package. Made with XcodeGen (`xcodegen` in this folder) from this file.
+# NGTable's apps: the iPad demo and bench, the Mac bench (live data, a
+# campaigns table, a network feed, Binance), the engine comparison and the log
+# viewer, as an Xcode project that uses this package; NGTable.xcworkspace at
+# the repository's root opens it with the package. Made with XcodeGen
+# (`xcodegen` in this folder) from this file. The comparison and the log
+# viewer are packages too (`swift run`), with the same sources.
 name: NGTableDemos
 options:
   deploymentTarget:
@@ -76,6 +79,34 @@ targets:
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/NGTable Mac Bench.app/Contents/MacOS/NGTable Mac Bench"
         BUNDLE_LOADER: "$(TEST_HOST)"
+  NGTable Comparison:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources: [../Comparison/Sources/NGTableComparison]
+    dependencies:
+      - package: NGTable
+        product: NGTable
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ngtable.comparison
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        TARGETED_DEVICE_FAMILY: ""
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  NGTable Log Viewer:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources: [LogViewer/Sources/NGTableLogViewer]
+    dependencies:
+      - package: NGTable
+        product: NGTable
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ngtable.log-viewer
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        TARGETED_DEVICE_FAMILY: ""
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
 schemes:
   NGTable iPad:
     build:
@@ -101,3 +132,15 @@ schemes:
     test:
       config: Debug
       targets: [NGTable Mac Bench Tests]
+  NGTable Comparison:
+    build:
+      targets:
+        NGTable Comparison: all
+    run:
+      config: Release
+  NGTable Log Viewer:
+    build:
+      targets:
+        NGTable Log Viewer: all
+    run:
+      config: Release

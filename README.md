@@ -28,9 +28,8 @@ own controls do.
 20,000 live trades sorted by amount, 45,000 changes a second, in each table in
 turn (a Release build on Apple silicon, 120 Hz screen). NGTable sorts the rows
 itself and moves only the changed ones; NSTableView and SwiftUI's Table leave
-sorting to the app, which sorts again after each change. The app is in
-[`Comparison`](Comparison): `swift run -c release --package-path Comparison
-NGTableComparison`.
+sorting to the app, which sorts again after each change. The app is the
+`NGTable Comparison` scheme of `NGTable.xcworkspace` (see Demos and benches).
 
 More scenarios, measured the same way. Main thread: the share of time it was
 busy (less is more room for your app). Frames: screen updates a second.
@@ -295,45 +294,29 @@ To read it in Xcode, open the package (or your app that uses it) and choose
 Symbol documentation also shows in Quick Help (Option-click a symbol). The
 sources are in `Sources/NGTable/NGTable.docc`.
 
-## Demo
+## Demos and benches
 
-The `NGTableDemo` scheme is a small app with ad campaign data: frozen and
-grouped columns, marks, a ROI formula, search, a filter, summary scopes, row
-tints, a context menu and 0 to 100,000 rows. Choose the scheme and run it
-(Command-R). Its source, `Sources/NGTableDemo/NGTableDemo.swift`, is a working
-example of most of the API; row grouping and targeted updates aren't in the
-demo yet (the articles show them).
+Open **`NGTable.xcworkspace`**: the package (the libraries, their tests and
+`NGTableDemo`) and every app below, in one window. Choose a scheme and run
+it (Command-R); the benches' schemes run Release builds, as measuring needs.
 
-The log viewer in `Demos/LogViewer` shows the Mac's own logs as they come,
-or the last hour of them (about a million entries): times with
-milliseconds, levels as tags, wrapped messages, search, column filters,
-grouping and export, and the frames a second it gets meanwhile:
+| Scheme | What it is |
+| --- | --- |
+| `NGTableDemo` | A small Mac app with ad campaign data: frozen and grouped columns, marks, a ROI formula, search, a filter, summary scopes, row tints, a context menu and 0 to 100,000 rows. Its source, `Sources/NGTableDemo/NGTableDemo.swift`, is a working example of most of the API. |
+| `NGTable Comparison` | The same live trades in NGTable, NSTableView and SwiftUI's Table in turn (the animation above). |
+| `NGTable Mac Bench` | The Mac's benches, a tab each: live data that changes by itself (updates, sorting, grouping), a real app's campaigns table with synthetic campaigns, a live feed over the network from an ngfeed server, and Binance's public market data; the feed and Binance can show NSTableView and SwiftUI's Table instead. Launch arguments open a tab and start it: `-BenchAutostart YES`, `-FeedAutostart trading`, `-BinanceAutostart tickers`. |
+| `NGTable Log Viewer` | The Mac's own logs as they come, or the last hour of them (about a million entries): wrapped messages, search, column filters, grouping, export, and the frames a second it gets meanwhile. |
+| `NGTable iPad` | The table on the iPad with live campaigns: editing, menus, swipe actions, filters, drag and drop, export to the share sheet, the frames a second. |
+| `NGTable iPad Bench` | NGTable, UITableView, UICollectionView and SwiftUI's Table and List on the same live rows (up to a million, up to 10,000 changes a second), with a scroll test; measure on a device too. Launch arguments run it by themselves: `-engine 0…4 -rows 0…2 -rate 0…3 -autoTest YES`. |
+
+The apps are in `Demos/NGTableDemos.xcodeproj` (made with XcodeGen from
+`Demos/project.yml`). The comparison and the log viewer also run from the
+command line:
 
 ```sh
-swift run -c release --package-path Demos/LogViewer
+swift run -c release --package-path Comparison NGTableComparison
 swift run -c release --package-path Demos/LogViewer NGTableLogViewer --last 60
 ```
-
-On the iPad, the `NGTable iPad` app (`Demos/iPadTable`) is the table with
-live campaigns: editing, menus, swipe actions, filters, drag and drop,
-export to the share sheet and the frames a second. The `NGTable iPad Bench`
-app (`Demos/iPadBench`) compares NGTable with UITableView, UICollectionView
-and SwiftUI's Table and List on the same live rows (up to a million, up to
-10,000 changes a second) with a scroll test; measure on a device too. Both
-are in `Demos/NGTableDemos.xcodeproj`: open it, choose a scheme and an iPad
-(the bench's scheme runs a Release build), and run. To work on an app of
-your own and the demos in one window, add the project to your workspace
-next to your app's project (both then use the same NGTable package).
-`Demos/project.yml` makes the project again with XcodeGen.
-
-The `NGTable Mac Bench` app (`Demos/MacBench`, in the same project) has the
-Mac's benches, a tab each: live data that changes by itself (updates,
-sorting, grouping), a real app's campaigns table with synthetic campaigns,
-a live feed over the network from an ngfeed
-server, and Binance's public market data; the feed and Binance can show
-NSTableView and SwiftUI's Table instead, for comparing. Its scheme runs a
-Release build; launch arguments open a tab and start it (`-BenchAutostart
-YES`, `-FeedAutostart trading`, `-BinanceAutostart tickers`).
 
 ## Tests
 
@@ -354,15 +337,15 @@ and drag and drop).
 | `Sources/NGTable/UIKit` | The iPad's views and its touches, pointer, keys, context menus, popovers, VoiceOver and drag and drop |
 | `Sources/NGTable/Metal` | The GPU renderer: shaders, the glyph atlas, Core Text shaping |
 | `Sources/NGTable/NGTable.docc` | Documentation articles |
+| `NGTable.xcworkspace` | The package and the demos project, in one window |
 | `Sources/NGTableDemo` | The demo app |
 | `Sources/NGTableICU` | The optional NGTableICU library ([NGTableICU.md](NGTableICU.md)) |
 | `Vendor/CollationICU` | The ICU it is built with, made by `Scripts/vendor-icu.py` |
 | `Tests/NGTableTests` | Unit and view tests |
 | `Tests/NGTableICUTests` | NGTableICU's tests |
 | `XCFramework` | The binary frameworks' builds (`ICU`: NGTableICU's) |
-| `Comparison` | The app that compares NGTable with NSTableView and SwiftUI's Table (`Docs/comparison.gif`) |
-| `Demos/LogViewer` | A log viewer of the Mac's logs |
-| `Demos/NGTableDemos.xcodeproj` | The apps that use the package: `Demos/iPadTable`, the table on the iPad; `Demos/iPadBench`, NGTable, UITableView, UICollectionView and SwiftUI compared on the iPad; `Demos/MacBench`, the Mac's benches (live data, a campaigns table, a network feed, Binance) |
+| `Comparison` | The engine comparison (`Docs/comparison.gif`), a package of its own too |
+| `Demos` | The apps' project (`NGTableDemos.xcodeproj`, XcodeGen's `project.yml`) and their sources: `iPadTable`, `iPadBench`, `MacBench`, `LogViewer` |
 
 ## License
 
