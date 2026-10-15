@@ -19,6 +19,8 @@ extension NGTableView {
         }
         guard point.y < bounds.height - layoutMetrics.summaryHeight else { return }
         endEditing(committing: true)
+        // A hardware keyboard's keys come to the table from now on.
+        if !isFirstResponder { _ = becomeFirstResponder() }
         let location = convert(point, to: nil)
         var row = row(atWindowLocation: location)
         if let handle = treeDisclosureHit(atWindowLocation: location, displayRow: row) {

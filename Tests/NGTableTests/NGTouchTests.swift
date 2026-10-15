@@ -362,5 +362,66 @@ struct NGTouchTests {
         // "Row 199" is narrower than 150 points.
         #expect((table.width(ofColumnID: "name") ?? 150) < 150)
     }
+
+    // MARK: A hardware keyboard
+
+    @Test func arrowsAndCommandAMoveTheSelection() {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        table.allowsMultipleSelection = true
+        table.tapped(at: point(ofRow: 3, in: table))
+        #expect(table.isFirstResponder)
+        #expect(table.handleKey(.keyboardDownArrow))
+        #expect(table.selectedRowIndexes == [4])
+        table.handleKey(.keyboardDownArrow, modifiers: .shift)
+        table.handleKey(.keyboardDownArrow, modifiers: .shift)
+        #expect(table.selectedRowIndexes == IndexSet(4...6))
+        table.handleKey(.keyboardUpArrow)
+        #expect(table.selectedRowIndexes == [5])
+        table.handleKey(.keyboardA, modifiers: .command, characters: "a")
+        #expect(table.selectedRowIndexes.count == 200)
+        // End scrolls to the last row.
+        table.handleKey(.keyboardEnd)
+        #expect(table.contentOffset.y == table.layoutMetrics.maxOffset.y)
+        // Keys the table doesn't use go on (a plain space outside type select).
+        #expect(!table.handleKey(.keyboardSpacebar, characters: " "))
+        #expect(!table.handleKey(.keyboardC, modifiers: .command, characters: "c"))
+    }
+
+    @Test func typingSelectsByTypeSelectAndEditsAFocusedCell() {
+        final class Names: NSObject, NGTableViewDataSource {
+            var names = ["Anna", "Boris", "Bella", "Clara", "Dmitry"]
+            func numberOfRows(in tableView: NGTableView) -> Int { names.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue { .text(names[row]) }
+            func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int) {
+                if case .text(let new) = value { names[row] = new }
+            }
+        }
+        let names = Names()
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 600, height: 800))
+        let table = NGTableView(frame: window.bounds)
+        defer { withExtendedLifetime((window, names)) {} }
+        table.columns = [.column(NGTableColumn("name", title: "Name", width: 150))]
+        table.dataSource = names
+        window.addSubview(table)
+        window.isHidden = false
+        table.layoutIfNeeded()
+        table.handleKey(.keyboardB, characters: "b")
+        table.handleKey(.keyboardE, characters: "e")
+        #expect(table.selectedRowIndexes == [2])
+        // Editable cells, navigated by cell: typing edits the focused one.
+        table.navigatesByCell = true
+        table.columns = [.column(NGTableColumn("name", title: "Name", width: 150, isEditable: true))]
+        table.tapped(at: point(ofRow: 0, in: table))
+        table.handleKey(.keyboardZ, characters: "Z")
+        #expect(table.isEditingCell)
+        #expect(table.editor?.field.text == "Z")
+        _ = table.editor.map { $0.field.delegate?.textFieldShouldReturn?($0.field) }
+        #expect(names.names[0] == "Z")
+        // Return moved down: Return again edits that cell.
+        #expect(table.handleKey(.keyboardReturnOrEnter))
+        #expect(table.editedRow == 1)
+    }
 }
 #endif

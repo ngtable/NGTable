@@ -222,8 +222,11 @@ extension NGTableView {
         window?.makeFirstResponder(self)
         #else
         let text = editor.field.text ?? ""
+        let hadKeyboard = editor.field.isFirstResponder
         editor.field.delegate = nil
         editor.clip.removeFromSuperview()
+        // The keys go back to the table (Return and Tab move on from there).
+        if hadKeyboard { _ = becomeFirstResponder() }
         #endif
         setNeedsMetalFrame()
         // Text left as it was is no edit (a date shown without its time

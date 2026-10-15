@@ -7,7 +7,6 @@ import UIKit
 
 extension NGTableView {
     // Keyboard and type select.
-    func typeSelectMatch(from start: Int, to end: Int, for prefix: String) -> Int { -1 }
 
     // Menus.
     func showChoiceMenu(row: Int, column: NGTableColumn) -> Bool { false }
