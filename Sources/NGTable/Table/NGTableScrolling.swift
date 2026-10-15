@@ -27,6 +27,9 @@ extension NGTableView {
         let didScrollHorizontally = offset.x != contentOffset.x
         let didScroll = offset != contentOffset
         contentOffset = offset
+        #if os(iOS)
+        followInTouchScrollView()
+        #endif
         applyScrollPosition(relayoutAll: forceLayout)
         // Told once the rows are laid out at the new position.
         if didScroll { postDidScroll() }

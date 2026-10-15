@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import NGTable
 // Required by the Xcode preview engine even though the preview itself is AppKit.
@@ -291,3 +292,4 @@ final class NGTableDemoViewController: NSViewController, NGTableViewDelegate {
 #Preview("NGTable") {
     NGTableDemoViewController()
 }
+#endif

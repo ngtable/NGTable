@@ -329,7 +329,7 @@ struct NGCellValueTests {
     /// The table tracks the user's clicks: a code-set sort is reversed, and
     /// only a click after the user reversed it removes it.
     @Test @MainActor func headerClicksOnASortSetInCode() {
-        let table = NGTableView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        let table = NGTableView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
         let profit = NGTableColumn("profit", title: "Profit", width: 100)
         table.columns = [.column(profit)]
         table.sortDescriptors = [NSSortDescriptor(key: "profit", ascending: false)]

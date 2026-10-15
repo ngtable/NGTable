@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import Testing
 @testable import NGTable
@@ -58,3 +59,4 @@ struct NGBundledICUCollationTests {
         #expect(other.lexicographicallyPrecedes(key))   // Numbers by value.
     }
 }
+#endif

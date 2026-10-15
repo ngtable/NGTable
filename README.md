@@ -280,8 +280,10 @@ Run the tests with the `NGTable-Package` scheme in Xcode (Command-U), or
 | Path | Contents |
 | --- | --- |
 | `Sources/NGTable/NGTable.swift` | Data source and delegate protocols |
-| `Sources/NGTable/Model` | Columns, values, formats, summaries, filters, layouts (no AppKit) |
-| `Sources/NGTable/AppKit` | `NGTableView` (the class in `NGTableView.swift`, its parts in `NGTable*.swift` extensions) and its header, row grouping, updates, menus and accessibility |
+| `Sources/NGTable/Model` | Columns, values, formats, summaries, filters, layouts (no AppKit or UIKit) |
+| `Sources/NGTable/Table` | `NGTableView` for both platforms (the class in `NGTableView.swift`, its parts in `NGTable*.swift` extensions): layout, scrolling, selection, sorting, row grouping, updates, filters, export |
+| `Sources/NGTable/AppKit` | The Mac's views and interactions: header, scrollers, menus, editing, keyboard, drag and drop, accessibility, printing |
+| `Sources/NGTable/UIKit` | The iPad's views, touch scrolling and taps |
 | `Sources/NGTable/Metal` | The GPU renderer: shaders, the glyph atlas, Core Text shaping |
 | `Sources/NGTable/NGTable.docc` | Documentation articles |
 | `Sources/NGTableDemo` | The demo app |

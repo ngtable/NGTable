@@ -598,5 +598,4 @@ struct NGConsistencyTests {
     }
 }
 
-extension SplitMix64: RandomNumberGenerator {}
 #endif

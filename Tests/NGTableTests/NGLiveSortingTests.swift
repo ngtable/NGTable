@@ -1073,9 +1073,10 @@ struct NGLiveSortingTests {
         #expect(shown(table) == records.expectedOrder(reversed, tableView: table))
     }
 }
+#endif
 
 /// A small deterministic random number generator.
-struct SplitMix64 {
+struct SplitMix64: RandomNumberGenerator {
     var state: UInt64
     init(seed: UInt64) { state = seed }
     mutating func next() -> UInt64 {
@@ -1086,4 +1087,3 @@ struct SplitMix64 {
         return z ^ (z >> 31)
     }
 }
-#endif

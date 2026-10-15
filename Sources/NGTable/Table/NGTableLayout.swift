@@ -18,6 +18,8 @@ extension NGTableView {
     struct LayoutMetrics {
         var headerHeight: CGFloat = 0
         var summaryHeight: CGFloat = 0
+        /// The window's bottom safe area over the table (the iPad's home indicator).
+        var bottomSafeInset: CGFloat = 0
         var leadingWidth: CGFloat = 0
         var trailingWidth: CGFloat = 0
         /// Space taken by a legacy (always visible) vertical scroller.
@@ -120,7 +122,10 @@ extension NGTableView {
     func computeLayoutMetrics() -> LayoutMetrics {
         var metrics = LayoutMetrics()
         metrics.headerHeight = headerHeight
-        metrics.summaryHeight = showsSummaryBar ? summaryRowHeight : 0
+        // On the iPad the summary strip reaches under the home indicator, its
+        // values above it; without a summary the rows scroll that far.
+        metrics.bottomSafeInset = bottomSafeInset
+        metrics.summaryHeight = showsSummaryBar ? summaryRowHeight + metrics.bottomSafeInset : 0
         metrics.leadingWidth = CGFloat(geometry.leading.width)
         metrics.trailingWidth = CGFloat(geometry.trailing.width)
         metrics.bodyHeight = max(0, bounds.height - metrics.headerHeight)
@@ -154,6 +159,7 @@ extension NGTableView {
             metrics.centerWidth = max(0, metrics.trailingX - metrics.leadingWidth)
         }
         metrics.bottomInset = metrics.summaryHeight + metrics.horizontalScrollerReserve
+            + (showsSummaryBar ? 0 : metrics.bottomSafeInset)
         metrics.maxOffset = CGPoint(
             x: max(0, centerContentWidth - metrics.centerWidth),
             y: max(0, metrics.contentHeight + metrics.bottomInset - metrics.bodyHeight)
@@ -170,9 +176,13 @@ extension NGTableView {
         super.setFrameSize(newSize)
         needsLayout = true
     }
+
+    var bottomSafeInset: CGFloat { 0 }
     #else
     static var usesLegacyScrollers: Bool { false }
     static var legacyScrollerWidth: CGFloat { 0 }
+
+    var bottomSafeInset: CGFloat { safeAreaInsets.bottom }
     #endif
 
     /// The canvases' heights grow and shrink in steps of this many points.
@@ -240,6 +250,9 @@ extension NGTableView {
 
         summaryBar.isHidden = !showsSummaryBar
         summaryBar.frame = CGRect(x: 0, y: bounds.height - metrics.summaryHeight, width: bounds.width, height: metrics.summaryHeight)
+        #if os(iOS)
+        summaryBar.valuesHeight = metrics.summaryHeight - metrics.bottomSafeInset
+        #endif
         layoutSummaryProgress()
         layoutDataUpdateOverlay()
 
