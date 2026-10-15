@@ -84,12 +84,12 @@ private extension NSMenu {
     }
 }
 #else
-/// The demo is a Mac app (the iPad's is Demos/iPadDemos.xcodeproj); on iOS the
+/// The demo is a Mac app (the iPad's is Demos/NGTableDemos.xcodeproj); on iOS the
 /// package's tests build it too.
 @main
 enum NGTableDemoApp {
     static func main() {
-        print("NGTableDemo runs on the Mac; see Demos/iPadDemos.xcodeproj for the iPad.")
+        print("NGTableDemo runs on the Mac; see Demos/NGTableDemos.xcodeproj for the iPad.")
     }
 }
 #endif

@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "16B03D354050A7BAF3CCE75E"
-               BuildableName = "NGTable iPad.app"
-               BlueprintName = "NGTable iPad"
-               ReferencedContainer = "container:iPadDemos.xcodeproj">
+               BlueprintIdentifier = "C632C4E2138153A30FB1073E"
+               BuildableName = "NGTable iPad Bench.app"
+               BlueprintName = "NGTable iPad Bench"
+               ReferencedContainer = "container:NGTableDemos.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,17 +32,17 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "16B03D354050A7BAF3CCE75E"
-            BuildableName = "NGTable iPad.app"
-            BlueprintName = "NGTable iPad"
-            ReferencedContainer = "container:iPadDemos.xcodeproj">
+            BlueprintIdentifier = "C632C4E2138153A30FB1073E"
+            BuildableName = "NGTable iPad Bench.app"
+            BlueprintName = "NGTable iPad Bench"
+            ReferencedContainer = "container:NGTableDemos.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Release"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -55,10 +55,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "16B03D354050A7BAF3CCE75E"
-            BuildableName = "NGTable iPad.app"
-            BlueprintName = "NGTable iPad"
-            ReferencedContainer = "container:iPadDemos.xcodeproj">
+            BlueprintIdentifier = "C632C4E2138153A30FB1073E"
+            BuildableName = "NGTable iPad Bench.app"
+            BlueprintName = "NGTable iPad Bench"
+            ReferencedContainer = "container:NGTableDemos.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -74,10 +74,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "16B03D354050A7BAF3CCE75E"
-            BuildableName = "NGTable iPad.app"
-            BlueprintName = "NGTable iPad"
-            ReferencedContainer = "container:iPadDemos.xcodeproj">
+            BlueprintIdentifier = "C632C4E2138153A30FB1073E"
+            BuildableName = "NGTable iPad Bench.app"
+            BlueprintName = "NGTable iPad Bench"
+            ReferencedContainer = "container:NGTableDemos.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

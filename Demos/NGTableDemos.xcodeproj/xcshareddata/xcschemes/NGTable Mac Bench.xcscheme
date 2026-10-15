@@ -15,10 +15,24 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0270B2F1B743CA506ED835E7"
-               BuildableName = "NGTable iPad Bench.app"
-               BlueprintName = "NGTable iPad Bench"
-               ReferencedContainer = "container:iPadDemos.xcodeproj">
+               BlueprintIdentifier = "98B6DE0560FB2323A42AB020"
+               BuildableName = "NGTable Mac Bench.app"
+               BlueprintName = "NGTable Mac Bench"
+               ReferencedContainer = "container:NGTableDemos.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9506FAF5752DDEB81F320743"
+               BuildableName = "NGTable Mac Bench Tests.xctest"
+               BlueprintName = "NGTable Mac Bench Tests"
+               ReferencedContainer = "container:NGTableDemos.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,14 +46,27 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0270B2F1B743CA506ED835E7"
-            BuildableName = "NGTable iPad Bench.app"
-            BlueprintName = "NGTable iPad Bench"
-            ReferencedContainer = "container:iPadDemos.xcodeproj">
+            BlueprintIdentifier = "98B6DE0560FB2323A42AB020"
+            BuildableName = "NGTable Mac Bench.app"
+            BlueprintName = "NGTable Mac Bench"
+            ReferencedContainer = "container:NGTableDemos.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9506FAF5752DDEB81F320743"
+               BuildableName = "NGTable Mac Bench Tests.xctest"
+               BlueprintName = "NGTable Mac Bench Tests"
+               ReferencedContainer = "container:NGTableDemos.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Release"
@@ -55,10 +82,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0270B2F1B743CA506ED835E7"
-            BuildableName = "NGTable iPad Bench.app"
-            BlueprintName = "NGTable iPad Bench"
-            ReferencedContainer = "container:iPadDemos.xcodeproj">
+            BlueprintIdentifier = "98B6DE0560FB2323A42AB020"
+            BuildableName = "NGTable Mac Bench.app"
+            BlueprintName = "NGTable Mac Bench"
+            ReferencedContainer = "container:NGTableDemos.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -74,10 +101,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0270B2F1B743CA506ED835E7"
-            BuildableName = "NGTable iPad Bench.app"
-            BlueprintName = "NGTable iPad Bench"
-            ReferencedContainer = "container:iPadDemos.xcodeproj">
+            BlueprintIdentifier = "98B6DE0560FB2323A42AB020"
+            BuildableName = "NGTable Mac Bench.app"
+            BlueprintName = "NGTable Mac Bench"
+            ReferencedContainer = "container:NGTableDemos.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

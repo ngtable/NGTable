@@ -320,11 +320,20 @@ export to the share sheet and the frames a second. The `NGTable iPad Bench`
 app (`Demos/iPadBench`) compares NGTable with UITableView, UICollectionView
 and SwiftUI's Table and List on the same live rows (up to a million, up to
 10,000 changes a second) with a scroll test; measure on a device too. Both
-are in `Demos/iPadDemos.xcodeproj`: open it, choose a scheme and an iPad
+are in `Demos/NGTableDemos.xcodeproj`: open it, choose a scheme and an iPad
 (the bench's scheme runs a Release build), and run. To work on an app of
 your own and the demos in one window, add the project to your workspace
 next to your app's project (both then use the same NGTable package).
 `Demos/project.yml` makes the project again with XcodeGen.
+
+The `NGTable Mac Bench` app (`Demos/MacBench`, in the same project) has the
+Mac's benches, a tab each: live data that changes by itself (updates,
+sorting, grouping), a real app's campaigns table with synthetic campaigns,
+a live feed over the network from an ngfeed
+server, and Binance's public market data; the feed and Binance can show
+NSTableView and SwiftUI's Table instead, for comparing. Its scheme runs a
+Release build; launch arguments open a tab and start it (`-BenchAutostart
+YES`, `-FeedAutostart trading`, `-BinanceAutostart tickers`).
 
 ## Tests
 
@@ -353,7 +362,7 @@ and drag and drop).
 | `XCFramework` | The binary frameworks' builds (`ICU`: NGTableICU's) |
 | `Comparison` | The app that compares NGTable with NSTableView and SwiftUI's Table (`Docs/comparison.gif`) |
 | `Demos/LogViewer` | A log viewer of the Mac's logs |
-| `Demos/iPadDemos.xcodeproj` | The iPad apps: `Demos/iPadTable`, the table on the iPad, and `Demos/iPadBench`, NGTable, UITableView, UICollectionView and SwiftUI compared |
+| `Demos/NGTableDemos.xcodeproj` | The apps that use the package: `Demos/iPadTable`, the table on the iPad; `Demos/iPadBench`, NGTable, UITableView, UICollectionView and SwiftUI compared on the iPad; `Demos/MacBench`, the Mac's benches (live data, a campaigns table, a network feed, Binance) |
 
 ## License
 

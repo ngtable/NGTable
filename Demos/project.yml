@@ -1,9 +1,11 @@
-# The iPad apps: the demo and the bench, as an Xcode project that uses this
-# package. Made with XcodeGen (`xcodegen` in this folder) from this file.
-name: iPadDemos
+# NGTable's apps: the iPad demo and bench, and the Mac bench (live data, a
+# campaigns table, a network feed, Binance), as an Xcode project that uses
+# this package. Made with XcodeGen (`xcodegen` in this folder) from this file.
+name: NGTableDemos
 options:
   deploymentTarget:
     iOS: "17.0"
+    macOS: "15.0"
   createIntermediateGroups: true
 packages:
   NGTable:
@@ -43,6 +45,37 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ngtable.ipad-bench
         INFOPLIST_KEY_CFBundleDisplayName: Table Bench
+  NGTable Mac Bench:
+    type: application
+    platform: macOS
+    sources: [MacBench]
+    dependencies:
+      - package: NGTable
+        product: NGTable
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ngtable.mac-bench
+        INFOPLIST_KEY_CFBundleDisplayName: NGTable Mac Bench
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        TARGETED_DEVICE_FAMILY: ""
+        # Like the app the benches came from: main actor by default.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+  NGTable Mac Bench Tests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [MacBenchTests]
+    dependencies:
+      - target: NGTable Mac Bench
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: ""
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/NGTable Mac Bench.app/Contents/MacOS/NGTable Mac Bench"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 schemes:
   NGTable iPad:
     build:
@@ -57,3 +90,14 @@ schemes:
     run:
       # Frames are compared in an optimized build.
       config: Release
+  NGTable Mac Bench:
+    build:
+      targets:
+        NGTable Mac Bench: all
+        NGTable Mac Bench Tests: [test]
+    run:
+      # Frames and the main thread's load are compared in an optimized build.
+      config: Release
+    test:
+      config: Debug
+      targets: [NGTable Mac Bench Tests]
