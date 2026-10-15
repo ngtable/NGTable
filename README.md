@@ -46,7 +46,7 @@ busy (less is more room for your app). Frames: screen updates a second.
 
 NGTable also sorts, filters, sums and highlights changes while doing it.
 
-On the iPad, [`Demos/iPadBench.swiftpm`](Demos/iPadBench.swiftpm) shows the
+On the iPad, the bench in [`Demos/iPadBench`](Demos/iPadBench) shows the
 same live rows in NGTable, UITableView, UICollectionView and SwiftUI's Table
 and List, and scrolls each down and up as fast as a flick for eight seconds.
 In the simulator (a Release build, 100,000 rows, 1,000 changes a second):
@@ -314,12 +314,17 @@ swift run -c release --package-path Demos/LogViewer
 swift run -c release --package-path Demos/LogViewer NGTableLogViewer --last 60
 ```
 
-On the iPad, `Demos/iPadTable.swiftpm` is the table with live campaigns:
-editing, menus, swipe actions, filters, drag and drop, export to the share
-sheet and the frames a second. `Demos/iPadBench.swiftpm` compares NGTable
-with UITableView, UICollectionView and SwiftUI's Table and List on the same
-live rows (up to a million, up to 10,000 changes a second) with a scroll
-test; measure on a device, in a Release build. Open either folder in Xcode.
+On the iPad, the `NGTable iPad` app (`Demos/iPadTable`) is the table with
+live campaigns: editing, menus, swipe actions, filters, drag and drop,
+export to the share sheet and the frames a second. The `NGTable iPad Bench`
+app (`Demos/iPadBench`) compares NGTable with UITableView, UICollectionView
+and SwiftUI's Table and List on the same live rows (up to a million, up to
+10,000 changes a second) with a scroll test; measure on a device too. Both
+are in `Demos/iPadDemos.xcodeproj`: open it, choose a scheme and an iPad
+(the bench's scheme runs a Release build), and run. To work on an app of
+your own and the demos in one window, add the project to your workspace
+next to your app's project (both then use the same NGTable package).
+`Demos/project.yml` makes the project again with XcodeGen.
 
 ## Tests
 
@@ -348,8 +353,7 @@ and drag and drop).
 | `XCFramework` | The binary frameworks' builds (`ICU`: NGTableICU's) |
 | `Comparison` | The app that compares NGTable with NSTableView and SwiftUI's Table (`Docs/comparison.gif`) |
 | `Demos/LogViewer` | A log viewer of the Mac's logs |
-| `Demos/iPadTable.swiftpm` | The table on the iPad |
-| `Demos/iPadBench.swiftpm` | NGTable, UITableView, UICollectionView and SwiftUI compared on the iPad |
+| `Demos/iPadDemos.xcodeproj` | The iPad apps: `Demos/iPadTable`, the table on the iPad, and `Demos/iPadBench`, NGTable, UITableView, UICollectionView and SwiftUI compared |
 
 ## License
 
