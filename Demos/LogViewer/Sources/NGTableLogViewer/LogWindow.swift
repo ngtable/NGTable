@@ -2,9 +2,10 @@ import AppKit
 import NGTable
 
 // The window: a toolbar (live or the last hour, pause, search), the table of
-// entries and a status line (entries, shown, a second). The table sorts by
-// time and follows the newest entries while scrolled to the end; holding the
-// pointer over the rows holds them still (`pausesLiveSortUnderPointer`).
+// entries and a status line (entries, shown, a second, and the frames a
+// second the window gets and how busy the main thread is). Entries come in
+// the order they were logged and aren't sorted; the table follows the newest
+// while scrolled to the end.
 
 final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate, NSSearchFieldDelegate {
     let table = NGTableView()
@@ -52,9 +53,13 @@ final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbar
             .column(NGTableColumn("category", title: "Category", width: 110)),
             .column(NGTableColumn("message", title: "Message", width: 520, maxWidth: 4_000).wrappingText(maximumNumberOfLines: 4)),
         ]
+        // In the order logged: no sorting by a column.
+        table.columns = table.columns.map { item in
+            guard case .column(var column) = item else { return item }
+            column.isSortable = false
+            return .column(column)
+        }
         table.dataSource = entries
-        table.sortsRows = true
-        table.sortDescriptors = [NSSortDescriptor(key: "time", ascending: true)]
         table.allowsColumnFilters = true
         table.allowsUserGrouping = true
         table.allowsMultipleSelection = true
@@ -87,6 +92,7 @@ final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbar
             content.addSubview(view)
         }
         window.contentView = content
+        meter.start(on: table)
         NSLayoutConstraint.activate([
             table.topAnchor.constraint(equalTo: content.safeAreaLayoutGuide.topAnchor),
             table.leadingAnchor.constraint(equalTo: content.leadingAnchor),
@@ -171,6 +177,8 @@ final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbar
         return last.isEmpty || last.minY < table.visibleRect.maxY
     }
 
+    private let meter = FrameMeter()
+
     private func showStatus() {
         let now = CACurrentMediaTime()
         arrivals.removeAll { now - $0.time > 1 }
@@ -179,7 +187,9 @@ final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbar
         var text = "\(entries.count.formatted()) entries"
         if shown != entries.count { text += ", \(shown.formatted()) shown" }
         if sourceControl.selectedSegment == 0 { text += isPaused ? " — paused" : " — \(rate.formatted()) a second" }
-        if table.isSortingRows || table.isSearchingRows { text += " — working…" }
+        if table.isSearchingRows { text += " — searching…" }
+        let (frames, busy) = meter.lastSecond()
+        text += String(format: "    %d fps, main thread %.0f%% busy", frames, busy * 100)
         status.stringValue = text
     }
 
