@@ -14,23 +14,9 @@ extension NGTableView {
         // search isn't the table's either: both go on to the next responder,
         // e.g. the app's Escape to cancel loading, or Quick Look.
         // Space toggles a focused check box.
-        if !ignoresUserInput, navigatesByCell, event.charactersIgnoringModifiers == " ",
-           event.modifierFlags.isDisjoint(with: [.command, .control, .option]), let cell = focusedCell,
-           let column = tableColumns.first(where: { $0.id == cell.columnID }), isCheckBox(row: cell.row, column: column),
-           displayRow(forSourceRow: cell.row) != nil {   // Not one the filter or a collapsed group hides.
-            toggleCheckBox(row: cell.row, columnID: cell.columnID)
-            return
-        }
-        // A number key sets a focused editable rating.
-        if !ignoresUserInput, navigatesByCell, event.modifierFlags.isDisjoint(with: [.command, .control, .option]),
-           let cell = focusedCell, displayRow(forSourceRow: cell.row) != nil,
-           let digit = event.charactersIgnoringModifiers.flatMap({ Int($0) }), setRating(digit, row: cell.row, columnID: cell.columnID) {
-            return
-        }
-        // Space presses a focused link.
-        if !ignoresUserInput, navigatesByCell, event.charactersIgnoringModifiers == " ",
-           event.modifierFlags.isDisjoint(with: [.command, .control, .option]), let cell = focusedCell,
-           displayRow(forSourceRow: cell.row) != nil, activateControl(row: cell.row, columnID: cell.columnID) {
+        // A number key sets a focused editable rating; Space presses a focused link.
+        if event.modifierFlags.isDisjoint(with: [.command, .control, .option]),
+           let key = event.charactersIgnoringModifiers, actOnFocusedCell(key: key) {
             return
         }
         // Option-Down Arrow opens the focused cell's column filter, like a spreadsheet's.
@@ -73,23 +59,16 @@ extension NGTableView {
     private func startsWithSpaceOutsideTypeSelect(_ event: NSEvent) -> Bool {
         guard event.charactersIgnoringModifiers == " ",
               event.modifierFlags.isDisjoint(with: [.command, .control, .option]) else { return false }
-        let isSearching = !typeSelectBuffer.isEmpty && ProcessInfo.processInfo.systemUptime - lastTypeSelectTime <= Self.typeSelectPause
-        return !isSearching
+        return !isTypeSelecting
     }
 
-    /// Typing within this pause continues a type select search.
-    private static let typeSelectPause: TimeInterval = 1
 
     public override func moveUp(_ sender: Any?) {
-        if moveThroughGroupHeaders(by: -1) { return }
-        if moveFocusedCell(columns: 0, rows: -1) { return }
-        moveSelection(by: -1, extending: false)
+        moveVertically(by: -1)
     }
 
     public override func moveDown(_ sender: Any?) {
-        if moveThroughGroupHeaders(by: 1) { return }
-        if moveFocusedCell(columns: 0, rows: 1) { return }
-        moveSelection(by: 1, extending: false)
+        moveVertically(by: 1)
     }
 
     /// A command the table doesn't handle goes on along the responder chain,
@@ -119,13 +98,11 @@ extension NGTableView {
     }
 
     public override func moveUpAndModifySelection(_ sender: Any?) {
-        if extendCellRange(columns: 0, rows: -1) { return }
-        moveSelection(by: -1, extending: true)
+        extendVertically(by: -1)
     }
 
     public override func moveDownAndModifySelection(_ sender: Any?) {
-        if extendCellRange(columns: 0, rows: 1) { return }
-        moveSelection(by: 1, extending: true)
+        extendVertically(by: 1)
     }
 
     // Shift with Left and Right: a range of cells, with navigation by cell.
@@ -155,12 +132,7 @@ extension NGTableView {
     }
 
     public override func selectAll(_ sender: Any?) {
-        guard allowsMultipleSelection, numberOfRows > 0, !ignoresUserInput else { return }
-        // On the first and last rows, not on group headers.
-        let rows = 0..<numberOfRows
-        anchorRow = rows.first { !isGroupRow($0) } ?? 0
-        cursorRow = rows.last { !isGroupRow($0) } ?? numberOfRows - 1
-        setSelection(IndexSet(integersIn: 0..<numberOfRows), byUser: true)
+        selectAllRowsByUser()
     }
 
     public override func scrollPageUp(_ sender: Any?) {
@@ -203,36 +175,12 @@ extension NGTableView {
         isRightToLeft ? moveTowardStart() : moveTowardEnd()
     }
 
-    /// Toward the leading side: collapse, the previous column.
     private func moveTowardStart() {
-        if collapseKeyboardGroup(includingChildren: currentEventHasOption) { return }
-        if collapseOrGoToParent(includingChildren: currentEventHasOption) { return }
-        if moveFocusedCell(columns: -1, rows: 0) { return }
-        scrollToColumn(forward: false)
+        moveTowardStart(includingChildren: currentEventHasOption)
     }
 
-    /// Toward the trailing side: expand, the next column.
     private func moveTowardEnd() {
-        if expandKeyboardGroup(includingChildren: currentEventHasOption) { return }
-        if expandOrGoToChild(includingChildren: currentEventHasOption) { return }
-        if moveFocusedCell(columns: 1, rows: 0) { return }
-        scrollToColumn(forward: true)
-    }
-
-    /// Scrolls so that the previous or next scrolling column starts at the
-    /// leading edge of the scrolling area.
-    private func scrollToColumn(forward: Bool) {
-        // Scroll positions at which each scrolling column starts where the first
-        // one does unscrolled (after the edge margin, if the region has one).
-        let spans = geometry.center.columns.map { scrollSpan(of: $0).start }.sorted()
-        let base = spans.first ?? 0
-        let starts = spans.map { $0 - base }
-        let x = contentOffset.x
-        let target = forward
-            ? starts.first { $0 > x + 0.5 } ?? layoutMetrics.maxOffset.x
-            : starts.last { $0 < x - 0.5 } ?? 0
-        setContentOffset(CGPoint(x: target, y: contentOffset.y))
-        revealScroller(.horizontal)
+        moveTowardEnd(includingChildren: currentEventHasOption)
     }
 
     // MARK: Deleting rows
@@ -250,108 +198,20 @@ extension NGTableView {
         deleteSelectedRows()
     }
 
-    /// The selected rows go to `rowDeletion`, if it's set; whether they did.
-    @discardableResult
-    func deleteSelectedRows() -> Bool {
-        guard let rowDeletion, !ignoresUserInput, !selectedRowIndexes.isEmpty else { return false }
-        rowDeletion(selectedRowIndexes)
-        return true
-    }
-
     // MARK: Type select
 
     public override func insertText(_ insertString: Any) {
         let typed = (insertString as? String) ?? (insertString as? NSAttributedString)?.string ?? ""
-        // Typing on a focused editable cell edits it, like a spreadsheet.
-        if navigatesByCell, let cell = focusedCell, !typed.trimmingCharacters(in: .whitespaces).isEmpty,
-           editCell(row: cell.row, columnID: cell.columnID, text: typed) {
-            return
-        }
-        guard allowsTypeSelect else { return }
-        let now = ProcessInfo.processInfo.systemUptime
-        // The delegate may let the key go on, like NSTableView's.
-        if let event = typeSelectEvent, let delegate {
-            let search = typeSelectBuffer.isEmpty || now - lastTypeSelectTime > Self.typeSelectPause ? nil : typeSelectBuffer
+        typeSelect(typed) { [typeSelectEvent] search in
+            // The delegate may let the key go on, like NSTableView's.
+            guard let event = typeSelectEvent, let delegate = self.delegate else { return true }
             guard delegate.tableView(self, shouldTypeSelectFor: event, withCurrentSearch: search) else {
                 super.keyDown(with: event)
-                return
+                return false
             }
+            return true
         }
-        // Typing continues a search within a short pause, otherwise starts over.
-        if now - lastTypeSelectTime > Self.typeSelectPause {
-            typeSelectBuffer = ""
-        }
-        let continuing = !typeSelectBuffer.isEmpty
-        lastTypeSelectTime = now
-        // A leading space is not a search (it would match nothing useful).
-        guard !(typeSelectBuffer.isEmpty && typed.trimmingCharacters(in: .whitespaces).isEmpty) else { return }
-        typeSelectBuffer += typed
-        guard let row = typeSelectMatch(for: typeSelectBuffer, continuing: continuing) else {
-            NSSound.beep()
-            return
-        }
-        anchorRow = row
-        cursorRow = row
-        setSelection([row], byUser: true)
-        scrollDisplayRowToVisible(row)
     }
 
-    /// The first row (display index) that matches `prefix`. Continuing to
-    /// type keeps the current row if it still matches; a new search starts
-    /// after it, so typing the same letter again moves on to the next match,
-    /// and wraps to the top. The delegate finds the match in each range
-    /// (`nextTypeSelectMatchFromRow`, by default `typeSelectMatch(from:to:for:)`).
-    func typeSelectMatch(for prefix: String, continuing: Bool = true) -> Int? {
-        guard numberOfRows > 0 else { return nil }
-        let start = (cursorRow.map { continuing ? $0 : $0 + 1 } ?? 0) % numberOfRows
-        let ranges = start > 0 ? [start..<numberOfRows, 0..<start] : [0..<numberOfRows]
-        for range in ranges {
-            let match = delegate?.tableView(self, nextTypeSelectMatchFromRow: range.lowerBound, toRow: range.upperBound, for: prefix)
-                ?? typeSelectMatch(from: range.lowerBound, to: range.upperBound, for: prefix)
-            if range.contains(match), !isGroupRow(match) { return match }
-        }
-        return nil
-    }
-
-    /// The table's own type select match: the first display index from
-    /// `start` up to `end` (wrapping past the last row if `end` is less)
-    /// whose value in the type select column starts with `prefix`, ignoring
-    /// case and diacritics, or -1.
-    func typeSelectMatch(from start: Int, to end: Int, for prefix: String) -> Int {
-        guard let dataSource, numberOfRows > 0, start >= 0, start < numberOfRows,
-              let column = typeSelectColumnID.flatMap({ columnLayout.columnsByID[$0] }) ?? columnLayout.allColumns.first
-        else { return -1 }
-        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .anchored]
-        let end = min(max(end, 0), numberOfRows)
-        let count = end > start ? end - start : numberOfRows - start + end
-        for offset in 0..<count {
-            let row = (start + offset) % numberOfRows
-            guard !isGroupRow(row) else { continue }
-            let source = sourceRow(row)
-            let text = delegate?.tableView(self, typeSelectStringFor: column, row: source)
-                ?? column.format.string(for: dataSource.tableView(self, valueFor: column, row: source), locale: formattingLocale)
-            if !text.isEmpty, text.range(of: prefix, options: options) != nil {
-                return row
-            }
-        }
-        return -1
-    }
-
-    private func moveSelection(by delta: Int, extending: Bool) {
-        guard numberOfRows > 0 else { return }
-        let current = cursorRow ?? (delta > 0 ? -1 : numberOfRows)
-        // Rows the delegate doesn't let the user select are skipped.
-        guard let row = selectableRow(from: current, by: delta) else { return }
-        if extending, allowsMultipleSelection {
-            let anchor = anchorRow ?? row
-            anchorRow = anchor
-            setSelection(IndexSet(integersIn: min(anchor, row)...max(anchor, row)), byUser: true)
-        } else {
-            anchorRow = row
-            setSelection([row], byUser: true)
-        }
-        cursorRow = row
-        scrollDisplayRowToVisible(row)
-    }
 }
 #endif

@@ -249,12 +249,16 @@ public final class NGTableView: NGPlatformView {
     var dropRetarget: (row: Int, operation: NSTableView.DropOperation)?
     /// Scrolls while a drag stays near the top or bottom of the rows.
     var dropScrollLink: CADisplayLink?
+    #if os(iOS)
+    /// The drop session over the rows, and where (window coordinates), while it scrolls them.
+    var dropScrollSession: (any UIDropSession)?
+    var dropScrollPoint: CGPoint?
+    #endif
     #if os(macOS)
     var dropScrollInfo: (any NSDraggingInfo)?
     var draggingSourceOperationMaskWithinApplication: NSDragOperation = .every
     var draggingSourceOperationMaskOutside: NSDragOperation = .copy
     #endif
-    #if os(macOS)
     /// The cell being edited (see NGCellEditing.swift).
     var editor: NGCellEditor?
     /// Ends editing on Return, Tab and Escape.
@@ -266,10 +270,6 @@ public final class NGTableView: NGPlatformView {
         return delegate
     }
     var cellEditorDelegate: NGCellEditorDelegate?
-    #else
-    /// (Editing cells comes later on the iPad.)
-    var editor: NGCellEditor? { nil }
-    #endif
 
     /// Whether a cell is being edited.
     public var isEditingCell: Bool { editor != nil }
@@ -2509,6 +2509,11 @@ public final class NGTableView: NGPlatformView {
     #if os(macOS)
     /// Takes a choice menu instead of popping it up (a modal loop), for tests.
     nonisolated(unsafe) static var choiceMenuShownForTesting: ((NSMenu) -> Void)?
+    #else
+    /// Takes the choices' sheet instead of presenting it, for tests.
+    nonisolated(unsafe) static var choicesShownForTesting: ((UIAlertController) -> Void)?
+    /// Takes a column's filter instead of presenting it, for tests.
+    nonisolated(unsafe) static var columnFilterShownForTesting: ((NGColumnFilterController) -> Void)?
     #endif
     /// Opens links' URLs instead of the workspace, for tests.
     nonisolated(unsafe) static var openURLForTesting: ((URL) -> Void)?
@@ -2587,6 +2592,10 @@ public final class NGTableView: NGPlatformView {
     var accessibilityHeaderCache: [String: NGAccessibilityColumnHeader] = [:]
     var accessibilityColumnCache: [String: NGAccessibilityColumn] = [:]
     private(set) lazy var accessibilitySummaryElement = NGAccessibilitySummary(table: self)
+    #if os(iOS)
+    /// The titles' elements on the iPad (NGTableAccessibilityUIKit.swift).
+    var accessibilityTitleCache: [String: NGTouchAccessibilityHeader] = [:]
+    #endif
 
     /// Values of a column for the summary, with only the values a filter includes.
     struct SummaryKey: Hashable, Sendable {

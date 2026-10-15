@@ -14,17 +14,9 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
     NSTableViewDataSource, NSTableViewDelegate {
     private weak var table: NGTableView?
     private let column: NGTableColumn
-    /// Value filters: every value the column offers, and those checked.
-    private var values: [(value: String, count: Int)] = []
-    private var checked: Set<String> = []
-    /// Whether the column has more values than the list shows.
-    private var isTruncated = false
-    /// Values a filter excluded that the list doesn't show: they stay excluded.
-    private var excludedElsewhere: Set<String> = []
-    /// A list that doesn't show every value either shows only the values
-    /// checked (`true`: opened over such a filter, or after everything was
-    /// unchecked) or hides the ones unchecked, so values not listed stay.
-    private var showsOnlyChecked = false
+    /// Value filters: the values offered and those checked (see NGFilterValueChoice.swift).
+    private var choice: NGFilterValueChoice?
+    private var values: [(value: String, count: Int)] { choice?.values ?? [] }
     /// The values matching the search, in the list.
     private var shownValues: [(value: String, count: Int)] = []
     private let allBox = NSButton(checkboxWithTitle: String(localized: "Select All", bundle: .module,
@@ -50,20 +42,7 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
     private let fromDay = NSDatePicker()
     private let toDay = NSDatePicker()
     private let daysRow = NSStackView()
-    private static let periods: [(period: NGDatePeriod?, title: String)] = [
-        (nil, String(localized: "Any Date", bundle: .module, comment: "Column filter: no date period.")),
-        (.today, String(localized: "Today", bundle: .module, comment: "Column filter: a date period.")),
-        (.yesterday, String(localized: "Yesterday", bundle: .module, comment: "Column filter: a date period.")),
-        (.thisWeek, String(localized: "This Week", bundle: .module, comment: "Column filter: a date period.")),
-        (.lastWeek, String(localized: "Last Week", bundle: .module, comment: "Column filter: a date period.")),
-        (.thisMonth, String(localized: "This Month", bundle: .module, comment: "Column filter: a date period.")),
-        (.lastMonth, String(localized: "Last Month", bundle: .module, comment: "Column filter: a date period.")),
-        (.thisYear, String(localized: "This Year", bundle: .module, comment: "Column filter: a date period.")),
-        (.lastYear, String(localized: "Last Year", bundle: .module, comment: "Column filter: a date period.")),
-        (.lastDays(7), String(localized: "Last 7 Days", bundle: .module, comment: "Column filter: a date period.")),
-        (.lastDays(30), String(localized: "Last 30 Days", bundle: .module, comment: "Column filter: a date period.")),
-        (.between(start: nil, end: nil), String(localized: "Between Two Days", bundle: .module, comment: "Column filter: dates from one day to another.")),
-    ]
+    private static var periods: [(period: NGDatePeriod?, title: String)] { NGFilterValueChoice.periods }
     private let numberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -164,8 +143,7 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
             return
         }
         func bound(_ field: NSTextField) -> Double? {
-            let text = field.stringValue.replacingOccurrences(of: "%", with: "").trimmingCharacters(in: .whitespaces)
-            return numberFormatter.number(from: text).map { $0.doubleValue / shownScale }
+            NGFilterValueChoice.bound(field.stringValue, format: column.format, formatter: numberFormatter)
         }
         // Only the field being typed in changes its bound (the other keeps its exact value).
         var (min, max): (Double?, Double?) = (bound(minField), bound(maxField))
@@ -221,9 +199,7 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
     /// From the first day's start to the end of the last.
     @objc private func daysChanged(_ sender: Any?) {
         let calendar = table?.calendar ?? .current
-        let first = calendar.startOfDay(for: min(fromDay.dateValue, toDay.dateValue))
-        let last = calendar.startOfDay(for: max(fromDay.dateValue, toDay.dateValue))
-        table?.setColumnFilter(.dates(.between(start: first, end: calendar.date(byAdding: .day, value: 1, to: last))), forColumnID: column.id)
+        table?.setColumnFilter(NGFilterValueChoice.days(from: fromDay.dateValue, to: toDay.dateValue, calendar: calendar), forColumnID: column.id)
     }
 
     func controlTextDidChange(_ notification: Notification) {
@@ -245,20 +221,7 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
     // MARK: Values
 
     private func makeValuesBody() -> NSView {
-        let offered = table?.filterValueList(forColumnID: column.id, limit: 1_000)
-        values = offered?.values ?? []
-        isTruncated = offered?.isTruncated ?? false
-        let listed = Set(values.map(\.value))
-        switch table?.columnFilters[column.id] {
-        case .values(let selected)?:
-            checked = selected
-            showsOnlyChecked = true
-        case .excluding(let excluded)?:
-            checked = listed.subtracting(excluded)
-            excludedElsewhere = excluded.subtracting(listed)
-        default:
-            checked = listed
-        }
+        choice = table.map { NGFilterValueChoice(table: $0, columnID: column.id) }
         searchField.placeholderString = String(localized: "Search", bundle: .module, comment: "Column filter: narrows the list of values.")
         searchField.delegate = self
         allBox.target = self
@@ -300,10 +263,7 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
 
     /// The values matching the search, with their checkboxes.
     private func showValues() {
-        let search = searchField.stringValue
-        shownValues = values.filter { value, _ in
-            search.isEmpty || value.range(of: search, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-        }
+        shownValues = choice?.shown(matching: searchField.stringValue) ?? []
         list.reloadData()
         updateAllBox()
     }
@@ -320,20 +280,21 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
         let (value, count) = shownValues[row]
         let noValue = String(localized: "No Value", bundle: .module, comment: "Group header for rows without a value in the grouping column.")
         button.title = "\(value.isEmpty ? noValue : value)  (\(count.formatted(.number.locale(table?.formattingLocale ?? .current))))"
-        button.state = checked.contains(value) ? .on : .off
+        button.state = choice?.checked.contains(value) == true ? .on : .off
         button.tag = row
         return button
     }
 
     private func updateAllBox() {
-        let count = shownValues.lazy.filter { self.checked.contains($0.value) }.count
+        let checked = choice?.checked ?? []
+        let count = shownValues.lazy.filter { checked.contains($0.value) }.count
         allBox.state = count == 0 ? .off : count == shownValues.count ? .on : .mixed
     }
 
     @objc private func toggleValue(_ sender: NSButton) {
         guard shownValues.indices.contains(sender.tag) else { return }
         let value = shownValues[sender.tag].value
-        if sender.state == .on { checked.insert(value) } else { checked.remove(value) }
+        choice?.set(value, checked: sender.state == .on)
         updateAllBox()
         applyValues()
     }
@@ -343,10 +304,9 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
     private func toggleSelectedValues() {
         let selected = list.selectedRowIndexes.filter { shownValues.indices.contains($0) }.map { shownValues[$0].value }
         guard !selected.isEmpty else { return }
+        let checked = choice?.checked ?? []
         let check = !selected.allSatisfy { checked.contains($0) }
-        for value in selected {
-            if check { checked.insert(value) } else { checked.remove(value) }
-        }
+        for value in selected { choice?.set(value, checked: check) }
         list.reloadData(forRowIndexes: list.selectedRowIndexes, columnIndexes: [0])
         updateAllBox()
         applyValues()
@@ -356,31 +316,14 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
         // A mixed box checks everything shown.
         let on = sender.state != .off
         sender.state = on ? .on : .off
-        for (value, _) in shownValues {
-            if on { checked.insert(value) } else { checked.remove(value) }
-        }
+        for (value, _) in shownValues { choice?.set(value, checked: on) }
         list.reloadData()
         applyValues()
     }
 
-    /// Every value checked: no filter. A list that doesn't show every value
-    /// hides the unchecked ones (values not listed, or arriving later, stay
-    /// shown), unless it shows only the checked ones: opened over such a
-    /// filter, or once nothing is checked. A full list: whichever is shorter.
+    /// The filter the checked values make.
     private func applyValues() {
-        let all = Set(values.map(\.value))
-        let unchecked = all.subtracting(checked)
-        let filter: NGColumnFilter?
-        if unchecked.isEmpty, excludedElsewhere.isEmpty {
-            filter = nil
-            showsOnlyChecked = false
-        } else if isTruncated || !excludedElsewhere.isEmpty {
-            if checked.isEmpty { showsOnlyChecked = true }
-            filter = showsOnlyChecked ? .values(checked) : .excluding(unchecked.union(excludedElsewhere))
-        } else {
-            filter = unchecked.count <= checked.count ? .excluding(unchecked) : .values(checked)
-        }
-        table?.setColumnFilter(filter, forColumnID: column.id)
+        table?.setColumnFilter(choice?.filter(), forColumnID: column.id)
     }
 
     @objc private func clearFilter(_ sender: Any?) {

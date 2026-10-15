@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Navigating by cell and editing cells, like a spreadsheet:
 // - With `navigatesByCell`, a focused cell (`focusedCell`) moves with the
@@ -12,6 +16,8 @@ import AppKit
 //   column's format, the data source receives the value
 //   (`tableView(_:setValue:for:row:)`), the row is read again, and the change
 //   can be undone.
+// On the iPad a second tap edits, the text field is UIKit's, and the
+// keyboard's Return commits (Tab and Escape with a hardware keyboard).
 
 extension NGTableView {
     // MARK: Focused cell
@@ -61,13 +67,13 @@ extension NGTableView {
               let frame = frameOfCell(row: cell.row, columnID: cell.columnID) else { return }
         let color = style.color(hasFocus ? .keyboardFocusIndicatorColor : .tertiaryLabelColor)
         let width: CGFloat = 2
-        let rows = NSRect(x: 0, y: layoutMetrics.headerHeight, width: bounds.width,
+        let rows = CGRect(x: 0, y: layoutMetrics.headerHeight, width: bounds.width,
                           height: max(0, bounds.height - layoutMetrics.headerHeight - layoutMetrics.summaryHeight))
         let ring = frame.insetBy(dx: 1, dy: 1)
-        for edge in [NSRect(x: ring.minX, y: ring.minY, width: ring.width, height: width),
-                     NSRect(x: ring.minX, y: ring.maxY - width, width: ring.width, height: width),
-                     NSRect(x: ring.minX, y: ring.minY, width: width, height: ring.height),
-                     NSRect(x: ring.maxX - width, y: ring.minY, width: width, height: ring.height)] {
+        for edge in [CGRect(x: ring.minX, y: ring.minY, width: ring.width, height: width),
+                     CGRect(x: ring.minX, y: ring.maxY - width, width: ring.width, height: width),
+                     CGRect(x: ring.minX, y: ring.minY, width: width, height: ring.height),
+                     CGRect(x: ring.maxX - width, y: ring.minY, width: width, height: ring.height)] {
             quads.append(NGMetalRenderer.rectangle(edge, scale: scale, color: color, clip: rows))
         }
     }
@@ -101,14 +107,36 @@ extension NGTableView {
         layoutSubtreeIfNeeded()
         guard let frame = frameOfCell(row: row, columnID: columnID) else { return false }
         let value = dataSource.tableView(self, valueFor: column, row: row)
+        let (field, clip) = makeCellEditor(frame: frame, text: text ?? Self.editingText(of: value, format: column.format, locale: formattingLocale),
+                                           column: column)
+        editor = NGCellEditor(field: field, clip: clip, ref: rowRef(ofRow: row), columnID: columnID, originalValue: value)
+        layoutCellEditor()
+        focusedCell = NGCellPosition(row: row, columnID: columnID)
+        #if os(macOS)
+        window?.makeFirstResponder(field)
+        if text != nil {
+            // Typed over: the caret after the text, like a spreadsheet.
+            field.currentEditor()?.selectedRange = NSRange(location: (field.stringValue as NSString).length, length: 0)
+        }
+        #else
+        field.becomeFirstResponder()
+        // The whole text selected, to type over (typed over already: the caret after it).
+        if text == nil { field.selectAll(nil) }
+        #endif
+        setNeedsMetalFrame()
+        return true
+    }
+
+    #if os(macOS)
+    /// The text field over a cell, in a view clipped to the rows its region
+    /// shows, so a cell scrolled partly under the header, the summary row or
+    /// frozen columns isn't edited over them (see `layoutCellEditor`).
+    private func makeCellEditor(frame: CGRect, text: String, column: NGTableColumn) -> (NGCellEditorField, NGPlatformView) {
         let field = NGCellEditorField(frame: frame.insetBy(dx: 1, dy: 1))
-        // In a view clipped to the rows its region shows, so a cell scrolled
-        // partly under the header, the summary row or frozen columns isn't
-        // edited over them (see `layoutCellEditor`).
         let clip = NGFlippedView()
         clip.wantsLayer = true
         clip.layer?.masksToBounds = true
-        field.stringValue = text ?? Self.editingText(of: value, format: column.format, locale: formattingLocale)
+        field.stringValue = text
         field.font = column.isNumeric ? metalStyle.digitFont : metalStyle.textFont
         field.alignment = column.alignment.textAlignment(isNumeric: column.isNumeric, layoutDirection: userInterfaceLayoutDirection)
         field.isBordered = false
@@ -120,18 +148,33 @@ extension NGTableView {
         field.cell?.isScrollable = true
         clip.addSubview(field)
         addSubview(clip, positioned: .below, relativeTo: headerBackground)
-        editor = NGCellEditor(field: field, clip: clip, ref: rowRef(ofRow: row), columnID: columnID, originalValue: value)
-        layoutCellEditor()
-        focusedCell = NGCellPosition(row: row, columnID: columnID)
-        window?.makeFirstResponder(field)
-        if text != nil {
-            // Typed over: the caret after the text, like a spreadsheet.
-            field.currentEditor()?.selectedRange = NSRange(location: (field.stringValue as NSString).length, length: 0)
-        }
-        setNeedsMetalFrame()
-        return true
+        return (field, clip)
     }
+    #else
+    /// The text field over a cell, in a view clipped to the rows (see `layoutCellEditor`).
+    private func makeCellEditor(frame: CGRect, text: String, column: NGTableColumn) -> (NGCellEditorField, NGPlatformView) {
+        let field = NGCellEditorField(frame: frame.insetBy(dx: 1, dy: 1))
+        let clip = UIView()
+        clip.clipsToBounds = true
+        field.text = text
+        field.font = column.isNumeric ? metalStyle.digitFont : metalStyle.textFont
+        field.textAlignment = column.alignment.textAlignment(isNumeric: column.isNumeric, layoutDirection: layoutDirection)
+        field.backgroundColor = metalStyle.background
+        field.borderStyle = .none
+        field.layer.borderColor = UIColor.tintColor.cgColor
+        field.layer.borderWidth = 2
+        field.autocorrectionType = .no
+        field.returnKeyType = .done
+        if column.isNumeric { field.keyboardType = .numbersAndPunctuation }
+        field.delegate = editorDelegate
+        field.table = self
+        clip.addSubview(field)
+        insertSubview(clip, belowSubview: headerBackground)
+        return (field, clip)
+    }
+    #endif
 
+    #if os(macOS)
     /// Starts editing a cell by column index, like NSTableView's: `select`
     /// selects the text, otherwise the caret goes after it. The event is
     /// ignored (the text field takes the clicks). Unlike NSTableView, the row
@@ -142,6 +185,7 @@ extension NGTableView {
               !select, let field = editor?.field else { return }
         field.currentEditor()?.selectedRange = NSRange(location: (field.stringValue as NSString).length, length: 0)
     }
+    #endif
 
     /// The data source row whose cell is being edited in a text field, or
     /// -1, like NSTableView's: it follows the record as rows move.
@@ -171,10 +215,19 @@ extension NGTableView {
     /// throws it away.
     func endEditing(committing: Bool) {
         guard let editor = editor.take() else { return }
+        #if os(macOS)
         let text = editor.field.stringValue
         editor.field.delegate = nil
         editor.clip.removeFromSuperview()
         window?.makeFirstResponder(self)
+        #else
+        let text = editor.field.text ?? ""
+        let hadKeyboard = editor.field.isFirstResponder
+        editor.field.delegate = nil
+        editor.clip.removeFromSuperview()
+        // The keys go back to the table (Return and Tab move on from there).
+        if hadKeyboard { _ = becomeFirstResponder() }
+        #endif
         setNeedsMetalFrame()
         // Text left as it was is no edit (a date shown without its time
         // would otherwise lose it).
@@ -204,7 +257,7 @@ extension NGTableView {
         guard let placement = cellPlacement(row: row(of: editor.ref), columnID: editor.columnID),
               !placement.isRegionHidden else {
             // Its row isn't shown (filtered out, in a collapsed group).
-            editor.field.setFrameOrigin(NSPoint(x: 0, y: -10 * max(editor.field.frame.height, 1)))
+            editor.field.setFrameOrigin(CGPoint(x: 0, y: -10 * max(editor.field.frame.height, 1)))
             return
         }
         editor.clip.frame = placement.visible
@@ -218,13 +271,14 @@ extension NGTableView {
 struct NGCellEditor {
     let field: NGCellEditorField
     /// The view the field is in, clipped to where rows show.
-    let clip: NSView
+    let clip: NGPlatformView
     /// The edited record (rows may move while it's edited).
     let ref: NGRowRef
     let columnID: String
     let originalValue: NGCellValue
 }
 
+#if os(macOS)
 /// The text field over an edited cell.
 final class NGCellEditorField: NSTextField {}
 
@@ -262,4 +316,49 @@ final class NGCellEditorDelegate: NSObject, NSTextFieldDelegate {
         table.endEditing(committing: true)
     }
 }
+#else
+/// The text field over an edited cell: a hardware keyboard's Tab moves on
+/// (Shift-Tab back), Escape throws the text away.
+final class NGCellEditorField: UITextField {
+    weak var table: NGTableView?
+
+    override var keyCommands: [UIKeyCommand]? {
+        let commands = [UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(nextCell)),
+                        UIKeyCommand(input: "\t", modifierFlags: .shift, action: #selector(previousCell)),
+                        UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(cancel))]
+        commands.forEach { $0.wantsPriorityOverSystemBehavior = true }
+        return commands
+    }
+
+    @objc private func nextCell() {
+        table?.endEditing(committing: true)
+        table?.moveFocusedCell(columns: 1, rows: 0)
+    }
+
+    @objc private func previousCell() {
+        table?.endEditing(committing: true)
+        table?.moveFocusedCell(columns: -1, rows: 0)
+    }
+
+    @objc private func cancel() { table?.endEditing(committing: false) }
+}
+
+/// Ends editing on Return (moving down); leaving the field commits.
+@MainActor
+final class NGCellEditorDelegate: NSObject, UITextFieldDelegate {
+    weak var table: NGTableView?
+
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        guard let table else { return true }
+        table.endEditing(committing: true)
+        table.moveFocusedCell(columns: 0, rows: 1)
+        return false
+    }
+
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        guard let table, table.editor?.field === textField else { return }
+        table.endEditing(committing: true)
+    }
+}
+#endif
 #endif

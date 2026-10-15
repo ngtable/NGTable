@@ -50,6 +50,23 @@ extension NGTableView {
         let doubleTap = UITapGestureRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.doubleTapped(_:)))
         doubleTap.numberOfTapsRequired = 2
         addGestureRecognizer(doubleTap)
+        addInteraction(UIContextMenuInteraction(delegate: delegate))
+        let headerPan = NGHeaderPanRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.headerPanned(_:)))
+        headerPan.delegate = delegate
+        headerPan.maximumNumberOfTouches = 1
+        addGestureRecognizer(headerPan)
+        // A swipe across a row decides first; the scroll view scrolls once it didn't begin.
+        let rowSwipe = NGRowSwipeRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.rowSwiped(_:)))
+        rowSwipe.delegate = delegate
+        rowSwipe.maximumNumberOfTouches = 1
+        addGestureRecognizer(rowSwipe)
+        touchScrollView.panGestureRecognizer.require(toFail: rowSwipe)
+        addGestureRecognizer(UIHoverGestureRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.hovered(_:))))
+        addInteraction(UIPointerInteraction(delegate: delegate))
+        let drag = UIDragInteraction(delegate: delegate)
+        drag.isEnabled = true
+        addInteraction(drag)
+        addInteraction(UIDropInteraction(delegate: delegate))
     }
 
     /// Over the rows (under the header and the summary row), as large as the
@@ -79,6 +96,8 @@ extension NGTableView {
     /// as the rubber band.
     func touchScrollViewDidScroll() {
         guard !isSyncingTouchScroll else { return }
+        // The finger scrolling closes open swipe actions.
+        if touchScrollView.isTracking, rowSwipe != nil { closeRowActions() }
         let offset = touchScrollView.contentOffset
         let maxOffset = layoutMetrics.maxOffset
         let clamped = CGPoint(x: min(max(offset.x, 0), maxOffset.x), y: min(max(offset.y, 0), maxOffset.y))
@@ -88,48 +107,15 @@ extension NGTableView {
         isSyncingTouchScroll = false
         setVerticalOverscroll(offset.y - clamped.y)
     }
-
-    /// A tap: on a title it sorts by its column, on a row it selects it (and
-    /// sends `action`).
-    func tapped(at point: CGPoint) {
-        guard !ignoresUserInput else { return }
-        if point.y < layoutMetrics.headerHeight {
-            if let (frame, _) = column(atViewportPoint: point), frame.column.isSortable { sortByClicking(frame.column) }
-            return
-        }
-        guard point.y < bounds.height - layoutMetrics.summaryHeight else { return }
-        let row = row(at: point)
-        clickedRow = row
-        clickedColumn = column(at: point)
-        if row >= 0 {
-            selectRowIndexes([row], byExtendingSelection: false)
-        }
-        send(action)
-    }
-
-    /// A second tap on the rows: `doubleAction`.
-    func doubleTapped(at point: CGPoint) {
-        guard !ignoresUserInput, point.y >= layoutMetrics.headerHeight,
-              point.y < bounds.height - layoutMetrics.summaryHeight else { return }
-        clickedRow = row(at: point)
-        clickedColumn = column(at: point)
-        send(doubleAction)
-    }
-
-    /// To `target`, or along the responder chain without one.
-    private func send(_ action: Selector?) {
-        guard let action else { return }
-        if let target = target as? NSObjectProtocol {
-            _ = target.perform(action, with: self)
-        } else {
-            UIApplication.shared.sendAction(action, to: nil, from: self, for: nil)
-        }
-    }
 }
 
-/// The scroll view's and the tap's delegate (an object: UIKit holds it).
+/// The scroll view's, the taps' and the context menus' delegate (an object: UIKit holds it).
 final class NGTouchScrollDelegate: NSObject, UIScrollViewDelegate {
     weak var table: NGTableView?
+    /// Where the open context menu was asked for (its preview is cut there).
+    var menuLocation: CGPoint?
+    /// The display row each lifted drag item is of (its preview).
+    var dragItemRows: [ObjectIdentifier: Int] = [:]
 
     init(table: NGTableView) {
         self.table = table
@@ -141,12 +127,12 @@ final class NGTouchScrollDelegate: NSObject, UIScrollViewDelegate {
 
     @objc func tapped(_ recognizer: UITapGestureRecognizer) {
         guard let table else { return }
-        table.tapped(at: recognizer.location(in: table))
+        table.tapped(at: recognizer.location(in: table), modifiers: recognizer.modifierFlags)
     }
 
     @objc func doubleTapped(_ recognizer: UITapGestureRecognizer) {
         guard let table else { return }
-        table.doubleTapped(at: recognizer.location(in: table))
+        table.doubleTapped(at: recognizer.location(in: table), modifiers: recognizer.modifierFlags)
     }
 }
 #endif

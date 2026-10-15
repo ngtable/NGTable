@@ -122,6 +122,17 @@
         }
       }
     },
+    "Columns" : {
+      "comment" : "Header menu on the iPad: the columns to show.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Колонки"
+          }
+        }
+      }
+    },
     "CSV (Comma-Separated Values)" : {
       "comment" : "Export: the .csv format.",
       "localizations" : {
@@ -195,6 +206,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Развернуть группу"
+          }
+        }
+      }
+    },
+    "Filter…" : {
+      "comment" : "Header menu on the iPad: opens the column's filter.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фильтр…"
           }
         }
       }
@@ -397,6 +419,17 @@
         }
       }
     },
+    "Rows %lld to %lld of %lld" : {
+      "comment" : "VoiceOver on the iPad: the rows in view after a page scroll.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Строки с %1$lld по %2$lld из %3$lld"
+          }
+        }
+      }
+    },
     "Save" : {
       "comment" : "Save view dialog: the default button.",
       "localizations" : {
@@ -470,6 +503,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Только выделенные строки"
+          }
+        }
+      }
+    },
+    "Sort Ascending" : {
+      "comment" : "Header menu on the iPad: sorts by the column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По возрастанию"
+          }
+        }
+      }
+    },
+    "Sort Descending" : {
+      "comment" : "Header menu on the iPad: sorts by the column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По убыванию"
           }
         }
       }

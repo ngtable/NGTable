@@ -103,6 +103,73 @@ extension NGTableView {
     }
     #endif
 
+    /// The rows shown exported to a file in a temporary folder of its own,
+    /// named `exportFileName` (or the autosave name, or "Table"), e.g. to
+    /// share it. Remove the folder when it's no longer needed.
+    public func exportedFile(as format: NGExportFormat, options: NGExportOptions = NGExportOptions()) async throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("NGTableExport-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let name = exportFileName ?? autosaveName ?? String(localized: "Table", bundle: .module, comment: "Export: the file name when the table has none.")
+        let url = directory.appendingPathComponent(name).appendingPathExtension(format.fileExtension)
+        do {
+            try await export(to: url, as: format, options: options)
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
+        return url
+    }
+
+    #if os(iOS)
+    /// Asks for a format (an Excel workbook or CSV), exports the rows shown
+    /// and offers the file in the share sheet: an action for an "Export"
+    /// button. The sheet points at `sender` (a bar button item or a view), or
+    /// the table.
+    @objc public func exportDocument(_ sender: Any?) {
+        guard !isExporting, let presenter = nearestViewController else { return }
+        let formats: [(format: NGExportFormat, title: String)] = [
+            (.xlsx, String(localized: "Excel Workbook", bundle: .module, comment: "Export: the .xlsx format.")),
+            (.csv, String(localized: "CSV (Comma-Separated Values)", bundle: .module, comment: "Export: the .csv format.")),
+        ]
+        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        for (format, title) in formats {
+            sheet.addAction(UIAlertAction(title: title, style: .default) { [weak self] _ in self?.share(format, from: sender) })
+        }
+        sheet.addAction(UIAlertAction(title: String(localized: "Cancel", bundle: .module, comment: "Save view dialog: cancels."), style: .cancel))
+        anchor(sheet.popoverPresentationController, to: sender)
+        presenter.present(sheet, animated: true)
+    }
+
+    private func share(_ format: NGExportFormat, from sender: Any?) {
+        Task { @MainActor [weak self] in
+            guard let self, let presenter = self.nearestViewController else { return }
+            do {
+                let url = try await self.exportedFile(as: format)
+                let share = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+                share.completionWithItemsHandler = { _, _, _, _ in try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+                self.anchor(share.popoverPresentationController, to: sender)
+                presenter.present(share, animated: true)
+            } catch {
+                let alert = UIAlertController(title: error.localizedDescription, message: nil, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                presenter.present(alert, animated: true)
+            }
+        }
+    }
+
+    private func anchor(_ popover: UIPopoverPresentationController?, to sender: Any?) {
+        if let item = sender as? UIBarButtonItem {
+            popover?.sourceItem = item
+        } else if let view = sender as? UIView {
+            popover?.sourceView = view
+            popover?.sourceRect = view.bounds
+        } else {
+            popover?.sourceView = self
+            popover?.sourceRect = CGRect(x: bounds.midX, y: layoutMetrics.headerHeight, width: 1, height: 1)
+        }
+    }
+    #endif
+
     /// Reads the rows and writes them into `sink`: a chunk written off the
     /// main thread while the next is read, the summary row last.
     private func export(into sink: NGExportSink, as format: NGExportFormat, options: NGExportOptions) async throws {

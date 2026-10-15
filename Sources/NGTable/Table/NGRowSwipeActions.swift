@@ -1,5 +1,9 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 // Swipe actions on rows, like NSTableView's `rowActionsForRow:edge:`: a
 // two-finger swipe across a row slides it aside and shows the delegate's
@@ -8,17 +12,25 @@ import AppKit
 // buttons, they stay open; a long swipe performs the first action if it is
 // destructive, like Mail. A click elsewhere, scrolling or new data close
 // them. A table that can scroll sideways scrolls first: a swipe opens actions
-// only at the edge it would scroll past.
+// only at the edge it would scroll past. On the iPad a finger's swipe does
+// the same (NGTableTouch.swift), and a tap on a button performs its action.
 
 /// An action a swipe across a row shows, like `NSTableViewRowAction` (whose
 /// handler AppKit keeps to itself): the same initializer, style and color.
 @MainActor
 public final class NGRowAction: NSObject {
+    #if os(macOS)
     public typealias Style = NSTableViewRowAction.Style
+    #else
+    /// Like `NSTableViewRowAction.Style`.
+    public enum Style: Int, Sendable {
+        case regular, destructive
+    }
+    #endif
     public let style: Style
     public var title: String
     /// Red for destructive actions, gray otherwise, like AppKit's.
-    public var backgroundColor: NSColor
+    public var backgroundColor: NGColor
     /// Called with the action and the data source row.
     public let handler: (NGRowAction, Int) -> Void
 
@@ -62,6 +74,7 @@ extension NGTableView {
         return swipe.offset
     }
 
+    #if os(macOS)
     /// Takes a trackpad swipe across a row for its actions; whether the
     /// event was the swipe's (the table doesn't scroll with it).
     func handleRowSwipe(_ event: NSEvent) -> Bool {
@@ -88,38 +101,51 @@ extension NGTableView {
             guard dx != 0 || dy != 0 else { return false }
             swipeCandidate = nil
             guard abs(dx) > abs(dy) * 1.5 else { return false }
-            let displayRow = row(atWindowLocation: location)
-            guard displayRow >= 0, displayRow < numberOfRows, !isGroupRow(displayRow) else { return false }
             // Sliding left shows the trailing actions, right the leading ones,
             // where the table can't scroll further that way.
-            // (Right to left, the trailing actions are at the left.)
-            let revealsRight = dx < 0
-            let edge: NSTableView.RowActionEdge = revealsRight != isRightToLeft ? .trailing : .leading
-            let atEdge = edge == .trailing ? contentOffset.x >= layoutMetrics.maxOffset.x - 0.5 : contentOffset.x <= 0.5
-            guard atEdge, let delegate else { return false }
-            let source = sourceRow(displayRow)
-            let actions = delegate.tableView(self, rowActionsForRow: source, edge: edge)
-            guard !actions.isEmpty else { return false }
-            rowSwipe = NGRowSwipe(ref: rowRef(ofRow: source), edge: edge, actions: actions, offset: 0, isTracking: true)
+            guard beginRowSwipe(displayRow: row(atWindowLocation: location), revealsRight: dx < 0) else { return false }
             swipeTookGesture = true
         }
         guard var swipe = rowSwipe, swipe.isTracking, swipeTookGesture else { return false }
         if event.phase.contains(.changed) {
-            let limit = bounds.width
-            swipe.offset = buttonsOnRight(swipe.edge) ? min(0, max(-limit, swipe.offset + event.scrollingDeltaX))
-                : max(0, min(limit, swipe.offset + event.scrollingDeltaX))
-            rowSwipe = swipe
-            layoutRowActionButtons()
-            setNeedsMetalFrame()
+            moveRowSwipe(by: event.scrollingDeltaX)
         }
         if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
             finishRowSwipe()
         }
         return true
     }
+    #endif
+
+    /// Starts a swipe on a display row toward a side (`revealsRight`: the
+    /// row slides left), if the table can't scroll further that way and the
+    /// delegate has actions there; whether it did.
+    func beginRowSwipe(displayRow: Int, revealsRight: Bool) -> Bool {
+        guard displayRow >= 0, displayRow < numberOfRows, !isGroupRow(displayRow), let delegate else { return false }
+        // (Right to left, the trailing actions are at the left.)
+        let edge: NSTableView.RowActionEdge = revealsRight != isRightToLeft ? .trailing : .leading
+        let atEdge = edge == .trailing ? contentOffset.x >= layoutMetrics.maxOffset.x - 0.5 : contentOffset.x <= 0.5
+        guard atEdge else { return false }
+        let source = sourceRow(displayRow)
+        let actions = delegate.tableView(self, rowActionsForRow: source, edge: edge)
+        guard !actions.isEmpty else { return false }
+        rowSwipe = NGRowSwipe(ref: rowRef(ofRow: source), edge: edge, actions: actions, offset: 0, isTracking: true)
+        return true
+    }
+
+    /// The swiping row slides by `delta` (positive: to the right).
+    func moveRowSwipe(by delta: CGFloat) {
+        guard var swipe = rowSwipe, swipe.isTracking else { return }
+        let limit = bounds.width
+        swipe.offset = buttonsOnRight(swipe.edge) ? min(0, max(-limit, swipe.offset + delta))
+            : max(0, min(limit, swipe.offset + delta))
+        rowSwipe = swipe
+        layoutRowActionButtons()
+        setNeedsMetalFrame()
+    }
 
     /// At the end of a swipe: open, closed, or the first action performed.
-    private func finishRowSwipe() {
+    func finishRowSwipe() {
         guard var swipe = rowSwipe else { return }
         let buttons = rowActionButtonsWidth(swipe.actions)
         let distance = abs(swipe.offset)
@@ -154,7 +180,7 @@ extension NGTableView {
         setNeedsMetalFrame()
     }
 
-    private func perform(_ action: NGRowAction) {
+    func perform(_ action: NGRowAction) {
         guard let swipe = rowSwipe else { return }
         let row = row(of: swipe.ref)
         let isShown = swipedDisplayRow != nil
@@ -168,8 +194,16 @@ extension NGTableView {
 
     private static let minimumButtonWidth: CGFloat = 64
 
+    private static var buttonFont: NGFont {
+        #if os(macOS)
+        NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+        #else
+        UIFont.systemFont(ofSize: UIFont.labelFontSize, weight: .medium)
+        #endif
+    }
+
     private func buttonWidth(_ action: NGRowAction) -> CGFloat {
-        let title = (action.title as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NSFont.systemFontSize)])
+        let title = (action.title as NSString).size(withAttributes: [.font: Self.buttonFont])
         return max(Self.minimumButtonWidth, ceil(title.width) + 24)
     }
 
@@ -185,20 +219,21 @@ extension NGTableView {
         }
         let container = rowActionButtons ?? makeRowActionButtons(swipe)
         let rowHeight = rowGeometry.height(of: displayRow)
-        let rowFrame = convert(NSRect(x: 0, y: rowGeometry.top(of: displayRow), width: 1, height: rowHeight), from: centerRegion.canvas)
+        let rowFrame = convert(CGRect(x: 0, y: rowGeometry.top(of: displayRow), width: 1, height: rowHeight), from: centerRegion.canvas)
         let revealed = abs(swipe.offset)
-        container.frame = NSRect(x: buttonsOnRight(swipe.edge) ? bounds.width - revealed : 0, y: rowFrame.minY,
+        container.frame = CGRect(x: buttonsOnRight(swipe.edge) ? bounds.width - revealed : 0, y: rowFrame.minY,
                                  width: revealed, height: rowHeight)
         // The buttons share the room by their widths.
         let total = max(1, rowActionButtonsWidth(swipe.actions))
         var x: CGFloat = 0
         for (button, action) in zip(container.subviews, swipe.actions) {
             let width = revealed * buttonWidth(action) / total
-            button.frame = NSRect(x: x, y: 0, width: width, height: rowHeight)
+            button.frame = CGRect(x: x, y: 0, width: width, height: rowHeight)
             x += width
         }
     }
 
+    #if os(macOS)
     private func makeRowActionButtons(_ swipe: NGRowSwipe) -> NSView {
         let container = NGFlippedView()
         container.wantsLayer = true
@@ -224,5 +259,39 @@ extension NGTableView {
         guard let swipe = rowSwipe, sender.tag < swipe.actions.count else { return }
         perform(swipe.actions[sender.tag])
     }
+    #else
+    /// The buttons: labels on the actions' colors (the table's tap presses them).
+    private func makeRowActionButtons(_ swipe: NGRowSwipe) -> UIView {
+        let container = UIView()
+        container.clipsToBounds = true
+        for action in swipe.actions {
+            let label = UILabel()
+            label.text = action.title
+            label.textColor = .white
+            label.font = Self.buttonFont
+            label.textAlignment = .center
+            label.backgroundColor = action.backgroundColor
+            container.addSubview(label)
+        }
+        insertSubview(container, belowSubview: headerBackground)
+        rowActionButtons = container
+        return container
+    }
+
+    /// A tap while actions are open: on a button it performs its action,
+    /// elsewhere it closes them. Whether there were open actions.
+    func tapRowActions(at point: CGPoint) -> Bool {
+        guard let swipe = rowSwipe, !swipe.isTracking else { return false }
+        if let container = rowActionButtons, container.frame.contains(point) {
+            let x = point.x - container.frame.minX
+            if let index = container.subviews.firstIndex(where: { $0.frame.minX <= x && x < $0.frame.maxX }), index < swipe.actions.count {
+                perform(swipe.actions[index])
+                return true
+            }
+        }
+        closeRowActions()
+        return true
+    }
+    #endif
 }
 #endif

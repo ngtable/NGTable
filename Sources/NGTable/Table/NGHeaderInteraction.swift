@@ -1,6 +1,16 @@
+#if os(macOS) || os(iOS)
 #if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import Metal
+
+// The header's interactions on both platforms: columns moved by dragging
+// their titles (a lifted snapshot, the others sliding aside, the table
+// scrolling at the edges) and resized by dragging their edges. The Mac drives
+// them with the mouse (and keeps the cursors right), the iPad with a pan
+// (NGTableTouch.swift).
 
 extension NGTableView {
 
@@ -8,7 +18,7 @@ extension NGTableView {
 
     /// What a header press would move: the whole group when pressing its title
     /// band, otherwise the column (inside its group, if any).
-    private func reorderUnit(for column: NGTableColumn, pointY: CGFloat) -> NGColumnReorder.Unit {
+    func reorderUnit(for column: NGTableColumn, pointY: CGFloat) -> NGColumnReorder.Unit {
         guard let groupID = columnLayout.groupIDByColumnID[column.id] else {
             return .item(id: column.id)
         }
@@ -68,21 +78,27 @@ extension NGTableView {
 
     /// Like NSTableView: the dragged columns (header, cells and summary) are
     /// lifted as a snapshot that follows the pointer, leaving an empty slot.
-    private func beginColumnDrag(unit: NGColumnReorder.Unit, pin: NGColumnPin, pointerX: CGFloat) {
+    func beginColumnDrag(unit: NGColumnReorder.Unit, pin: NGColumnPin, pointerX: CGFloat) {
         let draggedID = draggedID(of: unit)
         guard let range = siblingRanges(of: unit, pin: pin).first(where: { $0.id == draggedID })?.range else { return }
         // The whole column lifts, even if it is partly scrolled out or under a
         // frozen region. A column inside a group lifts without the group title
         // band, which stays in place.
         let top: CGFloat = if case .member = unit { groupHeaderHeight } else { 0 }
-        let rect = NSRect(x: range.lowerBound, y: top, width: range.upperBound - range.lowerBound, height: bounds.height - top)
+        let rect = CGRect(x: range.lowerBound, y: top, width: range.upperBound - range.lowerBound, height: bounds.height - top)
         let columnIDs = columnIDs(of: unit)
         // Columns still sliding from a previous drop would be captured half-way.
         stopColumnSlide()
+        #if os(macOS)
         let snapshot = NGDragSnapshotView(frame: rect)
         snapshot.image = makeColumnDragImage(of: rect, unit: unit, columnIDs: columnIDs, pin: pin)
         // Above the content, below the scrollers.
         addSubview(snapshot, positioned: .below, relativeTo: verticalScroller)
+        #else
+        // What shows of the columns (the iPad draws no offscreen image of them yet).
+        let snapshot = columnDragSnapshot(of: rect)
+        addSubview(snapshot)
+        #endif
 
         columnDrag = ColumnDrag(
             unit: unit,
@@ -93,10 +109,13 @@ extension NGTableView {
             originalColumns: columns
         )
         // Column edges passing under the pointer must not switch to the resize cursor.
+        #if os(macOS)
         suspendHeaderCursorRects(showing: .arrow)
+        #endif
         refreshAfterColumnMove()
     }
 
+    #if os(macOS)
     /// Renders the dragged columns in full: header, visible rows and summary.
     /// Screen capture would only include the visible part (and misses the Liquid
     /// Glass summary bar), so the image is drawn with the table's own code: the
@@ -226,8 +245,9 @@ extension NGTableView {
         image.addRepresentation(bitmap)
         return image
     }
+    #endif
 
-    private func moveColumnDrag(_ drag: ColumnDrag, pointerX: CGFloat) {
+    func moveColumnDrag(_ drag: ColumnDrag, pointerX: CGFloat) {
         columnDragPointerX = pointerX
         // Near an edge of the scrolling area the table keeps scrolling on every
         // frame, also while the pointer rests there, like system tables.
@@ -269,12 +289,14 @@ extension NGTableView {
             stopColumnDragScrolling()
             return
         }
+        #if os(macOS)
         // The mouse up went elsewhere (e.g. the app lost focus): end the drag
         // instead of scrolling on.
         guard NSEvent.pressedMouseButtons & 1 != 0 else {
             cancelHeaderInteraction()
             return
         }
+        #endif
         let overflow = columnDragEdgeOverflow()
         guard canColumnDragScroll() else {
             stopColumnDragScrolling()
@@ -340,7 +362,7 @@ extension NGTableView {
     }
 
     /// The snapshot glides into its slot, then the real column reappears.
-    private func endColumnDrag(_ drag: ColumnDrag) {
+    func endColumnDrag(_ drag: ColumnDrag) {
         stopColumnDragScrolling()
         resumeHeaderCursorRects()
         columnDrag?.isLanding = true
@@ -350,21 +372,33 @@ extension NGTableView {
         let clip = viewport.clipRange(of: drag.pin, regionWidth: CGFloat(geometry[drag.pin].width))
         let slotStart = siblingRanges(of: drag.unit, pin: drag.pin).first { $0.id == draggedID }?.range.lowerBound ?? snapshot.frame.minX
         let slotX = min(max(slotStart, clip.lowerBound), max(clip.lowerBound, clip.upperBound - snapshot.frame.width))
+        #if os(macOS)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             snapshot.animator().setFrameOrigin(NSPoint(x: slotX, y: snapshot.frame.minY))
         } completionHandler: { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self, self.columnDrag?.snapshot === snapshot else {
-                    snapshot.removeFromSuperview()
-                    return
-                }
-                self.finishColumnDragLanding()
-            }
+            MainActor.assumeIsolated { self?.columnDragLanded(snapshot) ?? snapshot.removeFromSuperview() }
         }
+        #else
+        UIView.animate(withDuration: 0.15, animations: {
+            snapshot.frame.origin.x = slotX
+        }, completion: { [weak self] _ in
+            self?.columnDragLanded(snapshot) ?? snapshot.removeFromSuperview()
+        })
+        #endif
         // A drag that ends where it started moved nothing, but was a drag.
         reportColumnsMoved(from: drag.originalColumns, dragged: drag.columnIDs)
         reportColumnsDragged(drag.columnIDs)
+    }
+
+    /// The landing animation ended: the drag's own snapshot goes (another
+    /// drag's, begun meanwhile, stays).
+    private func columnDragLanded(_ snapshot: NGPlatformView) {
+        guard columnDrag?.snapshot === snapshot else {
+            snapshot.removeFromSuperview()
+            return
+        }
+        finishColumnDragLanding()
     }
 
     /// The snapshot is an image of the columns at the table's height. If the
@@ -399,6 +433,7 @@ extension NGTableView {
     /// interaction and rebuilt afterwards.
     /// Suspending and resuming always pair up, even if the table changed
     /// windows in between: the window that was disabled is the one re-enabled.
+    #if os(macOS)
     private func suspendHeaderCursorRects(showing cursor: NSCursor) {
         if cursorRectsSuspendedWindow == nil, let window {
             window.disableCursorRects()
@@ -417,6 +452,11 @@ extension NGTableView {
         window.invalidateCursorRects(for: headerView)
         window.resetCursorRects()
     }
+    #else
+    /// (No cursors on a finger; the pointer's comes with the iPad's hover.)
+    private func suspendHeaderCursorRects(showing cursor: Any?) {}
+    private func resumeHeaderCursorRects() {}
+    #endif
 
     /// Whether a header press, resize or column drag is in progress.
     var isHeaderInteracting: Bool {
@@ -509,6 +549,7 @@ extension NGTableView {
         refreshAfterColumnMove()
     }
 
+    #if os(macOS)
     // MARK: Tool tips
 
     /// Title areas of the visible columns that have a tool tip.
@@ -539,6 +580,8 @@ extension NGTableView {
         return headerToolTipAreas().first { $0.contains(point) }
     }
 
+    #endif
+
     // MARK: Column resizing
 
     /// A column edge that can be dragged in the header.
@@ -552,7 +595,7 @@ extension NGTableView {
     /// Leading and scrolling columns are resized from their trailing edge.
     /// Trailing frozen columns are resized from their leading edge: their block
     /// is anchored to the table's trailing edge, so it grows toward the content.
-    private func resizeHandles() -> [ResizeHandle] {
+    func resizeHandles() -> [ResizeHandle] {
         let viewport = viewport
         var handles: [ResizeHandle] = []
         for pin in drawingOrder.reversed() {
@@ -578,20 +621,46 @@ extension NGTableView {
         }
     }
 
+    /// Fits a column to its content (or the delegate's width), as a double
+    /// click (a double tap) on its edge does, and tells the delegate.
+    func fitColumnByUser(_ handle: ResizeHandle) {
+        let columnID = handle.frame.column.id
+        let oldWidth = handle.frame.width
+        let index = tableColumns.firstIndex { $0.id == columnID } ?? -1
+        if let width = delegate?.tableView(self, sizeToFitWidthOfColumn: index) {
+            setWidth(Double(width), forColumnID: columnID)
+        } else {
+            sizeColumnToFit(columnID)
+        }
+        if let column = columnLayout.columnsByID[columnID], let width = width(ofColumnID: columnID), width != oldWidth {
+            autosaveLayoutState()
+            delegate?.tableView(self, didResizeColumn: column, width: width)
+        }
+    }
+
+    /// How far beside an edge a press still grabs it (a finger needs more).
+    #if os(macOS)
     private static let resizeHandleSlop: CGFloat = 4
+    #else
+    private static let resizeHandleSlop: CGFloat = 12
+    #endif
 
     /// Vertical range of a column's handle: the leaf row for grouped columns,
     /// the full header height otherwise.
-    private func resizeHandleRect(for handle: ResizeHandle, headerHeight: CGFloat) -> NSRect {
+    private func resizeHandleRect(for handle: ResizeHandle, headerHeight: CGFloat) -> CGRect {
         let isGrouped = columnLayout.groupIDByColumnID[handle.frame.column.id] != nil
         let top = isGrouped ? groupHeaderHeight : 0
         let slop = Self.resizeHandleSlop
-        return NSRect(x: handle.edgeX - slop, y: top, width: 2 * slop, height: headerHeight - top)
+        return CGRect(x: handle.edgeX - slop, y: top, width: 2 * slop, height: headerHeight - top)
     }
 
-    func resizeHandle(at point: NSPoint, headerHeight: CGFloat) -> ResizeHandle? {
-        resizeHandles().first { resizeHandleRect(for: $0, headerHeight: headerHeight).contains(point) }
+    func resizeHandle(at point: CGPoint, headerHeight: CGFloat) -> ResizeHandle? {
+        // The nearest edge, when two are within reach.
+        resizeHandles().filter { resizeHandleRect(for: $0, headerHeight: headerHeight).contains(point) }
+            .min { abs($0.edgeX - point.x) < abs($1.edgeX - point.x) }
     }
+
+    #if os(macOS)
 
     /// The resize cursor for a column edge at a point of the header, if any.
     func resizeCursor(at point: NSPoint) -> NSCursor? {
@@ -621,6 +690,9 @@ extension NGTableView {
         return directions.isEmpty ? .columnResize : .columnResize(directions: directions)
     }
 
+    #endif
+
+    #if os(macOS)
     func headerMouseDown(_ event: NSEvent, in view: NSView) {
         // A new press right after a drop finishes the landing at once.
         finishColumnDragLanding()
@@ -633,21 +705,9 @@ extension NGTableView {
         if let handle = resizeHandle(at: point, headerHeight: view.bounds.height) {
             // Double-clicking an edge fits the column to its content, like system tables.
             if event.clickCount == 2 {
-                let columnID = handle.frame.column.id
-                let oldWidth = handle.frame.width
-                let index = column(withIdentifier: NSUserInterfaceItemIdentifier(columnID))
-                if let width = delegate?.tableView(self, sizeToFitWidthOfColumn: index) {
-                    setWidth(Double(width), forColumnID: columnID)
-                } else {
-                    sizeColumnToFit(columnID)
-                }
+                fitColumnByUser(handle)
                 // The edge moved away from the pointer.
                 resumeHeaderCursorRects()
-                if let column = columnLayout.columnsByID[columnID], let width = width(ofColumnID: columnID),
-                   width != oldWidth {
-                    autosaveLayoutState()
-                    delegate?.tableView(self, didResizeColumn: column, width: width)
-                }
                 return
             }
             activeColumnResize = ColumnResize(
@@ -744,5 +804,6 @@ extension NGTableView {
             }
         }
     }
+    #endif
 }
 #endif

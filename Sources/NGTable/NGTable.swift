@@ -108,6 +108,21 @@ public protocol NGTableViewDataSource: AnyObject {
     /// A drag entered the table, like NSTableView's: the items' images may
     /// change for it (`enumerateDraggingItems`).
     func tableView(_ tableView: NGTableView, updateDraggingItemsForDrag draggingInfo: any NSDraggingInfo)
+    #else
+    /// The items a long press and a drag lift from a row, like
+    /// `UITableViewDragDelegate`'s: the row's record as an item provider.
+    /// Several selected rows drag together when the pressed one is among
+    /// them (each asked). No items (the default): the row doesn't drag.
+    func tableView(_ tableView: NGTableView, itemsForBeginning session: any UIDragSession, row: Int) -> [UIDragItem]
+    /// Whether a drag over the rows could drop there, and how, like
+    /// `UITableViewDropDelegate`'s `dropSessionDidUpdate`: above a row or
+    /// onto it (retarget with `setDropRow(_:dropOperation:)`). `.forbidden`
+    /// by default.
+    func tableView(_ tableView: NGTableView, dropSessionDidUpdate session: any UIDropSession, proposedRow row: Int,
+                   proposedDropOperation dropOperation: NSTableView.DropOperation) -> UIDropOperation
+    /// The drop, where the last update put it; whether it was taken.
+    func tableView(_ tableView: NGTableView, performDrop session: any UIDropSession, row: Int,
+                   dropOperation: NSTableView.DropOperation) -> Bool
     #endif
 }
 
@@ -135,6 +150,12 @@ public extension NGTableViewDataSource {
     func tableView(_ tableView: NGTableView, draggingSession session: NSDraggingSession, endedAt screenPoint: NSPoint,
                    operation: NSDragOperation) {}
     func tableView(_ tableView: NGTableView, updateDraggingItemsForDrag draggingInfo: any NSDraggingInfo) {}
+    #else
+    func tableView(_ tableView: NGTableView, itemsForBeginning session: any UIDragSession, row: Int) -> [UIDragItem] { [] }
+    func tableView(_ tableView: NGTableView, dropSessionDidUpdate session: any UIDropSession, proposedRow row: Int,
+                   proposedDropOperation dropOperation: NSTableView.DropOperation) -> UIDropOperation { .forbidden }
+    func tableView(_ tableView: NGTableView, performDrop session: any UIDropSession, row: Int,
+                   dropOperation: NSTableView.DropOperation) -> Bool { false }
     #endif
     func tableView(_ tableView: NGTableView, sortValueFor column: NGTableColumn, row: Int) -> NGCellValue {
         self.tableView(tableView, valueFor: column, row: row)
@@ -272,11 +293,9 @@ public protocol NGTableViewDelegate: AnyObject {
     /// (the default) shows the whole text of a cell too narrow for it, a
     /// mark's label or a media cell's text; an empty string shows none.
     func tableView(_ tableView: NGTableView, toolTipForRow row: Int, column: NGTableColumn) -> String?
-    #if os(macOS)
     /// Actions a swipe across a row shows at an edge, like NSTableView's
     /// `tableView(_:rowActionsForRow:edge:)`; none by default.
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction]
-    #endif
     /// Whether the user may edit a cell of an editable column, like
     /// NSTableView's `tableView(_:shouldEdit:row:)`.
     func tableView(_ tableView: NGTableView, shouldEdit tableColumn: NGTableColumn, row: Int) -> Bool
@@ -297,6 +316,21 @@ public protocol NGTableViewDelegate: AnyObject {
     /// - Returns: The menu, or `nil` for the table's `menu` (like an
     ///   `NSTableView`'s, with `clickedRow` set), if it has one.
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu?
+    #else
+    /// The context menu for a long press (or a secondary click with a pointer)
+    /// in the rows. The table adds no items of its own: build the menu with
+    /// your app's actions.
+    ///
+    /// - Parameters:
+    ///   - tableView: The table that was pressed.
+    ///   - rows: The rows the menu acts on: the whole selection when the
+    ///     pressed row is selected, otherwise just the pressed row (which is
+    ///     outlined, while the selection stays as it is). Empty below the last row.
+    ///   - clickedRow: The row pressed, or `nil` below the last row. Also
+    ///     available as `tableView.clickedRow` while the actions run.
+    ///   - column: The column pressed.
+    /// - Returns: The menu, or `nil` for none.
+    func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu?
     #endif
     /// A tint for a row's background instead of the alternating stripes, e.g. a
     /// pale green for profitable campaigns. Use light, translucent colors (like
@@ -414,9 +448,11 @@ public extension NGTableViewDelegate {
     }
     func tableView(_ tableView: NGTableView, toolTipForRow row: Int, column: NGTableColumn) -> String? { nil }
     func tableView(_ tableView: NGTableView, shouldEdit tableColumn: NGTableColumn, row: Int) -> Bool { true }
-    #if os(macOS)
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] { [] }
+    #if os(macOS)
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu? { nil }
+    #else
+    func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu? { nil }
     #endif
     func tableView(_ tableView: NGTableView, backgroundColorForRow row: Int) -> NGColor? { nil }
     func tableView(_ tableView: NGTableView, markerColorForRow row: Int) -> NGColor? { nil }

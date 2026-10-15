@@ -94,8 +94,14 @@ extension NGTableView {
 
     #if os(macOS)
     @objc func chooseEditChoice(_ sender: NSMenuItem) {
-        guard let choice = sender.representedObject as? NGChoice,
-              let column = tableColumns.first(where: { $0.id == choice.columnID }),
+        guard let choice = sender.representedObject as? NGChoice else { return }
+        choose(choice)
+    }
+    #endif
+
+    /// Sets a choice the user picked (with Undo).
+    func choose(_ choice: NGChoice) {
+        guard let column = tableColumns.first(where: { $0.id == choice.columnID }),
               let choices = column.editChoices, choice.index < choices.count, let dataSource else { return }
         // The record may have moved while the menu was open: found by its reference.
         let row = row(of: choice.ref)
@@ -103,6 +109,34 @@ extension NGTableView {
         let old = dataSource.tableView(self, valueFor: column, row: row)
         guard old != choices[choice.index] else { return }
         setValue(choices[choice.index], row: row, column: column, undoValue: old)
+    }
+
+    #if os(iOS)
+    /// Opens a cell's choices in a popover at the cell: their titles as
+    /// displayed, the current one checked; choosing one sets it.
+    func showChoiceMenu(row: Int, column: NGTableColumn) -> Bool {
+        guard let choices = column.editChoices, !choices.isEmpty, let dataSource, let presenter = nearestViewController,
+              let frame = frameOfCell(row: row, columnID: column.id) else { return false }
+        focusedCell = NGCellPosition(row: row, columnID: column.id)
+        let current = dataSource.tableView(self, valueFor: column, row: row)
+        let ref = rowRef(ofRow: row)
+        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        for (index, choice) in choices.enumerated() {
+            let title = NGFormatIDs.string(for: choice, format: column.format, locale: locale)
+            let shown = title.isEmpty ? "—" : title
+            sheet.addAction(UIAlertAction(title: choice == current ? "✓ " + shown : shown, style: .default) { [weak self] _ in
+                self?.choose(NGChoice(ref: ref, columnID: column.id, index: index))
+            })
+        }
+        sheet.addAction(UIAlertAction(title: String(localized: "Cancel", bundle: .module, comment: "Save view dialog: cancels."), style: .cancel))
+        sheet.popoverPresentationController?.sourceView = self
+        sheet.popoverPresentationController?.sourceRect = frame
+        if let showForTesting = Self.choicesShownForTesting {
+            showForTesting(sheet)
+            return true
+        }
+        presenter.present(sheet, animated: true)
+        return true
     }
     #endif
 

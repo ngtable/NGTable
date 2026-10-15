@@ -1,4 +1,4 @@
-#if os(macOS)
+#if os(macOS) || os(iOS)
 import Foundation
 
 /// Waits while `condition` holds, for a table's background work (a sort, a
