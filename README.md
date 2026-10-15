@@ -270,10 +270,20 @@ swift run -c release --package-path Demos/LogViewer
 swift run -c release --package-path Demos/LogViewer NGTableLogViewer --last 60
 ```
 
+On the iPad, `Demos/iPadTable.swiftpm` is the table with live campaigns:
+editing, menus, swipe actions, filters, drag and drop, export to the share
+sheet and the frames a second. `Demos/iPadBench.swiftpm` compares NGTable
+with UITableView, UICollectionView and SwiftUI's Table and List on the same
+live rows (up to a million, up to 10,000 changes a second) with a scroll
+test; measure on a device, in a Release build. Open either folder in Xcode.
+
 ## Tests
 
 Run the tests with the `NGTable-Package` scheme in Xcode (Command-U), or
-`swift test` in the package folder.
+`swift test` in the package folder. The same scheme runs them on an iPad
+simulator (the view tests that need AppKit are the Mac's;
+`NGTouchTests` drives the iPad's taps, menus, keyboard, VoiceOver, swipes
+and drag and drop).
 
 ## Package layout
 
@@ -281,9 +291,9 @@ Run the tests with the `NGTable-Package` scheme in Xcode (Command-U), or
 | --- | --- |
 | `Sources/NGTable/NGTable.swift` | Data source and delegate protocols |
 | `Sources/NGTable/Model` | Columns, values, formats, summaries, filters, layouts (no AppKit or UIKit) |
-| `Sources/NGTable/Table` | `NGTableView` for both platforms (the class in `NGTableView.swift`, its parts in `NGTable*.swift` extensions): layout, scrolling, selection, sorting, row grouping, updates, filters, export |
-| `Sources/NGTable/AppKit` | The Mac's views and interactions: header, scrollers, menus, editing, keyboard, drag and drop, accessibility, printing |
-| `Sources/NGTable/UIKit` | The iPad's views, touch scrolling and taps |
+| `Sources/NGTable/Table` | `NGTableView` for both platforms (the class in `NGTableView.swift`, its parts in `NGTable*.swift` extensions): layout, scrolling, selection, sorting, row grouping, updates, filters, export, editing, and what the interactions do (menus' items, keys, column moves, swipes, drops) |
+| `Sources/NGTable/AppKit` | The Mac's views and its mouse, keyboard and menu events, scrollers, accessibility elements, the filter popover, printing |
+| `Sources/NGTable/UIKit` | The iPad's views and its touches, pointer, keys, context menus, popovers, VoiceOver and drag and drop |
 | `Sources/NGTable/Metal` | The GPU renderer: shaders, the glyph atlas, Core Text shaping |
 | `Sources/NGTable/NGTable.docc` | Documentation articles |
 | `Sources/NGTableDemo` | The demo app |
@@ -294,6 +304,8 @@ Run the tests with the `NGTable-Package` scheme in Xcode (Command-U), or
 | `XCFramework` | The binary frameworks' builds (`ICU`: NGTableICU's) |
 | `Comparison` | The app that compares NGTable with NSTableView and SwiftUI's Table (`Docs/comparison.gif`) |
 | `Demos/LogViewer` | A log viewer of the Mac's logs |
+| `Demos/iPadTable.swiftpm` | The table on the iPad |
+| `Demos/iPadBench.swiftpm` | NGTable, UITableView, UICollectionView and SwiftUI compared on the iPad |
 
 ## License
 
