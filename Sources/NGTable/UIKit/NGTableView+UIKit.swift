@@ -55,6 +55,12 @@ extension NGTableView {
         headerPan.delegate = delegate
         headerPan.maximumNumberOfTouches = 1
         addGestureRecognizer(headerPan)
+        // A swipe across a row decides first; the scroll view scrolls once it didn't begin.
+        let rowSwipe = NGRowSwipeRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.rowSwiped(_:)))
+        rowSwipe.delegate = delegate
+        rowSwipe.maximumNumberOfTouches = 1
+        addGestureRecognizer(rowSwipe)
+        touchScrollView.panGestureRecognizer.require(toFail: rowSwipe)
         addGestureRecognizer(UIHoverGestureRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.hovered(_:))))
         addInteraction(UIPointerInteraction(delegate: delegate))
     }
@@ -86,6 +92,8 @@ extension NGTableView {
     /// as the rubber band.
     func touchScrollViewDidScroll() {
         guard !isSyncingTouchScroll else { return }
+        // The finger scrolling closes open swipe actions.
+        if touchScrollView.isTracking, rowSwipe != nil { closeRowActions() }
         let offset = touchScrollView.contentOffset
         let maxOffset = layoutMetrics.maxOffset
         let clamped = CGPoint(x: min(max(offset.x, 0), maxOffset.x), y: min(max(offset.y, 0), maxOffset.y))

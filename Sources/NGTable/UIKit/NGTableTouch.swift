@@ -13,6 +13,8 @@ extension NGTableView {
     /// A tap at a point in the table's coordinates.
     func tapped(at point: CGPoint, modifiers: UIKeyModifierFlags = []) {
         guard !ignoresUserInput else { return }
+        // Open swipe actions: a button acts, a tap elsewhere closes them.
+        if tapRowActions(at: point) { return }
         if point.y < layoutMetrics.headerHeight {
             if let (frame, _) = column(atViewportPoint: point), frame.column.isSortable { sortByClicking(frame.column) }
             return
@@ -138,6 +140,44 @@ extension NGTableView {
             _ = target.perform(action, with: self)
         } else {
             UIApplication.shared.sendAction(action, to: nil, from: self, for: nil)
+        }
+    }
+
+    // MARK: Swipes across rows
+
+    /// Whether a finger's pan from a point is a swipe across a row: mostly
+    /// sideways, on a row with actions at the side it reveals (where the
+    /// table can't scroll further), or on the row whose actions are open.
+    func rowSwipeShouldBegin(at point: CGPoint, velocity: CGPoint) -> Bool {
+        guard !ignoresUserInput, !isEditingCell, abs(velocity.x) > abs(velocity.y) * 1.5,
+              point.y >= layoutMetrics.headerHeight, point.y < bounds.height - layoutMetrics.summaryHeight else { return false }
+        let displayRow = row(atWindowLocation: convert(point, to: nil))
+        if let swipe = rowSwipe, !swipe.isTracking {
+            guard displayRow == swipedDisplayRow else {
+                closeRowActions()
+                return false
+            }
+            rowSwipe?.isTracking = true
+            return true
+        }
+        return beginRowSwipe(displayRow: displayRow, revealsRight: velocity.x < 0)
+    }
+}
+
+/// A finger's swipe across a row (its actions).
+final class NGRowSwipeRecognizer: UIPanGestureRecognizer {}
+
+extension NGTouchScrollDelegate {
+    @objc func rowSwiped(_ swipe: NGRowSwipeRecognizer) {
+        guard let table else { return }
+        switch swipe.state {
+        case .began, .changed:
+            table.moveRowSwipe(by: swipe.translation(in: table).x)
+            swipe.setTranslation(.zero, in: table)
+        case .ended, .cancelled, .failed:
+            table.finishRowSwipe()
+        default:
+            break
         }
     }
 }

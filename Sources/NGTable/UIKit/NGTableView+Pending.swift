@@ -12,12 +12,6 @@ extension NGTableView {
     func showChoiceMenu(row: Int, column: NGTableColumn) -> Bool { false }
     func showColumnFilter(for column: NGTableColumn, relativeTo rect: CGRect, of view: NGPlatformView) {}
 
-    // Swipe actions.
-    func closeRowActions() {}
-    func layoutRowActionButtons() {}
-    var swipedDisplayRow: Int? { nil }
-    func swipeOffset(ofDisplayRow displayRow: Int) -> CGFloat { 0 }
-
     // Drag and drop.
     func dropGapOffset(ofDisplayRow row: Int, progress: CGFloat? = nil) -> CGFloat { 0 }
     func appendDropIndicator(style: MetalStyle, scale: CGFloat, to quads: inout [NGMetalQuad]) {}
@@ -38,7 +32,6 @@ extension NGTableView {
 }
 
 /// Pending kinds of the shared state: their parts come with the features.
-final class NGRowSwipe {}
 final class NGAccessibilityRow {}
 final class NGAccessibilityColumnHeader {}
 final class NGAccessibilityColumn {}

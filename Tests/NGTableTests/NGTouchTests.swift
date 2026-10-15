@@ -451,5 +451,46 @@ struct NGTouchTests {
         #expect(table.pointerRegion(at: CGPoint(x: edge + 3, y: 5)) != nil)
         #expect(table.pointerRegion(at: CGPoint(x: 60, y: 5)) == nil)
     }
+
+    // MARK: Swipe actions
+
+    @Test func aSwipeOpensARowsActionsAndATapPressesOne() {
+        final class Actions: NGTableViewDelegate {
+            var archived: [Int] = []
+            func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] {
+                guard edge == .trailing else { return [] }
+                return [NGRowAction(style: .destructive, title: "Archive") { [weak self] _, row in self?.archived.append(row) }]
+            }
+        }
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        let actions = Actions()
+        defer { withExtendedLifetime((window, actions)) {} }
+        table.delegate = actions
+        let row = point(ofRow: 4, in: table)
+        // Sideways to the left (the columns fit: nothing to scroll first).
+        #expect(table.rowSwipeShouldBegin(at: row, velocity: CGPoint(x: -500, y: 20)))
+        table.moveRowSwipe(by: -120)
+        table.finishRowSwipe()
+        #expect(table.rowActionsVisible)
+        #expect(table.swipedDisplayRow == 4)
+        let buttons = try? #require(table.rowActionButtons)
+        #expect(buttons?.frame.width ?? 0 > 0)
+        // A tap on the button performs its action and closes them.
+        table.tapped(at: CGPoint(x: (buttons?.frame.midX ?? 0), y: row.y))
+        #expect(actions.archived == [4])
+        #expect(!table.rowActionsVisible)
+        // To the right there are no actions: the pan is the scroll view's.
+        #expect(!table.rowSwipeShouldBegin(at: row, velocity: CGPoint(x: 500, y: 0)))
+        // Mostly down: a scroll.
+        #expect(!table.rowSwipeShouldBegin(at: row, velocity: CGPoint(x: -100, y: 400)))
+        // Open, then a tap elsewhere closes them without selecting.
+        _ = table.rowSwipeShouldBegin(at: row, velocity: CGPoint(x: -500, y: 0))
+        table.moveRowSwipe(by: -120)
+        table.finishRowSwipe()
+        table.tapped(at: point(ofRow: 8, in: table))
+        #expect(!table.rowActionsVisible)
+        #expect(table.selectedRowIndexes.isEmpty)
+    }
 }
 #endif

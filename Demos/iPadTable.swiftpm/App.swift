@@ -134,6 +134,18 @@ final class CampaignsViewController: UIViewController, NGTableViewDelegate {
         return UIMenu(title: title, children: [pause, copy])
     }
 
+    /// A swipe across a row: pause it (trailing), or mark it active (leading).
+    func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] {
+        let status = edge == .trailing ? "Paused" : "Active"
+        let action = NGRowAction(style: edge == .trailing ? .destructive : .regular, title: edge == .trailing ? "Pause" : "Activate") { [weak self] _, row in
+            guard let self else { return }
+            self.campaigns.campaigns[row].status = status
+            self.table.reloadData(forRowIndexes: [row], columnIndexes: [2])
+        }
+        if edge == .leading { action.backgroundColor = .systemGreen }
+        return [action]
+    }
+
     private func tick() {
         table.beginUpdates()
         for _ in 0..<20 {

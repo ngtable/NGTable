@@ -272,11 +272,9 @@ public protocol NGTableViewDelegate: AnyObject {
     /// (the default) shows the whole text of a cell too narrow for it, a
     /// mark's label or a media cell's text; an empty string shows none.
     func tableView(_ tableView: NGTableView, toolTipForRow row: Int, column: NGTableColumn) -> String?
-    #if os(macOS)
     /// Actions a swipe across a row shows at an edge, like NSTableView's
     /// `tableView(_:rowActionsForRow:edge:)`; none by default.
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction]
-    #endif
     /// Whether the user may edit a cell of an editable column, like
     /// NSTableView's `tableView(_:shouldEdit:row:)`.
     func tableView(_ tableView: NGTableView, shouldEdit tableColumn: NGTableColumn, row: Int) -> Bool
@@ -429,8 +427,8 @@ public extension NGTableViewDelegate {
     }
     func tableView(_ tableView: NGTableView, toolTipForRow row: Int, column: NGTableColumn) -> String? { nil }
     func tableView(_ tableView: NGTableView, shouldEdit tableColumn: NGTableColumn, row: Int) -> Bool { true }
-    #if os(macOS)
     func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] { [] }
+    #if os(macOS)
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> NSMenu? { nil }
     #else
     func tableView(_ tableView: NGTableView, menuForRows rows: IndexSet, clickedRow: Int?, column: NGTableColumn?) -> UIMenu? { nil }

@@ -84,6 +84,12 @@ final class NGHeaderPanRecognizer: UIPanGestureRecognizer {}
 
 extension NGTouchScrollDelegate: UIGestureRecognizerDelegate {
     func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+        if let swipe = recognizer as? NGRowSwipeRecognizer, let table {
+            let point = swipe.location(in: table)
+            let translation = swipe.translation(in: table)
+            return table.rowSwipeShouldBegin(at: CGPoint(x: point.x - translation.x, y: point.y - translation.y),
+                                             velocity: swipe.velocity(in: table))
+        }
         guard let table, let pan = recognizer as? NGHeaderPanRecognizer else { return true }
         // Where the finger went down (the pan begins after it moved a little).
         let point = pan.location(in: table)
