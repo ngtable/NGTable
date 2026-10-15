@@ -492,5 +492,47 @@ struct NGTouchTests {
         #expect(!table.rowActionsVisible)
         #expect(table.selectedRowIndexes.isEmpty)
     }
+
+    // MARK: VoiceOver
+
+    @Test func voiceOverReadsADataTable() throws {
+        final class Actions: NGTableViewDelegate {
+            func tableView(_ tableView: NGTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NGRowAction] {
+                edge == .trailing ? [NGRowAction(style: .destructive, title: "Archive") { _, _ in }] : []
+            }
+        }
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        let actions = Actions()
+        defer { withExtendedLifetime((window, actions)) {} }
+        table.delegate = actions
+        table.locale = Locale(identifier: "en_US")
+        #expect(table.accessibilityContainerType == .dataTable)
+        let elements = try #require(table.accessibilityElements)
+        // Two titles, two cells for each row in view, the summary.
+        let rows = table.accessibilityRowsInView
+        #expect(rows.lowerBound == 0 && rows.count > 10)
+        #expect(elements.count == 2 + 2 * rows.count + 1)
+        let title = try #require(elements[1] as? NGTouchAccessibilityHeader)
+        #expect(title.accessibilityLabel == "Value")
+        let cell = try #require(table.accessibilityDataTableCellElement(forRow: 4, column: 1) as? NGTouchAccessibilityCell)
+        #expect(cell.accessibilityLabel == table.accessibilityText(row: 3, column: table.tableColumns[1]))
+        #expect(cell.accessibilityLabel == "\(Int(data.values[3]))")
+        #expect(cell.accessibilityColumnRange().location == 1)
+        #expect((table.accessibilityHeaderElements(forColumn: 1)?.first as? NGTouchAccessibilityHeader) === title)
+        // The same element while the row stays (VoiceOver's focus).
+        #expect(table.accessibilityDataTableCellElement(forRow: 4, column: 1) as? NGTouchAccessibilityCell === cell)
+        // A double tap selects the row; it reads as selected.
+        #expect(cell.accessibilityActivate())
+        #expect(table.selectedRowIndexes == [3])
+        #expect(cell.accessibilityTraits.contains(.selected))
+        #expect(cell.accessibilityCustomActions?.map(\.name) == ["Archive"])
+        // A title's double tap sorts.
+        #expect(title.accessibilityActivate())
+        #expect(title.accessibilityValue == "ascending")
+        // The summary reads its values.
+        let summary = try #require(elements.last as? NGAccessibilitySummary)
+        #expect(summary.accessibilityValue?.hasPrefix("Value: ") == true)
+    }
 }
 #endif

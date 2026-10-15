@@ -31,14 +31,6 @@ extension NGTableView {
     func layoutDataUpdateOverlay() {}
 }
 
-/// Pending kinds of the shared state: their parts come with the features.
-final class NGAccessibilityRow {}
-final class NGAccessibilityColumnHeader {}
-final class NGAccessibilityColumn {}
-final class NGAccessibilitySummary {
-    init(table: NGTableView) {}
-}
-
 /// The updating veil's place (it shows nothing yet on the iPad).
 final class NGDataUpdateOverlay: UIView {
     var blocksInput = true

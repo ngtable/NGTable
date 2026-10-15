@@ -2582,6 +2582,10 @@ public final class NGTableView: NGPlatformView {
     var accessibilityHeaderCache: [String: NGAccessibilityColumnHeader] = [:]
     var accessibilityColumnCache: [String: NGAccessibilityColumn] = [:]
     private(set) lazy var accessibilitySummaryElement = NGAccessibilitySummary(table: self)
+    #if os(iOS)
+    /// The titles' elements on the iPad (NGTableAccessibilityUIKit.swift).
+    var accessibilityTitleCache: [String: NGTouchAccessibilityHeader] = [:]
+    #endif
 
     /// Values of a column for the summary, with only the values a filter includes.
     struct SummaryKey: Hashable, Sendable {

@@ -408,6 +408,17 @@
         }
       }
     },
+    "Rows %lld to %lld of %lld" : {
+      "comment" : "VoiceOver on the iPad: the rows in view after a page scroll.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Строки с %1$lld по %2$lld из %3$lld"
+          }
+        }
+      }
+    },
     "Save" : {
       "comment" : "Save view dialog: the default button.",
       "localizations" : {
