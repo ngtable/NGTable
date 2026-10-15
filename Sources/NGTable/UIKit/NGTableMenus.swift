@@ -6,7 +6,7 @@ import UIKit
 // - rows: the delegate's menu, for the selection when the pressed row is in
 //   it, otherwise for the pressed row, outlined while the menu is open;
 // - a group header: collapse or expand it, or all groups;
-// - a column's title: sort, the saved views, pinning, grouping, and the
+// - a column's title: sort, its filter, the saved views, pinning, grouping, and the
 //   columns to show (a tap sorts; there is no right-click on a finger);
 // - the summary row: which rows it sums.
 
@@ -55,6 +55,14 @@ extension NGTableView {
                 self?.sort(by: column, ascending: false)
             }
             sections.append(UIMenu(options: .displayInline, children: [ascending, descending]))
+        }
+        if allowsColumnFilters, let column = column(atViewportPoint: point)?.frame.column, column.isFilterable {
+            let filter = UIAction(title: String(localized: "Filter…", bundle: .module, comment: "Header menu on the iPad: opens the column's filter."),
+                                  image: UIImage(systemName: "line.3.horizontal.decrease.circle"),
+                                  state: columnFilters[column.id] != nil ? .on : .off) { [weak self] _ in
+                self?.showFilter(forColumnID: column.id)
+            }
+            sections.append(UIMenu(options: .displayInline, children: [filter]))
         }
         if let views = namedViewsMenu() { sections.append(views) }
         if let (itemID, choices) = pinChoices(at: point) {

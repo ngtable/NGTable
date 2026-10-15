@@ -10,6 +10,8 @@ import UIKit
 extension NGTableView {
     /// The pointer moved (`nil`: it left the table), in the table's coordinates.
     func pointerMoved(to point: CGPoint?) {
+        // Over a title, its filter button shows (like the Mac's).
+        updateHoveredHeaderColumn(at: point.flatMap { $0.y >= 0 && $0.y < layoutMetrics.headerHeight && !hidesHeader ? $0 : nil })
         guard let point, bounds.contains(point) else {
             updateHoveredCell(atWindowPoint: nil)
             return

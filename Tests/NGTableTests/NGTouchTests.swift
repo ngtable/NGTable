@@ -534,5 +534,96 @@ struct NGTouchTests {
         let summary = try #require(elements.last as? NGAccessibilitySummary)
         #expect(summary.accessibilityValue?.hasPrefix("Value: ") == true)
     }
+
+    // MARK: Filters and choices
+
+    @Test func aColumnsFilterOpensFromItsMenuAndFilters() throws {
+        final class Cities: NSObject, NGTableViewDataSource {
+            let cities = ["Berlin", "Köln", "Berlin", "Wien", "Köln", "Berlin"]
+            let spend: [Double] = [5, 1, 7, 3, 2, 9]
+            func numberOfRows(in tableView: NGTableView) -> Int { cities.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
+                column.id == "city" ? .text(cities[row]) : .number(spend[row])
+            }
+        }
+        let cities = Cities()
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 600, height: 800))
+        let controller = UIViewController()
+        window.rootViewController = controller
+        window.isHidden = false
+        let table = NGTableView(frame: controller.view.bounds)
+        controller.view.addSubview(table)
+        var shown: NGColumnFilterController?
+        NGTableView.columnFilterShownForTesting = { shown = $0 }
+        defer {
+            NGTableView.columnFilterShownForTesting = nil
+            withExtendedLifetime((window, cities)) {}
+        }
+        table.allowsColumnFilters = true
+        table.columns = [.column(NGTableColumn("city", title: "City", width: 150)),
+                         .column(NGTableColumn("spend", title: "Spend", width: 100, format: .number(fractionDigits: 0)))]
+        table.dataSource = cities
+        table.layoutIfNeeded()
+        let cityTitle = CGPoint(x: 60, y: table.layoutMetrics.headerHeight / 2)
+        let menu = table.headerMenu(at: cityTitle)
+        #expect(titles(menu).contains("Filter…"))
+        #expect(table.showFilter(forColumnID: "city"))
+        let values = try #require(shown)
+        values.loadViewIfNeeded()
+        // Berlin, Köln, Wien: unchecking Köln leaves 4 rows.
+        #expect(values.tableView(values.tableView, numberOfRowsInSection: 0) == 4)
+        values.toggle(1)
+        #expect(table.columnFilters["city"] == .excluding(["Köln"]))
+        #expect(table.numberOfRows == 4)
+        // Select All checks them all again: no filter.
+        values.toggle(nil)
+        #expect(table.columnFilters["city"] == nil)
+        // A number column: a range typed.
+        #expect(table.showFilter(forColumnID: "spend"))
+        let numbers = try #require(shown)
+        numbers.minField.text = "3"
+        numbers.applyNumbers(changed: numbers.minField)
+        #expect(table.columnFilters["spend"] == .range(min: 3, max: nil))
+        #expect(table.numberOfRows == 4)
+        // Its filter button, a tap away, opens it again.
+        shown = nil
+        let edge = try #require(table.resizeHandles().first { $0.frame.column.id == "spend" }?.edgeX)
+        table.tapped(at: CGPoint(x: edge - 14, y: table.layoutMetrics.headerHeight / 2))
+        #expect(shown != nil)
+        #expect(table.sortDescriptors.isEmpty)
+    }
+
+    @Test func aChoiceColumnOpensItsChoices() throws {
+        final class Status: NSObject, NGTableViewDataSource {
+            var statuses = ["Active", "Paused"]
+            func numberOfRows(in tableView: NGTableView) -> Int { statuses.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue { .text(statuses[row]) }
+            func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int) {
+                if case .text(let new) = value { statuses[row] = new }
+            }
+        }
+        let status = Status()
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 600, height: 800))
+        let controller = UIViewController()
+        window.rootViewController = controller
+        window.isHidden = false
+        let table = NGTableView(frame: controller.view.bounds)
+        controller.view.addSubview(table)
+        var sheet: UIAlertController?
+        NGTableView.choicesShownForTesting = { sheet = $0 }
+        defer {
+            NGTableView.choicesShownForTesting = nil
+            withExtendedLifetime((window, status)) {}
+        }
+        table.columns = [.column(NGTableColumn("status", title: "Status", width: 150, isEditable: true,
+                                               editChoices: [.text("Active"), .text("Paused"), .text("Finished")]))]
+        table.dataSource = status
+        table.layoutIfNeeded()
+        table.doubleTapped(at: point(ofRow: 1, in: table))
+        let shown = try #require(sheet)
+        #expect(shown.actions.map(\.title) == ["Active", "✓ Paused", "Finished", "Cancel"])
+        table.choose(NGChoice(ref: table.rowRef(ofRow: 1), columnID: "status", index: 2))
+        #expect(status.statuses[1] == "Finished")
+    }
 }
 #endif

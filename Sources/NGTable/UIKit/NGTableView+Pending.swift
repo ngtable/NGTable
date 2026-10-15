@@ -9,8 +9,6 @@ extension NGTableView {
     // Keyboard and type select.
 
     // Menus.
-    func showChoiceMenu(row: Int, column: NGTableColumn) -> Bool { false }
-    func showColumnFilter(for column: NGTableColumn, relativeTo rect: CGRect, of view: NGPlatformView) {}
 
     // Drag and drop.
     func dropGapOffset(ofDisplayRow row: Int, progress: CGFloat? = nil) -> CGFloat { 0 }

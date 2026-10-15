@@ -2504,6 +2504,11 @@ public final class NGTableView: NGPlatformView {
     #if os(macOS)
     /// Takes a choice menu instead of popping it up (a modal loop), for tests.
     nonisolated(unsafe) static var choiceMenuShownForTesting: ((NSMenu) -> Void)?
+    #else
+    /// Takes the choices' sheet instead of presenting it, for tests.
+    nonisolated(unsafe) static var choicesShownForTesting: ((UIAlertController) -> Void)?
+    /// Takes a column's filter instead of presenting it, for tests.
+    nonisolated(unsafe) static var columnFilterShownForTesting: ((NGColumnFilterController) -> Void)?
     #endif
     /// Opens links' URLs instead of the workspace, for tests.
     nonisolated(unsafe) static var openURLForTesting: ((URL) -> Void)?

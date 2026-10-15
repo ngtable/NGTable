@@ -16,7 +16,21 @@ extension NGTableView {
         // Open swipe actions: a button acts, a tap elsewhere closes them.
         if tapRowActions(at: point) { return }
         if point.y < layoutMetrics.headerHeight {
-            if let (frame, _) = column(atViewportPoint: point), frame.column.isSortable { sortByClicking(frame.column) }
+            guard let (frame, pin) = column(atViewportPoint: point) else { return }
+            // A filtered column's filter button opens its filter.
+            if showsFilterButton(for: frame.column, width: frame.width) {
+                let band = columnLayout.hasGroups ? groupHeaderHeight : 0
+                let title = CGRect(x: viewport.origin(of: pin) + CGFloat(frame.x), y: band, width: CGFloat(frame.width),
+                                   height: layoutMetrics.headerHeight - band)
+                let button = filterButtonRect(inTitleRect: title)
+                // A finger's reach around the small button.
+                if button.insetBy(dx: -10, dy: 0).contains(point) {
+                    showColumnFilter(for: frame.column, relativeTo: button, of: self)
+                    return
+                }
+            }
+            if frame.column.isSortable { sortByClicking(frame.column) }
+            delegate?.tableView(self, didClick: frame.column)
             return
         }
         guard point.y < bounds.height - layoutMetrics.summaryHeight else { return }

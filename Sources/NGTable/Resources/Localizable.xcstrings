@@ -210,6 +210,17 @@
         }
       }
     },
+    "Filter…" : {
+      "comment" : "Header menu on the iPad: opens the column's filter.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фильтр…"
+          }
+        }
+      }
+    },
     "Format:" : {
       "comment" : "Export: the label of the file format menu.",
       "localizations" : {
