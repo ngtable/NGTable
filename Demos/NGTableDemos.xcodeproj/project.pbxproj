@@ -11,7 +11,10 @@
 		2659DDFA1E39EAF135517EB7 /* FeedStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE82CB75826EA00887536F5A /* FeedStoreTests.swift */; };
 		2C18E82B6276DCD729D75148 /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = EEA7F474BB88B9C8B04D8B31 /* NGTable */; };
 		3034D48344806CDDAFD3D23A /* FeedDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB89FA230F50C6244811287 /* FeedDecoderTests.swift */; };
+		3BE6B8C627E8D2ADADBD4B58 /* LogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70462CA40E6DB905B9043E0 /* LogReader.swift */; };
 		3C459E0346E3E0E9EBC16BDE /* LiveDataViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD2B336949E89FAFFAA702B7 /* LiveDataViewController.swift */; };
+		451C48535F680F0D5FFB9AD3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE52A7961EB066D4CEB90880 /* main.swift */; };
+		4ACA61DC046A909C8EA4E31A /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = BF63AE10D65ACBB887A7CCF6 /* NGTable */; };
 		4D276B90689A7E09F24FE762 /* BinanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B7B2A1EED626F91FCB76A5 /* BinanceTests.swift */; };
 		546A61EB53B54664D5743AFA /* BenchViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A926AC636D9AD962A8D7EB /* BenchViewController.swift */; };
 		56549320F698D15B4DD91AF3 /* FeedBacklog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 525029FA7C04AC8A05B7A6D8 /* FeedBacklog.swift */; };
@@ -19,6 +22,7 @@
 		6809224D7267F32BE5AFE54B /* CampaignsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EC1B4C3EF081FFE20844DE3 /* CampaignsTable.swift */; };
 		6843D98149DF5B0D008C5D9C /* BinanceMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8302ACD2CFF184499DAAAE09 /* BinanceMessages.swift */; };
 		6AB3B4AB56DE2935FEB25364 /* MacBenchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209BC789ECD6568AAE424F65 /* MacBenchApp.swift */; };
+		70A5C5ED2C7FF7DB1A970E1A /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = 4A5F8A1097DB9E5CB8145BDD /* NGTable */; };
 		711609FAA1E7F3CC0C341DC7 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 599868EAC1931E67E5EC1C03 /* Formatters.swift */; };
 		72B055F45662C3020493236C /* BenchTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5246E58E0566104BE3E26024 /* BenchTable.swift */; };
 		796CA80EDEF65C7AF03383EE /* CampaignColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB1E6EE9EFCD923BA98C291 /* CampaignColumn.swift */; };
@@ -28,14 +32,19 @@
 		898FEBDF4C4821F2E040073E /* BinanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3B2FF7D082CDA3409F4AE /* BinanceStore.swift */; };
 		97D22AE2C0D133E88012BE13 /* FeedConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343E6F7B50BBB182C2DC5A7D /* FeedConnection.swift */; };
 		98CF6D23C864ACCE7237928A /* BenchData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C29514814D7796A91E6B2D /* BenchData.swift */; };
+		99234910AB71CBFB665BE08A /* FrameMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70C201FC4D788B1B7ACF50D /* FrameMeter.swift */; };
+		9A7F64216C0EEF363BC8DE1A /* Engines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B2FAE433C94455DB084086 /* Engines.swift */; };
 		9AC21A6BCDDAE92D6F80AB7B /* Campaign.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC6B69B3C34FCF8CFBFE34CC /* Campaign.swift */; };
+		A4ACD4F20C5A8C97E2584D52 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB2A80036DF432CDDC2C269 /* main.swift */; };
 		ABF6EFAC6FBAAB44CD34C5D9 /* FeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B97AC0F4CD32968ADBA35DB /* FeedViewController.swift */; };
 		AEFA6E51087FA12749B7F8D5 /* BenchCampaigns.swift in Sources */ = {isa = PBXBuildFile; fileRef = E71E1061FB416FD11A002C66 /* BenchCampaigns.swift */; };
+		B4BC097FD1C2DCFE5CA36623 /* LogWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21AAC5E031A1D93AF5A1571 /* LogWindow.swift */; };
 		B5E0145520C288E1A768D919 /* FeedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEED76085FE3512A52C44831 /* FeedStore.swift */; };
 		B74190C0AE2D64EF5BCE6599 /* DateRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405F1193FAFC63FB21BE9DD7 /* DateRange.swift */; };
 		BA1A0DE1ABE976510CA44AB1 /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = 2590F7587F6C9AF43BD3AD0C /* NGTable */; };
 		BD0D18791F79A97EF02DE24D /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = AF91149C1CA16DB2955E5DD2 /* NGTable */; };
 		C5F3EF3C6FC366CB9A59B832 /* CampaignRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA69AE7CC5840D16540AF7D /* CampaignRow.swift */; };
+		C75634A51F5FE006A27FCAF6 /* Feed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E333E10CB1ABEA82963D29 /* Feed.swift */; };
 		CAB9D55FE944B78AA424FD5B /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9667838521B8DCC3670AA6EA /* App.swift */; };
 		D4A2078CC230C643A380E74A /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D09AF408A2582F0DD28535 /* Enums.swift */; };
 		D5E8C5C73CDB1262C73D3492 /* BinanceViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D321A6AADFC9CD6802C93FDD /* BinanceViewController.swift */; };
@@ -45,6 +54,7 @@
 		F7A4F827219198F0CB26283D /* NSBenchTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5DF6D35AB138F9566F9795E /* NSBenchTable.swift */; };
 		F899507859DA482711B6DFBD /* FrameMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BCCCA4A5D86A214ED7AE40F /* FrameMeter.swift */; };
 		F93E4765B5678A11250DE07C /* BinanceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6681495AAD86CEFD0FB2AB5D /* BinanceConnection.swift */; };
+		FD678CC3EF9C6EDF07EBBC5E /* LogEntries.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D92C71969EF98D624C25A2 /* LogEntries.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +74,7 @@
 		1D820D09463C1BE96970F30F /* FeedMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedMessages.swift; sourceTree = "<group>"; };
 		1FB89FA230F50C6244811287 /* FeedDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDecoderTests.swift; sourceTree = "<group>"; };
 		209BC789ECD6568AAE424F65 /* MacBenchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacBenchApp.swift; sourceTree = "<group>"; };
+		21E333E10CB1ABEA82963D29 /* Feed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feed.swift; sourceTree = "<group>"; };
 		2B97AC0F4CD32968ADBA35DB /* FeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewController.swift; sourceTree = "<group>"; };
 		343E6F7B50BBB182C2DC5A7D /* FeedConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedConnection.swift; sourceTree = "<group>"; };
 		3726503F725710CA1B9A1EC1 /* FeedBacklogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedBacklogTests.swift; sourceTree = "<group>"; };
@@ -73,6 +84,8 @@
 		47B7B2A1EED626F91FCB76A5 /* BinanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceTests.swift; sourceTree = "<group>"; };
 		5246E58E0566104BE3E26024 /* BenchTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchTable.swift; sourceTree = "<group>"; };
 		525029FA7C04AC8A05B7A6D8 /* FeedBacklog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedBacklog.swift; sourceTree = "<group>"; };
+		52B2FAE433C94455DB084086 /* Engines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engines.swift; sourceTree = "<group>"; };
+		538875F7E4FEC1682F7C4FF9 /* NGTable Log Viewer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NGTable Log Viewer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		599868EAC1931E67E5EC1C03 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		5FB1E6EE9EFCD923BA98C291 /* CampaignColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignColumn.swift; sourceTree = "<group>"; };
 		64617D37280BD6EB835C6D68 /* FeedJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedJSON.swift; sourceTree = "<group>"; };
@@ -83,20 +96,27 @@
 		9667838521B8DCC3670AA6EA /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		A1A926AC636D9AD962A8D7EB /* BenchViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchViewController.swift; sourceTree = "<group>"; };
 		A5DF6D35AB138F9566F9795E /* NSBenchTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSBenchTable.swift; sourceTree = "<group>"; };
+		B21AAC5E031A1D93AF5A1571 /* LogWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWindow.swift; sourceTree = "<group>"; };
+		B70462CA40E6DB905B9043E0 /* LogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogReader.swift; sourceTree = "<group>"; };
 		B969F1CD9BA49BAD86F92E7B /* NGTable */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NGTable; path = ..; sourceTree = SOURCE_ROOT; };
 		BFA69AE7CC5840D16540AF7D /* CampaignRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignRow.swift; sourceTree = "<group>"; };
 		C3DE4E33F51B9A991B06C935 /* NGTable Mac Bench Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "NGTable Mac Bench Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C54E96D324F7483837A7B449 /* BinanceBookSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceBookSync.swift; sourceTree = "<group>"; };
 		C6C29514814D7796A91E6B2D /* BenchData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchData.swift; sourceTree = "<group>"; };
+		C7D92C71969EF98D624C25A2 /* LogEntries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEntries.swift; sourceTree = "<group>"; };
 		CD2B336949E89FAFFAA702B7 /* LiveDataViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDataViewController.swift; sourceTree = "<group>"; };
+		CE52A7961EB066D4CEB90880 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		CEC3B2FF7D082CDA3409F4AE /* BinanceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceStore.swift; sourceTree = "<group>"; };
 		D321A6AADFC9CD6802C93FDD /* BinanceViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceViewController.swift; sourceTree = "<group>"; };
+		D70C201FC4D788B1B7ACF50D /* FrameMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMeter.swift; sourceTree = "<group>"; };
 		D8C9183021F620DF2DBD4A01 /* NGTable Mac Bench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NGTable Mac Bench.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DC6B69B3C34FCF8CFBFE34CC /* Campaign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Campaign.swift; sourceTree = "<group>"; };
 		DEED76085FE3512A52C44831 /* FeedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedStore.swift; sourceTree = "<group>"; };
 		E1194294A1599436660E22C9 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		E6E7FBF8B6289EAD4555CAAA /* NGTable Comparison.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NGTable Comparison.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E71E1061FB416FD11A002C66 /* BenchCampaigns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchCampaigns.swift; sourceTree = "<group>"; };
 		F4D09AF408A2582F0DD28535 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		FCB2A80036DF432CDDC2C269 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FE82CB75826EA00887536F5A /* FeedStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -114,6 +134,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				BD0D18791F79A97EF02DE24D /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		646C74BCB0B8CDC0D7E6F8E1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4ACA61DC046A909C8EA4E31A /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A17DC32145B4F69CDF930BB8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70A5C5ED2C7FF7DB1A970E1A /* NGTable in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,11 +172,25 @@
 			path = Shell;
 			sourceTree = "<group>";
 		};
+		06858FA40DFF65A5D52E6908 /* NGTableLogViewer */ = {
+			isa = PBXGroup;
+			children = (
+				D70C201FC4D788B1B7ACF50D /* FrameMeter.swift */,
+				C7D92C71969EF98D624C25A2 /* LogEntries.swift */,
+				B70462CA40E6DB905B9043E0 /* LogReader.swift */,
+				B21AAC5E031A1D93AF5A1571 /* LogWindow.swift */,
+				CE52A7961EB066D4CEB90880 /* main.swift */,
+			);
+			path = NGTableLogViewer;
+			sourceTree = "<group>";
+		};
 		10B7997CA7CFE8B1784F7052 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				E6E7FBF8B6289EAD4555CAAA /* NGTable Comparison.app */,
 				77D3A31A94A67A2A457B8A8A /* NGTable iPad Bench.app */,
 				1BD47D5AC582BFD77DF3C5DC /* NGTable iPad.app */,
+				538875F7E4FEC1682F7C4FF9 /* NGTable Log Viewer.app */,
 				C3DE4E33F51B9A991B06C935 /* NGTable Mac Bench Tests.xctest */,
 				D8C9183021F620DF2DBD4A01 /* NGTable Mac Bench.app */,
 			);
@@ -180,6 +230,22 @@
 			path = MacBench;
 			sourceTree = "<group>";
 		};
+		66D136CD49EA542F1537A7EC /* Comparison */ = {
+			isa = PBXGroup;
+			children = (
+				EFCCD89F05CD61A855D6557B /* Sources */,
+			);
+			path = Comparison;
+			sourceTree = "<group>";
+		};
+		7FBA2ED4078C19FA0F271254 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				06858FA40DFF65A5D52E6908 /* NGTableLogViewer */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
 		81A8F791842DF1CBD23287D7 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -206,11 +272,21 @@
 			children = (
 				C1C505F4B41D283C2A77D1D3 /* iPadBench */,
 				159E9637F33570E0735DC21E /* iPadTable */,
+				9CB00F0726EE7EAABC375AC3 /* LogViewer */,
 				38660DDB9E78FAED8A357282 /* MacBench */,
 				30CC71CEFA56717157BE556E /* MacBenchTests */,
+				B6EDB417AF41E431B37C7CD3 /* NGTable */,
 				81A8F791842DF1CBD23287D7 /* Packages */,
 				10B7997CA7CFE8B1784F7052 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		9CB00F0726EE7EAABC375AC3 /* LogViewer */ = {
+			isa = PBXGroup;
+			children = (
+				7FBA2ED4078C19FA0F271254 /* Sources */,
+			);
+			path = LogViewer;
 			sourceTree = "<group>";
 		};
 		AB702DF25CC5DAF735060A49 /* Campaigns */ = {
@@ -221,6 +297,15 @@
 				C2AA3537B0FAC21C060EF41E /* FromEasyCPA */,
 			);
 			path = Campaigns;
+			sourceTree = "<group>";
+		};
+		B6EDB417AF41E431B37C7CD3 /* NGTable */ = {
+			isa = PBXGroup;
+			children = (
+				66D136CD49EA542F1537A7EC /* Comparison */,
+			);
+			name = NGTable;
+			path = ..;
 			sourceTree = "<group>";
 		};
 		BA3C2E67D4A0818B73C81752 /* Binance */ = {
@@ -268,6 +353,14 @@
 			path = LiveData;
 			sourceTree = "<group>";
 		};
+		EFCCD89F05CD61A855D6557B /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				FB246FBA7B53107753CE0BE0 /* NGTableComparison */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
 		F01BACA0463DAFAFB9BBD69A /* Engines */ = {
 			isa = PBXGroup;
 			children = (
@@ -278,9 +371,57 @@
 			path = Engines;
 			sourceTree = "<group>";
 		};
+		FB246FBA7B53107753CE0BE0 /* NGTableComparison */ = {
+			isa = PBXGroup;
+			children = (
+				52B2FAE433C94455DB084086 /* Engines.swift */,
+				21E333E10CB1ABEA82963D29 /* Feed.swift */,
+				FCB2A80036DF432CDDC2C269 /* main.swift */,
+			);
+			path = NGTableComparison;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		22FD4276F10B38F7C6744E7C /* NGTable Log Viewer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 02B06CB88314EBE57D3BF47C /* Build configuration list for PBXNativeTarget "NGTable Log Viewer" */;
+			buildPhases = (
+				615C0F43BA97A4F5996C068F /* Sources */,
+				A17DC32145B4F69CDF930BB8 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable Log Viewer";
+			packageProductDependencies = (
+				4A5F8A1097DB9E5CB8145BDD /* NGTable */,
+			);
+			productName = "NGTable Log Viewer";
+			productReference = 538875F7E4FEC1682F7C4FF9 /* NGTable Log Viewer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		46FACB0515488E0A8DFBFA04 /* NGTable Comparison */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 79399603A5D42B647637A292 /* Build configuration list for PBXNativeTarget "NGTable Comparison" */;
+			buildPhases = (
+				CB3E4B5D5C24E266998C769E /* Sources */,
+				646C74BCB0B8CDC0D7E6F8E1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable Comparison";
+			packageProductDependencies = (
+				BF63AE10D65ACBB887A7CCF6 /* NGTable */,
+			);
+			productName = "NGTable Comparison";
+			productReference = E6E7FBF8B6289EAD4555CAAA /* NGTable Comparison.app */;
+			productType = "com.apple.product-type.application";
+		};
 		9506FAF5752DDEB81F320743 /* NGTable Mac Bench Tests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 46476E67343F49DF267C010C /* Build configuration list for PBXNativeTarget "NGTable Mac Bench Tests" */;
@@ -365,6 +506,12 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					22FD4276F10B38F7C6744E7C = {
+						ProvisioningStyle = Automatic;
+					};
+					46FACB0515488E0A8DFBFA04 = {
+						ProvisioningStyle = Automatic;
+					};
 					9506FAF5752DDEB81F320743 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -400,6 +547,8 @@
 				C632C4E2138153A30FB1073E /* NGTable iPad Bench */,
 				98B6DE0560FB2323A42AB020 /* NGTable Mac Bench */,
 				9506FAF5752DDEB81F320743 /* NGTable Mac Bench Tests */,
+				46FACB0515488E0A8DFBFA04 /* NGTable Comparison */,
+				22FD4276F10B38F7C6744E7C /* NGTable Log Viewer */,
 			);
 		};
 /* End PBXProject section */
@@ -422,6 +571,18 @@
 			files = (
 				6237C6FEB3068F1DD5247AAE /* App.swift in Sources */,
 				F899507859DA482711B6DFBD /* FrameMeter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		615C0F43BA97A4F5996C068F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				99234910AB71CBFB665BE08A /* FrameMeter.swift in Sources */,
+				FD678CC3EF9C6EDF07EBBC5E /* LogEntries.swift in Sources */,
+				3BE6B8C627E8D2ADADBD4B58 /* LogReader.swift in Sources */,
+				B4BC097FD1C2DCFE5CA36623 /* LogWindow.swift in Sources */,
+				451C48535F680F0D5FFB9AD3 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -468,6 +629,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CB3E4B5D5C24E266998C769E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A7F64216C0EEF363BC8DE1A /* Engines.swift in Sources */,
+				C75634A51F5FE006A27FCAF6 /* Feed.swift in Sources */,
+				A4ACD4F20C5A8C97E2584D52 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -479,6 +650,24 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		394FA2606CC29705E192EE45 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.log-viewer";
+				SDKROOT = macosx;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Release;
+		};
 		40B93305310DE4BEB752C08B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -563,6 +752,24 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		71B340498A3E12C12D6291D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.log-viewer";
+				SDKROOT = macosx;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Debug;
 		};
 		7C271A640AA4A361840D875C /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -722,6 +929,42 @@
 			};
 			name = Debug;
 		};
+		D4CDB15D7ECC69610986CED4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ngtable.comparison;
+				SDKROOT = macosx;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Release;
+		};
+		D901C435286C2FE1756093A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ngtable.comparison;
+				SDKROOT = macosx;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Debug;
+		};
 		DCF5B0AB672552C58F9F371F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -761,6 +1004,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		02B06CB88314EBE57D3BF47C /* Build configuration list for PBXNativeTarget "NGTable Log Viewer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				71B340498A3E12C12D6291D9 /* Debug */,
+				394FA2606CC29705E192EE45 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		26CDE93023514DDF18D83DC1 /* Build configuration list for PBXNativeTarget "NGTable Mac Bench" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -797,6 +1049,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		79399603A5D42B647637A292 /* Build configuration list for PBXNativeTarget "NGTable Comparison" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D901C435286C2FE1756093A6 /* Debug */,
+				D4CDB15D7ECC69610986CED4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		E7A580901A229946E128A649 /* Build configuration list for PBXNativeTarget "NGTable iPad" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -820,7 +1081,15 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = NGTable;
 		};
+		4A5F8A1097DB9E5CB8145BDD /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
 		AF91149C1CA16DB2955E5DD2 /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
+		BF63AE10D65ACBB887A7CCF6 /* NGTable */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = NGTable;
 		};
