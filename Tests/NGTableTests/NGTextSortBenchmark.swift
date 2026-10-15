@@ -121,5 +121,47 @@ struct NGTextSortBenchmark {
         }
         withExtendedLifetime(texts) {}
     }
+
+    /// A feed changing and inserting names of a table sorted by them: what
+    /// a batch costs, each changed row placed by comparing texts.
+    @Test func livePlacing() async throws {
+        @MainActor final class Names: NGTableViewDataSource {
+            var names: [String]
+            init(_ names: [String]) { self.names = names }
+            func numberOfRows(in tableView: NGTableView) -> Int { names.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue { .text(names[row]) }
+        }
+        let count = Int(ProcessInfo.processInfo.environment["NGTABLE_BENCH_ROWS"] ?? "") ?? 1_000_000
+        let names = Names(Texts(count: count, distinct: nil).names)
+        let table = NGTableView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        table.columns = [.column(NGTableColumn("name", title: "Name", width: 300))]
+        table.dataSource = names
+        table.sortsRows = true
+        table.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        table.layoutSubtreeIfNeeded()
+        defer { withExtendedLifetime(names) {} }
+        while table.isSortingRows || table.isSettlingSort { try await Task.sleep(for: .milliseconds(5)) }
+        var generator = SplitMix64(seed: 8)
+        func name() -> String { "Campaign \(generator.next() % 10_000_000) – Live" }
+        let batches = 50
+        let start = ContinuousClock.now
+        for _ in 0..<batches {
+            table.beginUpdates()
+            for _ in 0..<100 {
+                let row = Int(generator.next() % UInt64(names.names.count))
+                names.names[row] = name()
+                table.reloadData(forRowIndexes: [row], columnIndexes: [0])
+            }
+            for _ in 0..<10 {
+                names.names.append(name())
+                table.insertRows(at: [names.names.count - 1])
+            }
+            table.endUpdates()
+            table.layoutSubtreeIfNeeded()
+        }
+        let perBatch = (ContinuousClock.now - start) / batches
+        while table.isSettlingSort { try await Task.sleep(for: .milliseconds(5)) }
+        print("BENCH text live placing, \(count) rows: a batch of 100 changed and 10 new names \(perBatch)")
+    }
 }
 #endif
