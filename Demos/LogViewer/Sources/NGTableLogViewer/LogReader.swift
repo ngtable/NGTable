@@ -20,7 +20,7 @@ nonisolated final class LogReader: @unchecked Sendable {   // (Its process is on
 
     /// Starts reading; `deliver` gets the batches on the main actor, and
     /// `finished` once the tool has ended (`log show`) or was stopped.
-    init(_ source: Source, deliver: @escaping @MainActor @Sendable (LogBatch) -> Void,
+    init(_ source: Source, strings: LogStrings, deliver: @escaping @MainActor @Sendable (LogBatch) -> Void,
          finished: @escaping @MainActor @Sendable () -> Void) {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
         switch source {
@@ -50,27 +50,32 @@ nonisolated final class LogReader: @unchecked Sendable {   // (Its process is on
         timer.resume()
         let handle = pipe.fileHandleForReading
         Thread.detachNewThread {
-            var parser = LogLineParser()
+            var parser = LogLineParser(strings: strings)
             var buffer = Data()
-            while true {
-                let chunk = handle.availableData
-                if chunk.isEmpty { break }
-                buffer.append(chunk)
-                var batch = LogBatch()
-                // Whole lines; the rest waits for the next chunk. (The JSON
-                // objects go with each chunk: without a pool of its own the
-                // thread kept a million lines' objects, 3 GB, to the end.)
-                var start = buffer.startIndex
+            var ended = false
+            while !ended {
+                // A pool for each chunk: the chunk read (autoreleased) and the
+                // JSON objects of its lines go with it; without one the
+                // thread kept everything it read, 1 GB an hour of logs, to the end.
                 autoreleasepool {
+                    let chunk = handle.availableData
+                    if chunk.isEmpty {
+                        ended = true
+                        return
+                    }
+                    buffer.append(chunk)
+                    var batch = LogBatch()
+                    // Whole lines; the rest waits for the next chunk.
+                    var start = buffer.startIndex
                     while let newline = buffer[start...].firstIndex(of: 0x0A) {
                         parser.parse(buffer[start..<newline], into: &batch)
                         start = buffer.index(after: newline)
                     }
+                    buffer.removeSubrange(buffer.startIndex..<start)
+                    guard batch.count > 0 else { return }
+                    let read = batch
+                    pending.withLock { $0.batch.append(read) }
                 }
-                buffer.removeSubrange(buffer.startIndex..<start)
-                guard batch.count > 0 else { continue }
-                let read = batch
-                pending.withLock { $0.batch.append(read) }
             }
             pending.withLock { $0.ended = true }
         }
@@ -89,18 +94,12 @@ nonisolated final class LogReader: @unchecked Sendable {   // (Its process is on
 
 /// One JSON line of `log` into an entry (lines that aren't entries are skipped).
 nonisolated struct LogLineParser {
-    /// Process names by path: a few hundred processes write most lines.
-    private var names: [String: String] = [:]
-    /// Subsystems and categories repeat: each kept once (a string a row
-    /// cost more than the rest of the entry).
-    private var strings: Set<String> = []
+    let strings: LogStrings
+    /// Process numbers by path: a few hundred processes write most lines.
+    private var processes: [String: Int32] = [:]
 
-    private mutating func interned(_ text: String) -> String {
-        if let kept = strings.firstIndex(of: text) { return strings[kept] }
-        // Native, not the bridged JSON string (its own object per row).
-        let native = String(decoding: Array(text.utf8), as: UTF8.self)
-        strings.insert(native)
-        return native
+    init(strings: LogStrings) {
+        self.strings = strings
     }
 
     mutating func parse(_ line: Data, into batch: inout LogBatch) {
@@ -108,21 +107,21 @@ nonisolated struct LogLineParser {
               object["eventType"] as? String == "logEvent",
               let timestamp = object["timestamp"] as? String, let date = Self.date(timestamp) else { return }
         let path = object["processImagePath"] as? String ?? ""
-        let process: String
-        if let known = names[path] {
+        let process: Int32
+        if let known = processes[path] {
             process = known
         } else {
-            process = String(decoding: Array((path as NSString).lastPathComponent.utf8), as: UTF8.self)
-            names[path] = process
+            process = strings.number(of: (path as NSString).lastPathComponent)
+            processes[path] = process
         }
         batch.dates.append(date)
         batch.levels.append(LogLevel(rawValue: object["messageType"] as? String ?? "") ?? .default)
         batch.processes.append(process)
-        batch.processIDs.append(object["processID"] as? Int ?? 0)
-        batch.subsystems.append(interned(object["subsystem"] as? String ?? ""))
-        batch.categories.append(interned(object["category"] as? String ?? ""))
-        // A native string: the bridged one keeps its JSON object's storage.
-        batch.messages.append(String(decoding: Array((object["eventMessage"] as? String ?? "").utf8), as: UTF8.self))
+        batch.processIDs.append(Int32(truncatingIfNeeded: object["processID"] as? Int ?? 0))
+        batch.subsystems.append(strings.number(of: object["subsystem"] as? String ?? ""))
+        batch.categories.append(strings.number(of: object["category"] as? String ?? ""))
+        batch.messageBytes += (object["eventMessage"] as? String ?? "").utf8
+        batch.messageEnds.append(batch.messageBytes.count)
     }
 
     /// "2026-10-15 09:55:44.895142+0300", read by hand (a formatter took

@@ -9,7 +9,8 @@ import NGTable
 
 final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate, NSSearchFieldDelegate {
     let table = NGTableView()
-    private let entries = LogEntries()
+    private let strings = LogStrings()
+    private lazy var entries = LogEntries(strings: strings)
     private var reader: LogReader?
     private let status = NSTextField(labelWithString: "")
     private let sourceControl = NSSegmentedControl(labels: ["Live", "Last Hour"], trackingMode: .selectOne, target: nil, action: nil)
@@ -147,11 +148,18 @@ final class LogWindowController: NSWindowController, NSWindowDelegate, NSToolbar
         table.reloadData()
         arrivals = []
         let started = CACurrentMediaTime()
-        reader = LogReader(source, deliver: { [weak self] batch in self?.add(batch) },
+        reader = LogReader(source, strings: strings, deliver: { [weak self] batch in self?.add(batch) },
                            finished: { [weak self] in
                                guard let self else { return }
-                               FileHandle.standardError.write(Data(String(format: "Read %d entries in %.1f s\n", self.entries.count,
-                                                                          CACurrentMediaTime() - started).utf8))
+                               // What reading took, and the memory (now and at most).
+                               var info = task_vm_info_data_t()
+                               var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+                               _ = withUnsafeMutablePointer(to: &info) {
+                                   $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+                               }
+                               FileHandle.standardError.write(Data(String(format: "Read %d entries in %.1f s, footprint %d MB, peak %d MB\n", self.entries.count,
+                                                                          CACurrentMediaTime() - started, Int(info.phys_footprint >> 20),
+                                                                          Int(info.ledger_phys_footprint_peak >> 20)).utf8))
                                self.showStatus()
                            })
     }
