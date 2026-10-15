@@ -1,0 +1,456 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0AF19547D377592EE5CF8E87 /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = A3ED6BBCEFAC1145344F7A7D /* NGTable */; };
+		30CBDCFC9C3A4514DD0D982C /* FrameMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A581E964A68D773DF541D8 /* FrameMeter.swift */; };
+		4DFC7D525C47F2EF81F743DF /* Engines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21448C0BAE03DE27401B355A /* Engines.swift */; };
+		64138F593F6904C821FC141E /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = D9F9158F78CA5D5316DF816E /* NGTable */; };
+		76FC83D153E0F3C9799DD28E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97186DC69743475591067767 /* App.swift */; };
+		7F8D50B1ED1BB1BD57CCC8E9 /* FrameMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E08C8D197EB7D72691ABF7E3 /* FrameMeter.swift */; };
+		8FBE85071D5A4356B166EB8F /* BenchData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00094EAD0413BD6622CB620 /* BenchData.swift */; };
+		D4D7A27105C2CEC92A2F5D07 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44164D3DB85734D67E6DA3DF /* App.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		21448C0BAE03DE27401B355A /* Engines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engines.swift; sourceTree = "<group>"; };
+		44164D3DB85734D67E6DA3DF /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		699652EA05E880534DD18930 /* NGTable */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NGTable; path = ..; sourceTree = SOURCE_ROOT; };
+		97186DC69743475591067767 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		B535EEE0748ADD98399E3DCF /* NGTable iPad.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "NGTable iPad.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BFDA7BEC33F2C8327260D3F1 /* NGTable iPad Bench.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "NGTable iPad Bench.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C00094EAD0413BD6622CB620 /* BenchData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchData.swift; sourceTree = "<group>"; };
+		E08C8D197EB7D72691ABF7E3 /* FrameMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMeter.swift; sourceTree = "<group>"; };
+		E8A581E964A68D773DF541D8 /* FrameMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMeter.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0EB263D36EF45B38CF0CFE83 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0AF19547D377592EE5CF8E87 /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF127108530C4BC483981F7B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				64138F593F6904C821FC141E /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6F66113D007A8912F01CF36C /* iPadBench */ = {
+			isa = PBXGroup;
+			children = (
+				97186DC69743475591067767 /* App.swift */,
+				C00094EAD0413BD6622CB620 /* BenchData.swift */,
+				21448C0BAE03DE27401B355A /* Engines.swift */,
+				E8A581E964A68D773DF541D8 /* FrameMeter.swift */,
+			);
+			path = iPadBench;
+			sourceTree = "<group>";
+		};
+		C9FFB09C3ACC94C623170FD7 = {
+			isa = PBXGroup;
+			children = (
+				6F66113D007A8912F01CF36C /* iPadBench */,
+				E673E6038116AE404C7394A5 /* iPadTable */,
+				F9F16F350D61CDE657E4FBF1 /* Packages */,
+				CFA2BFC780621AA155494AA7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CFA2BFC780621AA155494AA7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BFDA7BEC33F2C8327260D3F1 /* NGTable iPad Bench.app */,
+				B535EEE0748ADD98399E3DCF /* NGTable iPad.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E673E6038116AE404C7394A5 /* iPadTable */ = {
+			isa = PBXGroup;
+			children = (
+				44164D3DB85734D67E6DA3DF /* App.swift */,
+				E08C8D197EB7D72691ABF7E3 /* FrameMeter.swift */,
+			);
+			path = iPadTable;
+			sourceTree = "<group>";
+		};
+		F9F16F350D61CDE657E4FBF1 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				699652EA05E880534DD18930 /* NGTable */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0270B2F1B743CA506ED835E7 /* NGTable iPad Bench */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5CDD30ACC595676B36F63AC5 /* Build configuration list for PBXNativeTarget "NGTable iPad Bench" */;
+			buildPhases = (
+				D6490092112BA3098A1F8455 /* Sources */,
+				AF127108530C4BC483981F7B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable iPad Bench";
+			packageProductDependencies = (
+				D9F9158F78CA5D5316DF816E /* NGTable */,
+			);
+			productName = "NGTable iPad Bench";
+			productReference = BFDA7BEC33F2C8327260D3F1 /* NGTable iPad Bench.app */;
+			productType = "com.apple.product-type.application";
+		};
+		16B03D354050A7BAF3CCE75E /* NGTable iPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D92FEEC30E447BC401CC19B4 /* Build configuration list for PBXNativeTarget "NGTable iPad" */;
+			buildPhases = (
+				97AA4BA6D607D02532966E3A /* Sources */,
+				0EB263D36EF45B38CF0CFE83 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable iPad";
+			packageProductDependencies = (
+				A3ED6BBCEFAC1145344F7A7D /* NGTable */,
+			);
+			productName = "NGTable iPad";
+			productReference = B535EEE0748ADD98399E3DCF /* NGTable iPad.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		633580DADDF8F9DA2C0B178D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0270B2F1B743CA506ED835E7 = {
+						ProvisioningStyle = Automatic;
+					};
+					16B03D354050A7BAF3CCE75E = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 61CEDDD610A866AEB0E4CAB2 /* Build configuration list for PBXProject "iPadDemos" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C9FFB09C3ACC94C623170FD7;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1C6A0A09CD82EF6210167222 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CFA2BFC780621AA155494AA7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				16B03D354050A7BAF3CCE75E /* NGTable iPad */,
+				0270B2F1B743CA506ED835E7 /* NGTable iPad Bench */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		97AA4BA6D607D02532966E3A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4D7A27105C2CEC92A2F5D07 /* App.swift in Sources */,
+				7F8D50B1ED1BB1BD57CCC8E9 /* FrameMeter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D6490092112BA3098A1F8455 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				76FC83D153E0F3C9799DD28E /* App.swift in Sources */,
+				8FBE85071D5A4356B166EB8F /* BenchData.swift in Sources */,
+				4DFC7D525C47F2EF81F743DF /* Engines.swift in Sources */,
+				30CBDCFC9C3A4514DD0D982C /* FrameMeter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1156311F50D6AD4B0109B34C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "NGTable iPad";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-demo";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4B7BE2853CEDBE90EBB70040 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "NGTable iPad";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-demo";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6928BCCF5436671C87BA050E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "Table Bench";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-bench";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		72DB3F403AD023BCFB94CF16 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		907C3AACD655D25FE9757AAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F29CC92513C676F474F94D60 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "Table Bench";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-bench";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5CDD30ACC595676B36F63AC5 /* Build configuration list for PBXNativeTarget "NGTable iPad Bench" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6928BCCF5436671C87BA050E /* Debug */,
+				F29CC92513C676F474F94D60 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		61CEDDD610A866AEB0E4CAB2 /* Build configuration list for PBXProject "iPadDemos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				72DB3F403AD023BCFB94CF16 /* Debug */,
+				907C3AACD655D25FE9757AAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D92FEEC30E447BC401CC19B4 /* Build configuration list for PBXNativeTarget "NGTable iPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4B7BE2853CEDBE90EBB70040 /* Debug */,
+				1156311F50D6AD4B0109B34C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1C6A0A09CD82EF6210167222 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A3ED6BBCEFAC1145344F7A7D /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
+		D9F9158F78CA5D5316DF816E /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 633580DADDF8F9DA2C0B178D /* Project object */;
+}
