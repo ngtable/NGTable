@@ -35,7 +35,7 @@ public enum NGSelectionHighlightStyle: Sendable {
 ///   Text's typesetting, and only when something visible changed.
 /// - Scrollers are overlay scrollers the table places and reveals (legacy
 ///   scrollers when "Show scroll bars: Always" is set in System Settings).
-public final class NGTableView: NSView {
+public final class NGTableView: NGPlatformView {
     /// Supplies the rows and values. Setting it reloads the table. Held weakly:
     /// keep the data source alive yourself.
     public weak var dataSource: NGTableViewDataSource? {
