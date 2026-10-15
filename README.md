@@ -136,6 +136,17 @@ For fast sorts of large text columns, also add the optional `NGTableICU`
 library, `.product(name: "NGTableICU", package: "NGTable")` (about 9 MB per
 architecture, see the note above). Apps without it don't build its ICU.
 
+### Versions
+
+NGTable follows semantic versioning, with one rule for enums: a minor
+version may add cases to the public enums that describe values, formats,
+filters and summaries (`NGValueFormat`, `NGColumnFilter`, `NGCellValue`,
+`NGAggregate` and the like), as 1.1 added the `.dates`, `.top` and
+`.bottom` filters. Keep a `default` in a `switch` over
+them, and updates won't stop your code from compiling. Only `NGColumnItem`,
+`NGDataColumnItem`, `NGColumnPin` and `NGColumnVisibility.State` keep their
+cases until the next major version.
+
 > [!TIP]
 > In the binary `NGTable.xcframework` (`XCFramework/build-xcframework.sh`,
 > built with library evolution) enums may get new cases: a `switch` over one
@@ -249,6 +260,16 @@ tints, a context menu and 0 to 100,000 rows. Choose the scheme and run it
 example of most of the API; row grouping and targeted updates aren't in the
 demo yet (the articles show them).
 
+The log viewer in `Demos/LogViewer` shows the Mac's own logs as they come,
+or the last hour of them (about a million entries): times with
+milliseconds, levels as tags, wrapped messages, search, column filters,
+grouping and export, and the frames a second it gets meanwhile:
+
+```sh
+swift run -c release --package-path Demos/LogViewer
+swift run -c release --package-path Demos/LogViewer NGTableLogViewer --last 60
+```
+
 ## Tests
 
 Run the tests with the `NGTable-Package` scheme in Xcode (Command-U), or
@@ -270,6 +291,7 @@ Run the tests with the `NGTable-Package` scheme in Xcode (Command-U), or
 | `Tests/NGTableICUTests` | NGTableICU's tests |
 | `XCFramework` | The binary frameworks' builds (`ICU`: NGTableICU's) |
 | `Comparison` | The app that compares NGTable with NSTableView and SwiftUI's Table (`Docs/comparison.gif`) |
+| `Demos/LogViewer` | A log viewer of the Mac's logs |
 
 ## License
 
