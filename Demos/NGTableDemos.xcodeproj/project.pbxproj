@@ -1,0 +1,834 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0FE77CE8D204EDC9F1892A92 /* FeedMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D820D09463C1BE96970F30F /* FeedMessages.swift */; };
+		2659DDFA1E39EAF135517EB7 /* FeedStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE82CB75826EA00887536F5A /* FeedStoreTests.swift */; };
+		2C18E82B6276DCD729D75148 /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = EEA7F474BB88B9C8B04D8B31 /* NGTable */; };
+		3034D48344806CDDAFD3D23A /* FeedDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB89FA230F50C6244811287 /* FeedDecoderTests.swift */; };
+		3C459E0346E3E0E9EBC16BDE /* LiveDataViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD2B336949E89FAFFAA702B7 /* LiveDataViewController.swift */; };
+		4D276B90689A7E09F24FE762 /* BinanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B7B2A1EED626F91FCB76A5 /* BinanceTests.swift */; };
+		546A61EB53B54664D5743AFA /* BenchViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A926AC636D9AD962A8D7EB /* BenchViewController.swift */; };
+		56549320F698D15B4DD91AF3 /* FeedBacklog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 525029FA7C04AC8A05B7A6D8 /* FeedBacklog.swift */; };
+		6237C6FEB3068F1DD5247AAE /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1194294A1599436660E22C9 /* App.swift */; };
+		6809224D7267F32BE5AFE54B /* CampaignsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EC1B4C3EF081FFE20844DE3 /* CampaignsTable.swift */; };
+		6843D98149DF5B0D008C5D9C /* BinanceMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8302ACD2CFF184499DAAAE09 /* BinanceMessages.swift */; };
+		6AB3B4AB56DE2935FEB25364 /* MacBenchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209BC789ECD6568AAE424F65 /* MacBenchApp.swift */; };
+		711609FAA1E7F3CC0C341DC7 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 599868EAC1931E67E5EC1C03 /* Formatters.swift */; };
+		72B055F45662C3020493236C /* BenchTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5246E58E0566104BE3E26024 /* BenchTable.swift */; };
+		796CA80EDEF65C7AF03383EE /* CampaignColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB1E6EE9EFCD923BA98C291 /* CampaignColumn.swift */; };
+		7D07BAE4E3FE17F8BD6C193F /* FrameMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE1A626098C8ED9BA99EEA8 /* FrameMeter.swift */; };
+		7F1DEDCE8CE2289B989420B9 /* SwiftUIBenchTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C66CCEEC8BEC16CAF8915C9 /* SwiftUIBenchTable.swift */; };
+		853D61B50B31134B8488C5D3 /* FeedBacklogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3726503F725710CA1B9A1EC1 /* FeedBacklogTests.swift */; };
+		898FEBDF4C4821F2E040073E /* BinanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3B2FF7D082CDA3409F4AE /* BinanceStore.swift */; };
+		97D22AE2C0D133E88012BE13 /* FeedConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343E6F7B50BBB182C2DC5A7D /* FeedConnection.swift */; };
+		98CF6D23C864ACCE7237928A /* BenchData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C29514814D7796A91E6B2D /* BenchData.swift */; };
+		9AC21A6BCDDAE92D6F80AB7B /* Campaign.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC6B69B3C34FCF8CFBFE34CC /* Campaign.swift */; };
+		ABF6EFAC6FBAAB44CD34C5D9 /* FeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B97AC0F4CD32968ADBA35DB /* FeedViewController.swift */; };
+		AEFA6E51087FA12749B7F8D5 /* BenchCampaigns.swift in Sources */ = {isa = PBXBuildFile; fileRef = E71E1061FB416FD11A002C66 /* BenchCampaigns.swift */; };
+		B5E0145520C288E1A768D919 /* FeedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEED76085FE3512A52C44831 /* FeedStore.swift */; };
+		B74190C0AE2D64EF5BCE6599 /* DateRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405F1193FAFC63FB21BE9DD7 /* DateRange.swift */; };
+		BA1A0DE1ABE976510CA44AB1 /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = 2590F7587F6C9AF43BD3AD0C /* NGTable */; };
+		BD0D18791F79A97EF02DE24D /* NGTable in Frameworks */ = {isa = PBXBuildFile; productRef = AF91149C1CA16DB2955E5DD2 /* NGTable */; };
+		C5F3EF3C6FC366CB9A59B832 /* CampaignRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA69AE7CC5840D16540AF7D /* CampaignRow.swift */; };
+		CAB9D55FE944B78AA424FD5B /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9667838521B8DCC3670AA6EA /* App.swift */; };
+		D4A2078CC230C643A380E74A /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D09AF408A2582F0DD28535 /* Enums.swift */; };
+		D5E8C5C73CDB1262C73D3492 /* BinanceViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D321A6AADFC9CD6802C93FDD /* BinanceViewController.swift */; };
+		D924FB4D85A344AE78E875E3 /* Engines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F739E84B606A0EA2EFB4EFE /* Engines.swift */; };
+		DAADC74729D76125EA08AE9B /* BinanceBookSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = C54E96D324F7483837A7B449 /* BinanceBookSync.swift */; };
+		E5ED1C6CEA1F44F3D08A2180 /* FeedJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64617D37280BD6EB835C6D68 /* FeedJSON.swift */; };
+		F7A4F827219198F0CB26283D /* NSBenchTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5DF6D35AB138F9566F9795E /* NSBenchTable.swift */; };
+		F899507859DA482711B6DFBD /* FrameMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BCCCA4A5D86A214ED7AE40F /* FrameMeter.swift */; };
+		F93E4765B5678A11250DE07C /* BinanceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6681495AAD86CEFD0FB2AB5D /* BinanceConnection.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		286DEA9FB76F065E81428861 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 55193F0D8CBD7376739182F9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 98B6DE0560FB2323A42AB020;
+			remoteInfo = "NGTable Mac Bench";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0AE1A626098C8ED9BA99EEA8 /* FrameMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMeter.swift; sourceTree = "<group>"; };
+		0C66CCEEC8BEC16CAF8915C9 /* SwiftUIBenchTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIBenchTable.swift; sourceTree = "<group>"; };
+		1BD47D5AC582BFD77DF3C5DC /* NGTable iPad.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "NGTable iPad.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D820D09463C1BE96970F30F /* FeedMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedMessages.swift; sourceTree = "<group>"; };
+		1FB89FA230F50C6244811287 /* FeedDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDecoderTests.swift; sourceTree = "<group>"; };
+		209BC789ECD6568AAE424F65 /* MacBenchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacBenchApp.swift; sourceTree = "<group>"; };
+		2B97AC0F4CD32968ADBA35DB /* FeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewController.swift; sourceTree = "<group>"; };
+		343E6F7B50BBB182C2DC5A7D /* FeedConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedConnection.swift; sourceTree = "<group>"; };
+		3726503F725710CA1B9A1EC1 /* FeedBacklogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedBacklogTests.swift; sourceTree = "<group>"; };
+		3BCCCA4A5D86A214ED7AE40F /* FrameMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMeter.swift; sourceTree = "<group>"; };
+		3F739E84B606A0EA2EFB4EFE /* Engines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engines.swift; sourceTree = "<group>"; };
+		405F1193FAFC63FB21BE9DD7 /* DateRange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateRange.swift; sourceTree = "<group>"; };
+		47B7B2A1EED626F91FCB76A5 /* BinanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceTests.swift; sourceTree = "<group>"; };
+		5246E58E0566104BE3E26024 /* BenchTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchTable.swift; sourceTree = "<group>"; };
+		525029FA7C04AC8A05B7A6D8 /* FeedBacklog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedBacklog.swift; sourceTree = "<group>"; };
+		599868EAC1931E67E5EC1C03 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		5FB1E6EE9EFCD923BA98C291 /* CampaignColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignColumn.swift; sourceTree = "<group>"; };
+		64617D37280BD6EB835C6D68 /* FeedJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedJSON.swift; sourceTree = "<group>"; };
+		6681495AAD86CEFD0FB2AB5D /* BinanceConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceConnection.swift; sourceTree = "<group>"; };
+		77D3A31A94A67A2A457B8A8A /* NGTable iPad Bench.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "NGTable iPad Bench.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8302ACD2CFF184499DAAAE09 /* BinanceMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceMessages.swift; sourceTree = "<group>"; };
+		8EC1B4C3EF081FFE20844DE3 /* CampaignsTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignsTable.swift; sourceTree = "<group>"; };
+		9667838521B8DCC3670AA6EA /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		A1A926AC636D9AD962A8D7EB /* BenchViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchViewController.swift; sourceTree = "<group>"; };
+		A5DF6D35AB138F9566F9795E /* NSBenchTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSBenchTable.swift; sourceTree = "<group>"; };
+		B969F1CD9BA49BAD86F92E7B /* NGTable */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NGTable; path = ..; sourceTree = SOURCE_ROOT; };
+		BFA69AE7CC5840D16540AF7D /* CampaignRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignRow.swift; sourceTree = "<group>"; };
+		C3DE4E33F51B9A991B06C935 /* NGTable Mac Bench Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "NGTable Mac Bench Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C54E96D324F7483837A7B449 /* BinanceBookSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceBookSync.swift; sourceTree = "<group>"; };
+		C6C29514814D7796A91E6B2D /* BenchData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchData.swift; sourceTree = "<group>"; };
+		CD2B336949E89FAFFAA702B7 /* LiveDataViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDataViewController.swift; sourceTree = "<group>"; };
+		CEC3B2FF7D082CDA3409F4AE /* BinanceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceStore.swift; sourceTree = "<group>"; };
+		D321A6AADFC9CD6802C93FDD /* BinanceViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinanceViewController.swift; sourceTree = "<group>"; };
+		D8C9183021F620DF2DBD4A01 /* NGTable Mac Bench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NGTable Mac Bench.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DC6B69B3C34FCF8CFBFE34CC /* Campaign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Campaign.swift; sourceTree = "<group>"; };
+		DEED76085FE3512A52C44831 /* FeedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedStore.swift; sourceTree = "<group>"; };
+		E1194294A1599436660E22C9 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		E71E1061FB416FD11A002C66 /* BenchCampaigns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchCampaigns.swift; sourceTree = "<group>"; };
+		F4D09AF408A2582F0DD28535 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		FE82CB75826EA00887536F5A /* FeedStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedStoreTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5DA8717729BF9304EEDEC076 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA1A0DE1ABE976510CA44AB1 /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		630AC8966B83E87F5968B498 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BD0D18791F79A97EF02DE24D /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C62C6DFC8AF1D27533F94A1F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C18E82B6276DCD729D75148 /* NGTable in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		052232EBC7C7F7C3176E4075 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				209BC789ECD6568AAE424F65 /* MacBenchApp.swift */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		10B7997CA7CFE8B1784F7052 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				77D3A31A94A67A2A457B8A8A /* NGTable iPad Bench.app */,
+				1BD47D5AC582BFD77DF3C5DC /* NGTable iPad.app */,
+				C3DE4E33F51B9A991B06C935 /* NGTable Mac Bench Tests.xctest */,
+				D8C9183021F620DF2DBD4A01 /* NGTable Mac Bench.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		159E9637F33570E0735DC21E /* iPadTable */ = {
+			isa = PBXGroup;
+			children = (
+				E1194294A1599436660E22C9 /* App.swift */,
+				3BCCCA4A5D86A214ED7AE40F /* FrameMeter.swift */,
+			);
+			path = iPadTable;
+			sourceTree = "<group>";
+		};
+		30CC71CEFA56717157BE556E /* MacBenchTests */ = {
+			isa = PBXGroup;
+			children = (
+				47B7B2A1EED626F91FCB76A5 /* BinanceTests.swift */,
+				3726503F725710CA1B9A1EC1 /* FeedBacklogTests.swift */,
+				1FB89FA230F50C6244811287 /* FeedDecoderTests.swift */,
+				FE82CB75826EA00887536F5A /* FeedStoreTests.swift */,
+			);
+			path = MacBenchTests;
+			sourceTree = "<group>";
+		};
+		38660DDB9E78FAED8A357282 /* MacBench */ = {
+			isa = PBXGroup;
+			children = (
+				BA3C2E67D4A0818B73C81752 /* Binance */,
+				AB702DF25CC5DAF735060A49 /* Campaigns */,
+				F01BACA0463DAFAFB9BBD69A /* Engines */,
+				84BAADCE62E6B776E32744BC /* Feed */,
+				ED74A6E7A836E86711DFA5A0 /* LiveData */,
+				052232EBC7C7F7C3176E4075 /* Shell */,
+			);
+			path = MacBench;
+			sourceTree = "<group>";
+		};
+		81A8F791842DF1CBD23287D7 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				B969F1CD9BA49BAD86F92E7B /* NGTable */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		84BAADCE62E6B776E32744BC /* Feed */ = {
+			isa = PBXGroup;
+			children = (
+				525029FA7C04AC8A05B7A6D8 /* FeedBacklog.swift */,
+				343E6F7B50BBB182C2DC5A7D /* FeedConnection.swift */,
+				64617D37280BD6EB835C6D68 /* FeedJSON.swift */,
+				1D820D09463C1BE96970F30F /* FeedMessages.swift */,
+				DEED76085FE3512A52C44831 /* FeedStore.swift */,
+				2B97AC0F4CD32968ADBA35DB /* FeedViewController.swift */,
+			);
+			path = Feed;
+			sourceTree = "<group>";
+		};
+		94FF8C4F78CE2073A74E7A68 = {
+			isa = PBXGroup;
+			children = (
+				C1C505F4B41D283C2A77D1D3 /* iPadBench */,
+				159E9637F33570E0735DC21E /* iPadTable */,
+				38660DDB9E78FAED8A357282 /* MacBench */,
+				30CC71CEFA56717157BE556E /* MacBenchTests */,
+				81A8F791842DF1CBD23287D7 /* Packages */,
+				10B7997CA7CFE8B1784F7052 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AB702DF25CC5DAF735060A49 /* Campaigns */ = {
+			isa = PBXGroup;
+			children = (
+				E71E1061FB416FD11A002C66 /* BenchCampaigns.swift */,
+				A1A926AC636D9AD962A8D7EB /* BenchViewController.swift */,
+				C2AA3537B0FAC21C060EF41E /* FromEasyCPA */,
+			);
+			path = Campaigns;
+			sourceTree = "<group>";
+		};
+		BA3C2E67D4A0818B73C81752 /* Binance */ = {
+			isa = PBXGroup;
+			children = (
+				C54E96D324F7483837A7B449 /* BinanceBookSync.swift */,
+				6681495AAD86CEFD0FB2AB5D /* BinanceConnection.swift */,
+				8302ACD2CFF184499DAAAE09 /* BinanceMessages.swift */,
+				CEC3B2FF7D082CDA3409F4AE /* BinanceStore.swift */,
+				D321A6AADFC9CD6802C93FDD /* BinanceViewController.swift */,
+			);
+			path = Binance;
+			sourceTree = "<group>";
+		};
+		C1C505F4B41D283C2A77D1D3 /* iPadBench */ = {
+			isa = PBXGroup;
+			children = (
+				9667838521B8DCC3670AA6EA /* App.swift */,
+				C6C29514814D7796A91E6B2D /* BenchData.swift */,
+				3F739E84B606A0EA2EFB4EFE /* Engines.swift */,
+				0AE1A626098C8ED9BA99EEA8 /* FrameMeter.swift */,
+			);
+			path = iPadBench;
+			sourceTree = "<group>";
+		};
+		C2AA3537B0FAC21C060EF41E /* FromEasyCPA */ = {
+			isa = PBXGroup;
+			children = (
+				DC6B69B3C34FCF8CFBFE34CC /* Campaign.swift */,
+				5FB1E6EE9EFCD923BA98C291 /* CampaignColumn.swift */,
+				BFA69AE7CC5840D16540AF7D /* CampaignRow.swift */,
+				8EC1B4C3EF081FFE20844DE3 /* CampaignsTable.swift */,
+				405F1193FAFC63FB21BE9DD7 /* DateRange.swift */,
+				F4D09AF408A2582F0DD28535 /* Enums.swift */,
+				599868EAC1931E67E5EC1C03 /* Formatters.swift */,
+			);
+			path = FromEasyCPA;
+			sourceTree = "<group>";
+		};
+		ED74A6E7A836E86711DFA5A0 /* LiveData */ = {
+			isa = PBXGroup;
+			children = (
+				CD2B336949E89FAFFAA702B7 /* LiveDataViewController.swift */,
+			);
+			path = LiveData;
+			sourceTree = "<group>";
+		};
+		F01BACA0463DAFAFB9BBD69A /* Engines */ = {
+			isa = PBXGroup;
+			children = (
+				5246E58E0566104BE3E26024 /* BenchTable.swift */,
+				A5DF6D35AB138F9566F9795E /* NSBenchTable.swift */,
+				0C66CCEEC8BEC16CAF8915C9 /* SwiftUIBenchTable.swift */,
+			);
+			path = Engines;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9506FAF5752DDEB81F320743 /* NGTable Mac Bench Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46476E67343F49DF267C010C /* Build configuration list for PBXNativeTarget "NGTable Mac Bench Tests" */;
+			buildPhases = (
+				B669D3054C6FB7174FE59AF8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8A0A0E51FDBE5205DB3BC12B /* PBXTargetDependency */,
+			);
+			name = "NGTable Mac Bench Tests";
+			packageProductDependencies = (
+			);
+			productName = "NGTable Mac Bench Tests";
+			productReference = C3DE4E33F51B9A991B06C935 /* NGTable Mac Bench Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		98B6DE0560FB2323A42AB020 /* NGTable Mac Bench */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 26CDE93023514DDF18D83DC1 /* Build configuration list for PBXNativeTarget "NGTable Mac Bench" */;
+			buildPhases = (
+				C9306A7BD9BF87B3C1F75C47 /* Sources */,
+				C62C6DFC8AF1D27533F94A1F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable Mac Bench";
+			packageProductDependencies = (
+				EEA7F474BB88B9C8B04D8B31 /* NGTable */,
+			);
+			productName = "NGTable Mac Bench";
+			productReference = D8C9183021F620DF2DBD4A01 /* NGTable Mac Bench.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BAA158C8CADF9B78914845DF /* NGTable iPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E7A580901A229946E128A649 /* Build configuration list for PBXNativeTarget "NGTable iPad" */;
+			buildPhases = (
+				5A789DE8D4FC836B8EECFFF0 /* Sources */,
+				5DA8717729BF9304EEDEC076 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable iPad";
+			packageProductDependencies = (
+				2590F7587F6C9AF43BD3AD0C /* NGTable */,
+			);
+			productName = "NGTable iPad";
+			productReference = 1BD47D5AC582BFD77DF3C5DC /* NGTable iPad.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C632C4E2138153A30FB1073E /* NGTable iPad Bench */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 67862BECCF99336AFA901160 /* Build configuration list for PBXNativeTarget "NGTable iPad Bench" */;
+			buildPhases = (
+				54B96B3010CE6039327461A0 /* Sources */,
+				630AC8966B83E87F5968B498 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "NGTable iPad Bench";
+			packageProductDependencies = (
+				AF91149C1CA16DB2955E5DD2 /* NGTable */,
+			);
+			productName = "NGTable iPad Bench";
+			productReference = 77D3A31A94A67A2A457B8A8A /* NGTable iPad Bench.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		55193F0D8CBD7376739182F9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					9506FAF5752DDEB81F320743 = {
+						ProvisioningStyle = Automatic;
+					};
+					98B6DE0560FB2323A42AB020 = {
+						ProvisioningStyle = Automatic;
+					};
+					BAA158C8CADF9B78914845DF = {
+						ProvisioningStyle = Automatic;
+					};
+					C632C4E2138153A30FB1073E = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 46077214EEEAD376AC0DFE26 /* Build configuration list for PBXProject "NGTableDemos" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 94FF8C4F78CE2073A74E7A68;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9E69FE54F1F24A974C6BFFB4 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 10B7997CA7CFE8B1784F7052 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BAA158C8CADF9B78914845DF /* NGTable iPad */,
+				C632C4E2138153A30FB1073E /* NGTable iPad Bench */,
+				98B6DE0560FB2323A42AB020 /* NGTable Mac Bench */,
+				9506FAF5752DDEB81F320743 /* NGTable Mac Bench Tests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		54B96B3010CE6039327461A0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CAB9D55FE944B78AA424FD5B /* App.swift in Sources */,
+				98CF6D23C864ACCE7237928A /* BenchData.swift in Sources */,
+				D924FB4D85A344AE78E875E3 /* Engines.swift in Sources */,
+				7D07BAE4E3FE17F8BD6C193F /* FrameMeter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A789DE8D4FC836B8EECFFF0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6237C6FEB3068F1DD5247AAE /* App.swift in Sources */,
+				F899507859DA482711B6DFBD /* FrameMeter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B669D3054C6FB7174FE59AF8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D276B90689A7E09F24FE762 /* BinanceTests.swift in Sources */,
+				853D61B50B31134B8488C5D3 /* FeedBacklogTests.swift in Sources */,
+				3034D48344806CDDAFD3D23A /* FeedDecoderTests.swift in Sources */,
+				2659DDFA1E39EAF135517EB7 /* FeedStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C9306A7BD9BF87B3C1F75C47 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AEFA6E51087FA12749B7F8D5 /* BenchCampaigns.swift in Sources */,
+				72B055F45662C3020493236C /* BenchTable.swift in Sources */,
+				546A61EB53B54664D5743AFA /* BenchViewController.swift in Sources */,
+				DAADC74729D76125EA08AE9B /* BinanceBookSync.swift in Sources */,
+				F93E4765B5678A11250DE07C /* BinanceConnection.swift in Sources */,
+				6843D98149DF5B0D008C5D9C /* BinanceMessages.swift in Sources */,
+				898FEBDF4C4821F2E040073E /* BinanceStore.swift in Sources */,
+				D5E8C5C73CDB1262C73D3492 /* BinanceViewController.swift in Sources */,
+				9AC21A6BCDDAE92D6F80AB7B /* Campaign.swift in Sources */,
+				796CA80EDEF65C7AF03383EE /* CampaignColumn.swift in Sources */,
+				C5F3EF3C6FC366CB9A59B832 /* CampaignRow.swift in Sources */,
+				6809224D7267F32BE5AFE54B /* CampaignsTable.swift in Sources */,
+				B74190C0AE2D64EF5BCE6599 /* DateRange.swift in Sources */,
+				D4A2078CC230C643A380E74A /* Enums.swift in Sources */,
+				56549320F698D15B4DD91AF3 /* FeedBacklog.swift in Sources */,
+				97D22AE2C0D133E88012BE13 /* FeedConnection.swift in Sources */,
+				E5ED1C6CEA1F44F3D08A2180 /* FeedJSON.swift in Sources */,
+				0FE77CE8D204EDC9F1892A92 /* FeedMessages.swift in Sources */,
+				B5E0145520C288E1A768D919 /* FeedStore.swift in Sources */,
+				ABF6EFAC6FBAAB44CD34C5D9 /* FeedViewController.swift in Sources */,
+				711609FAA1E7F3CC0C341DC7 /* Formatters.swift in Sources */,
+				3C459E0346E3E0E9EBC16BDE /* LiveDataViewController.swift in Sources */,
+				6AB3B4AB56DE2935FEB25364 /* MacBenchApp.swift in Sources */,
+				F7A4F827219198F0CB26283D /* NSBenchTable.swift in Sources */,
+				7F1DEDCE8CE2289B989420B9 /* SwiftUIBenchTable.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8A0A0E51FDBE5205DB3BC12B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 98B6DE0560FB2323A42AB020 /* NGTable Mac Bench */;
+			targetProxy = 286DEA9FB76F065E81428861 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		40B93305310DE4BEB752C08B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "NGTable Mac Bench";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.mac-bench";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Release;
+		};
+		4AA4B1F61A8C3915EBBEE239 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7C271A640AA4A361840D875C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = "";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NGTable Mac Bench.app/Contents/MacOS/NGTable Mac Bench";
+			};
+			name = Release;
+		};
+		846E75D68BA71AD43482DC4D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = "";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NGTable Mac Bench.app/Contents/MacOS/NGTable Mac Bench";
+			};
+			name = Debug;
+		};
+		96425B28CB7070879CF690E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "NGTable iPad";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-demo";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A0903124AFC79BD85556057B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AE978EC814FFA9805E29A6F3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "Table Bench";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-bench";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D04D7EA101314FF94B95E0E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "NGTable iPad";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-demo";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DCF5B0AB672552C58F9F371F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "NGTable Mac Bench";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.mac-bench";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Debug;
+		};
+		E6EA9E858D8250C07841F52C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_CFBundleDisplayName = "Table Bench";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ngtable.ipad-bench";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		26CDE93023514DDF18D83DC1 /* Build configuration list for PBXNativeTarget "NGTable Mac Bench" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DCF5B0AB672552C58F9F371F /* Debug */,
+				40B93305310DE4BEB752C08B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		46077214EEEAD376AC0DFE26 /* Build configuration list for PBXProject "NGTableDemos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0903124AFC79BD85556057B /* Debug */,
+				4AA4B1F61A8C3915EBBEE239 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		46476E67343F49DF267C010C /* Build configuration list for PBXNativeTarget "NGTable Mac Bench Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				846E75D68BA71AD43482DC4D /* Debug */,
+				7C271A640AA4A361840D875C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		67862BECCF99336AFA901160 /* Build configuration list for PBXNativeTarget "NGTable iPad Bench" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E6EA9E858D8250C07841F52C /* Debug */,
+				AE978EC814FFA9805E29A6F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E7A580901A229946E128A649 /* Build configuration list for PBXNativeTarget "NGTable iPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D04D7EA101314FF94B95E0E2 /* Debug */,
+				96425B28CB7070879CF690E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		9E69FE54F1F24A974C6BFFB4 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2590F7587F6C9AF43BD3AD0C /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
+		AF91149C1CA16DB2955E5DD2 /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
+		EEA7F474BB88B9C8B04D8B31 /* NGTable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NGTable;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 55193F0D8CBD7376739182F9 /* Project object */;
+}
