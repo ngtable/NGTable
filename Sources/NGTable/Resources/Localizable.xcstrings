@@ -265,17 +265,6 @@
         }
       }
     },
-    "Last 30 Days" : {
-      "comment" : "Column filter: a date period.",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Последние 30 дней"
-          }
-        }
-      }
-    },
     "Last 7 Days" : {
       "comment" : "Column filter: a date period.",
       "localizations" : {
@@ -283,6 +272,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Последние 7 дней"
+          }
+        }
+      }
+    },
+    "Last 30 Days" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последние 30 дней"
           }
         }
       }
@@ -397,17 +397,6 @@
         }
       }
     },
-    "Rows" : {
-      "comment" : "Print panel summary: which rows print.",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Строки"
-          }
-        }
-      }
-    },
     "rows" : {
       "comment" : "Column filter: after the count of top or bottom rows.",
       "localizations" : {
@@ -415,6 +404,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "строк"
+          }
+        }
+      }
+    },
+    "Rows" : {
+      "comment" : "Print panel summary: which rows print.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Строки"
           }
         }
       }
@@ -585,7 +585,7 @@
       }
     },
     "Table" : {
-      "comment" : "Export: the file name when the table has none.\nPrint panel: the title of the table's options.",
+      "comment" : "Export: the file name when the table has none.",
       "localizations" : {
         "ru" : {
           "stringUnit" : {
