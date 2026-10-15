@@ -647,5 +647,21 @@ struct NGTouchTests {
         table.tapped(at: point(ofRow: 2, in: table))
         #expect(table.selectedRowIndexes == [2])
     }
+
+    // MARK: Sharing an export
+
+    @Test func anExportIsAFileToShare() async throws {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        table.exportFileName = "Numbers"
+        let url = try await table.exportedFile(as: .csv)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        #expect(url.lastPathComponent == "Numbers.csv")
+        let text = try String(contentsOf: url, encoding: .utf8)
+        let lines = text.split(whereSeparator: \.isNewline)
+        #expect(lines.first?.hasSuffix("Name,Value") == true)
+        #expect(lines.count == 1 + 200 + 1)
+    }
 }
 #endif
