@@ -254,7 +254,6 @@ public final class NGTableView: NGPlatformView {
     var draggingSourceOperationMaskWithinApplication: NSDragOperation = .every
     var draggingSourceOperationMaskOutside: NSDragOperation = .copy
     #endif
-    #if os(macOS)
     /// The cell being edited (see NGCellEditing.swift).
     var editor: NGCellEditor?
     /// Ends editing on Return, Tab and Escape.
@@ -266,10 +265,6 @@ public final class NGTableView: NGPlatformView {
         return delegate
     }
     var cellEditorDelegate: NGCellEditorDelegate?
-    #else
-    /// (Editing cells comes later on the iPad.)
-    var editor: NGCellEditor? { nil }
-    #endif
 
     /// Whether a cell is being edited.
     public var isEditingCell: Bool { editor != nil }

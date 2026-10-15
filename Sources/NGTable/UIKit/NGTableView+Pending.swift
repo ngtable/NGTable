@@ -6,14 +6,7 @@ import UIKit
 // calls these; here they do nothing, until the iPad gets each.
 
 extension NGTableView {
-    // Editing cells.
-    func canEdit(row: Int, columnID: String) -> Bool { false }
-    func endEditing(committing: Bool) {}
-    func layoutCellEditor() {}
-    func appendFocusRing(style: MetalStyle, scale: CGFloat, to quads: inout [NGMetalQuad]) {}
-
     // Keyboard and type select.
-    func focusCell(displayRow: Int, columnID: String) {}
     func typeSelectMatch(from start: Int, to end: Int, for prefix: String) -> Int { -1 }
 
     // Menus.
@@ -53,7 +46,6 @@ extension NGTableView {
 }
 
 /// Pending kinds of the shared state: their parts come with the features.
-final class NGCellEditor {}
 final class NGRowSwipe {}
 final class NGAccessibilityRow {}
 final class NGAccessibilityColumnHeader {}

@@ -121,5 +121,122 @@ struct NGTouchTests {
         table.layoutIfNeeded()
         #expect(table.layoutMetrics.maxOffset.y == metrics.contentHeight + 20 - metrics.bodyHeight)
     }
+
+    // MARK: Taps like clicks
+
+    @Test func theDelegateDecidesWhatATapSelects() {
+        final class OnlyEven: NGTableViewDelegate {
+            func tableView(_ tableView: NGTableView, selectionIndexesForProposedSelection proposed: IndexSet) -> IndexSet {
+                proposed.filteredIndexSet { $0 % 2 == 0 }
+            }
+        }
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        let delegate = OnlyEven()
+        defer { withExtendedLifetime((window, delegate)) {} }
+        table.delegate = delegate
+        table.tapped(at: point(ofRow: 3, in: table))
+        #expect(table.selectedRowIndexes.isEmpty)
+        table.tapped(at: point(ofRow: 4, in: table))
+        #expect(table.selectedRowIndexes == [4])
+    }
+
+    @Test func commandAndShiftTapsWithAKeyboard() {
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        defer { withExtendedLifetime(window) {} }
+        table.allowsMultipleSelection = true
+        table.tapped(at: point(ofRow: 2, in: table))
+        table.tapped(at: point(ofRow: 6, in: table), modifiers: .command)
+        #expect(table.selectedRowIndexes == [2, 6])
+        table.tapped(at: point(ofRow: 2, in: table), modifiers: .command)
+        #expect(table.selectedRowIndexes == [6])
+        // From the row tapped last (the anchor, like a click on the Mac).
+        table.tapped(at: point(ofRow: 9, in: table), modifiers: .shift)
+        #expect(table.selectedRowIndexes == IndexSet(2...9))
+        // A plain tap selects one row again.
+        table.tapped(at: point(ofRow: 1, in: table))
+        #expect(table.selectedRowIndexes == [1])
+    }
+
+    @Test func aTapOnALinkOrACheckBoxActs() {
+        final class Cells: NSObject, NGTableViewDataSource, NGTableViewDelegate {
+            var on = [Bool](repeating: false, count: 20)
+            var clicked: [Int] = []
+            func numberOfRows(in tableView: NGTableView) -> Int { on.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue {
+                column.id == "link" ? .link(NGLink("Open \(row)", url: URL(string: "https://example.com/\(row)"))) : .bool(on[row])
+            }
+            func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int) {
+                if case .bool(let new) = value { on[row] = new }
+            }
+            func tableView(_ tableView: NGTableView, didClickLink link: NGLink, in column: NGTableColumn, row: Int) { clicked.append(row) }
+        }
+        let cells = Cells()
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 600, height: 800))
+        let table = NGTableView(frame: window.bounds)
+        defer { withExtendedLifetime((window, cells)) {} }
+        table.columns = [.column(NGTableColumn("link", title: "Link", width: 150)),
+                         .column(NGTableColumn("on", title: "On", width: 120, isEditable: true))]
+        table.dataSource = cells
+        table.delegate = cells
+        window.addSubview(table)
+        window.isHidden = false
+        table.layoutIfNeeded()
+        // A link: the delegate hears of it, the row isn't selected.
+        table.tapped(at: point(ofRow: 2, in: table))
+        #expect(cells.clicked == [2])
+        #expect(table.selectedRowIndexes.isEmpty)
+        // A check box toggles at a tap anywhere in its cell (and the row is selected).
+        var cell = point(ofRow: 4, in: table)
+        cell.x = 150 + 110
+        table.tapped(at: cell)
+        #expect(cells.on[4])
+        #expect(table.selectedRowIndexes == [4])
+        // The double tap's second tap toggles it back, and edits nothing.
+        table.tapped(at: cell)
+        table.doubleTapped(at: cell)
+        #expect(!cells.on[4])
+        #expect(!table.isEditingCell)
+    }
+
+    @Test func aDoubleTapEditsAndReturnCommits() throws {
+        final class Spend: NSObject, NGTableViewDataSource {
+            var values: [Double] = Array(repeating: 10, count: 20)
+            func numberOfRows(in tableView: NGTableView) -> Int { values.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue { .number(values[row]) }
+            func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int) {
+                if case .number(let new) = value { values[row] = new }
+            }
+        }
+        let spend = Spend()
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 600, height: 800))
+        let table = NGTableView(frame: window.bounds)
+        defer { withExtendedLifetime((window, spend)) {} }
+        table.locale = Locale(identifier: "en_US")
+        table.navigatesByCell = true
+        table.columns = [.column(NGTableColumn("spend", title: "Spend", width: 150, format: .number(fractionDigits: 0), isEditable: true))]
+        table.dataSource = spend
+        window.addSubview(table)
+        window.isHidden = false
+        table.layoutIfNeeded()
+        table.tapped(at: point(ofRow: 3, in: table))
+        table.doubleTapped(at: point(ofRow: 3, in: table))
+        #expect(table.isEditingCell)
+        #expect(table.editedRow == 3)
+        let field = try #require(table.editor?.field)
+        #expect(field.text == "10")
+        field.text = "42"
+        // Return: committed, and the cell below is focused.
+        _ = field.delegate?.textFieldShouldReturn?(field)
+        #expect(!table.isEditingCell)
+        #expect(spend.values[3] == 42)
+        #expect(table.focusedCell == NGCellPosition(row: 4, columnID: "spend"))
+        // Escape throws the text away.
+        #expect(table.editCell(row: 5, columnID: "spend"))
+        table.editor?.field.text = "7"
+        table.abortEditing()
+        #expect(spend.values[5] == 10)
+    }
 }
 #endif

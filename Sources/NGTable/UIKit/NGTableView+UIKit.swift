@@ -88,43 +88,6 @@ extension NGTableView {
         isSyncingTouchScroll = false
         setVerticalOverscroll(offset.y - clamped.y)
     }
-
-    /// A tap: on a title it sorts by its column, on a row it selects it (and
-    /// sends `action`).
-    func tapped(at point: CGPoint) {
-        guard !ignoresUserInput else { return }
-        if point.y < layoutMetrics.headerHeight {
-            if let (frame, _) = column(atViewportPoint: point), frame.column.isSortable { sortByClicking(frame.column) }
-            return
-        }
-        guard point.y < bounds.height - layoutMetrics.summaryHeight else { return }
-        let row = row(at: point)
-        clickedRow = row
-        clickedColumn = column(at: point)
-        if row >= 0 {
-            selectRowIndexes([row], byExtendingSelection: false)
-        }
-        send(action)
-    }
-
-    /// A second tap on the rows: `doubleAction`.
-    func doubleTapped(at point: CGPoint) {
-        guard !ignoresUserInput, point.y >= layoutMetrics.headerHeight,
-              point.y < bounds.height - layoutMetrics.summaryHeight else { return }
-        clickedRow = row(at: point)
-        clickedColumn = column(at: point)
-        send(doubleAction)
-    }
-
-    /// To `target`, or along the responder chain without one.
-    private func send(_ action: Selector?) {
-        guard let action else { return }
-        if let target = target as? NSObjectProtocol {
-            _ = target.perform(action, with: self)
-        } else {
-            UIApplication.shared.sendAction(action, to: nil, from: self, for: nil)
-        }
-    }
 }
 
 /// The scroll view's and the tap's delegate (an object: UIKit holds it).
@@ -141,12 +104,12 @@ final class NGTouchScrollDelegate: NSObject, UIScrollViewDelegate {
 
     @objc func tapped(_ recognizer: UITapGestureRecognizer) {
         guard let table else { return }
-        table.tapped(at: recognizer.location(in: table))
+        table.tapped(at: recognizer.location(in: table), modifiers: recognizer.modifierFlags)
     }
 
     @objc func doubleTapped(_ recognizer: UITapGestureRecognizer) {
         guard let table else { return }
-        table.doubleTapped(at: recognizer.location(in: table))
+        table.doubleTapped(at: recognizer.location(in: table), modifiers: recognizer.modifierFlags)
     }
 }
 #endif

@@ -99,6 +99,7 @@ extension UIColor {
     static var separatorColor: UIColor { .separator }
     static var gridColor: UIColor { .separator }
     static var controlAccentColor: UIColor { .tintColor }
+    static var keyboardFocusIndicatorColor: UIColor { .tintColor }
     static var windowBackgroundColor: UIColor { .systemBackground }
     static var controlBackgroundColor: UIColor { .systemBackground }
     static var selectedContentBackgroundColor: UIColor { .tintColor }
