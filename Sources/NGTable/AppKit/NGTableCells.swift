@@ -523,6 +523,7 @@ extension NGTableView {
         NGFormatIDs.localeDidChange()
         NGTextCollation.localeDidChange()
         columnFilterPasses = [:]
+        rankRanges = [:]
         for layer in visibleCells.values {
             layer.displayedText = nil
         }

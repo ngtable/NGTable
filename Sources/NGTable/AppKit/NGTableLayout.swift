@@ -256,6 +256,7 @@ extension NGTableView {
         columnFormatIDs = []
         // Formats may have changed what filtered values display as.
         columnFilterPasses = [:]
+        rankRanges = [:]
         // Hidden columns keep their width for when they are shown again.
         let columnIDs = Set(columns.flatMap(\.leafColumns).map(\.id))
         // The same columns defined again (a title or format changed): the rows stay where they are.

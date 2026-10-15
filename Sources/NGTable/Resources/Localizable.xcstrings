@@ -23,6 +23,17 @@
         }
       }
     },
+    "Any Date" : {
+      "comment" : "Column filter: no date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Любая дата"
+          }
+        }
+      }
+    },
     "ascending" : {
       "comment" : "VoiceOver: a column sorted in ascending order.",
       "localizations" : {
@@ -30,6 +41,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "по возрастанию"
+          }
+        }
+      }
+    },
+    "Between Two Days" : {
+      "comment" : "Column filter: dates from one day to another.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Между датами"
+          }
+        }
+      }
+    },
+    "Bottom" : {
+      "comment" : "Column filter: the rows with the smallest numbers.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наименьшие"
           }
         }
       }
@@ -199,17 +232,6 @@
         }
       }
     },
-    "No Value" : {
-      "comment" : "Group header for rows without a value in the grouping column.",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Без значения"
-          }
-        }
-      }
-    },
     "in progress" : {
       "comment" : "VoiceOver: an indeterminate progress bar in a cell.",
       "localizations" : {
@@ -217,6 +239,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "выполняется"
+          }
+        }
+      }
+    },
+    "Last 30 Days" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последние 30 дней"
+          }
+        }
+      }
+    },
+    "Last 7 Days" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последние 7 дней"
+          }
+        }
+      }
+    },
+    "Last Month" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прошлый месяц"
+          }
+        }
+      }
+    },
+    "Last Week" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прошлая неделя"
+          }
+        }
+      }
+    },
+    "Last Year" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прошлый год"
+          }
+        }
+      }
+    },
+    "No Value" : {
+      "comment" : "Group header for rows without a value in the grouping column.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Без значения"
           }
         }
       }
@@ -276,6 +364,17 @@
         }
       }
     },
+    "Range" : {
+      "comment" : "Column filter: numbers between two bounds.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Диапазон"
+          }
+        }
+      }
+    },
     "Rows" : {
       "comment" : "Print panel summary: which rows print.",
       "localizations" : {
@@ -283,6 +382,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Строки"
+          }
+        }
+      }
+    },
+    "rows" : {
+      "comment" : "Column filter: after the count of top or bottom rows.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "строк"
           }
         }
       }
@@ -452,6 +562,39 @@
         }
       }
     },
+    "This Month" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот месяц"
+          }
+        }
+      }
+    },
+    "This Week" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эта неделя"
+          }
+        }
+      }
+    },
+    "This Year" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот год"
+          }
+        }
+      }
+    },
     "To" : {
       "comment" : "Column filter: the largest number shown.",
       "localizations" : {
@@ -459,6 +602,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "До"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "Column filter: a date period.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сегодня"
+          }
+        }
+      }
+    },
+    "Top" : {
+      "comment" : "Column filter: the rows with the largest numbers.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наибольшие"
+          }
+        }
+      }
+    },
+    "trend: last %@, lowest %@, highest %@" : {
+      "comment" : "VoiceOver: a sparkline (a small chart in a cell): its last, lowest and highest values.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "тренд: последнее %1$@, минимум %2$@, максимум %3$@"
+          }
+        }
+      }
+    },
+    "trend: no values" : {
+      "comment" : "VoiceOver: a sparkline without values.",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "тренд: нет значений"
           }
         }
       }
@@ -496,24 +683,13 @@
         }
       }
     },
-    "trend: last %@, lowest %@, highest %@" : {
-      "comment" : "VoiceOver: a sparkline (a small chart in a cell): its last, lowest and highest values.",
+    "Yesterday" : {
+      "comment" : "Column filter: a date period.",
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "тренд: последнее %1$@, минимум %2$@, максимум %3$@"
-          }
-        }
-      }
-    },
-    "trend: no values" : {
-      "comment" : "VoiceOver: a sparkline without values.",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "тренд: нет значений"
+            "value" : "Вчера"
           }
         }
       }

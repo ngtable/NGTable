@@ -10,13 +10,73 @@ import AppKit
 
 extension NGTableView {
     /// The column filters with their columns, for checking rows (unknown
-    /// column ids are ignored).
+    /// column ids are ignored), as they apply now: date periods from today
+    /// in `calendar`, ranks as ranges from the column's values.
     var resolvedColumnFilters: [(column: NGTableColumn, filter: NGColumnFilter)] {
         guard !columnFilters.isEmpty else { return [] }
         let columns = tableColumns
+        let now = filterDateForTesting ?? Date()
         return columnFilters.compactMap { id, filter in
-            columns.first { $0.id == id }.map { ($0, filter) }
+            columns.first { $0.id == id }.map { column in
+                (column, filter.isRank ? rankRange(filter, column: column) : filter.resolved(calendar: calendar, now: now))
+            }
         }.sorted { $0.column.id < $1.column.id }
+    }
+
+    /// A top or bottom filter as the range of the numbers it lets through:
+    /// from (or up to) the `count`-th largest (smallest) value of all rows,
+    /// read again when rows came, went or moved, or filtered values changed.
+    private func rankRange(_ filter: NGColumnFilter, column: NGTableColumn) -> NGColumnFilter {
+        if let kept = rankRanges[column.id], kept.filter == filter, kept.rowsMoved == summaryRowsMoved,
+           kept.valuesVersion == columnFilterValuesVersion {
+            return kept.range
+        }
+        var numbers: [Double] = []
+        if let dataSource {
+            numbers.reserveCapacity(numberOfSourceRows)
+            for row in 0..<numberOfSourceRows {
+                if let number = dataSource.tableView(self, valueFor: column, row: row).numericValue, number.isFinite { numbers.append(number) }
+            }
+        }
+        let range: NGColumnFilter
+        switch filter {
+        case .top(let count): range = Self.rankRange(numbers, count: count, largest: true)
+        case .bottom(let count): range = Self.rankRange(numbers, count: count, largest: false)
+        default: range = filter
+        }
+        rankRanges[column.id] = (filter, range, summaryRowsMoved, columnFilterValuesVersion)
+        return range
+    }
+
+    /// The range of the `count` largest (smallest) numbers, ties with the
+    /// last included; nothing for no count, every number for more than there are.
+    nonisolated static func rankRange(_ numbers: [Double], count: Int, largest: Bool) -> NGColumnFilter {
+        guard count > 0, !numbers.isEmpty else { return .range(min: .infinity, max: -.infinity) }
+        guard count < numbers.count else { return .range(min: -.infinity, max: .infinity) }
+        // The k-th smallest, k counted from the end for the largest.
+        var values = numbers
+        let k = largest ? numbers.count - count : count - 1
+        let threshold = nthSmallest(&values, k)
+        return largest ? .range(min: threshold, max: nil) : .range(min: nil, max: threshold)
+    }
+
+    /// The `k`-th smallest value (from 0), by quickselect (linear on average).
+    nonisolated static func nthSmallest(_ values: inout [Double], _ k: Int) -> Double {
+        var low = 0, high = values.count - 1
+        var generator = SystemRandomNumberGenerator()
+        while low < high {
+            values.swapAt(Int.random(in: low...high, using: &generator), high)
+            let pivot = values[high]
+            var store = low
+            for index in low..<high where values[index] < pivot {
+                values.swapAt(index, store)
+                store += 1
+            }
+            values.swapAt(store, high)
+            if store == k { return values[store] }
+            if store < k { low = store + 1 } else { high = store - 1 }
+        }
+        return values[low]
     }
 
     /// Whether each row (by handle) passes each column filter, brought up to
@@ -45,6 +105,10 @@ extension NGTableView {
                 }
                 for handle in toCheck where handle < known { passesByHandle[handle] = passes(handle) }
             } else {
+                // A filter that applies differently now (another day for a
+                // period, other values for a rank): the rows it showed may
+                // change without having changed.
+                if columnFilterPasses[column.id] != nil { filterNeedsFullEvaluation = true }
                 passesByHandle = [Bool](repeating: false, count: capacity)
                 for handle in allRowHandles { passesByHandle[handle] = passes(handle) }
             }
@@ -141,6 +205,29 @@ extension NGTableView {
         NSRect(x: (mirrored ?? isRightToLeft) ? rect.minX + NGMetrics.cellPadding : rect.maxX - NGMetrics.cellPadding - Self.filterButtonWidth,
                y: rect.minY,
                width: Self.filterButtonWidth, height: rect.height)
+    }
+
+    /// Opens a column's filter in a popover under its header, as its filter
+    /// button does: for a menu item, or the keyboard (Option-Down Arrow on a
+    /// focused cell, like a spreadsheet). Scrolls the column into view
+    /// first. Returns whether it opened: with `allowsColumnFilters`, for a
+    /// filterable column that is shown.
+    @discardableResult
+    public func showFilter(forColumnID columnID: String) -> Bool {
+        guard allowsColumnFilters, let index = tableColumns.firstIndex(where: { $0.id == columnID }),
+              tableColumns[index].isFilterable, !hiddenColumnIDs.contains(columnID) else { return false }
+        scrollColumnToVisible(index)
+        layoutSubtreeIfNeeded()
+        let viewport = viewport
+        for pin in NGColumnPin.allCases {
+            guard let frame = geometry[pin].columns.first(where: { $0.column.id == columnID }) else { continue }
+            let band = columnLayout.hasGroups ? groupHeaderHeight : 0
+            let title = NSRect(x: viewport.origin(of: pin) + CGFloat(frame.x) + slideOffset(forColumnID: columnID), y: band,
+                               width: CGFloat(frame.width), height: headerView.bounds.height - band)
+            showColumnFilter(for: frame.column, relativeTo: filterButtonRect(inTitleRect: title), of: headerView)
+            return true
+        }
+        return false
     }
 
     /// Opens the filter of a column in a popover under its button.
