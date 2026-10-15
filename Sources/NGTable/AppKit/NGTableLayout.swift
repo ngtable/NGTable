@@ -43,8 +43,26 @@ extension NGTableView {
 
     /// Device pixels per point of the screen the table is on.
     var displayScale: CGFloat {
-        scaleForTesting ?? window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        scaleForTesting ?? window?.backingScaleFactor ?? Self.mainScreenScale
     }
+
+    /// The main screen's scale, for tables outside windows (printing, tests):
+    /// asking `NSScreen.main` each layout pass asked the window server,
+    /// ~3 ms. Asked again when the screens change.
+    private static var mainScreenScale: CGFloat {
+        if let kept = keptMainScreenScale { return kept }
+        if screenObserver == nil {
+            screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
+                                                                    object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { NGTableView.keptMainScreenScale = nil }
+            }
+        }
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        keptMainScreenScale = scale
+        return scale
+    }
+    private static var keptMainScreenScale: CGFloat?
+    private static var screenObserver: (any NSObjectProtocol)?
 
     /// Width of separator lines: one device pixel, like system separators.
     var hairline: CGFloat {
