@@ -123,6 +123,9 @@ private func makeTable(_ columns: [NGColumnItem], width: CGFloat = 600) -> (NGTa
     return (table, dataSource)
 }
 
+/// An event AppKit didn't make.
+private struct NoEvent: Error {}
+
 @Suite("Table view")
 @MainActor
 struct NGTableViewTests {
@@ -1053,9 +1056,12 @@ struct NGTableViewTests {
         let (table, dataSource) = makeTable([.column(NGTableColumn("a", title: "A", width: 200))])
         container.addSubview(table)
         func key(_ characters: String, code: UInt16) throws -> NSEvent {
-            try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
-                                          windowNumber: window.windowNumber, context: nil, characters: characters,
-                                          charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code))
+            // (Optional in older SDKs, not in newer ones, where `#require` warns.)
+            let event: NSEvent? = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                                   windowNumber: window.windowNumber, context: nil, characters: characters,
+                                                   charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)
+            guard let event else { throw NoEvent() }
+            return event
         }
         table.keyDown(with: try key(" ", code: 49))
         #expect(container.keys == [" "])
@@ -1330,7 +1336,8 @@ struct NGTableViewCompatibilityTests {
         let fixture = Fixture()
         let recorder = SelectionRecorder()
         fixture.table.delegate = recorder
-        var observed = 0
+        // (Posted on the main thread, where the test reads it.)
+        nonisolated(unsafe) var observed = 0
         let observer = NotificationCenter.default.addObserver(forName: NGTableView.selectionDidChangeNotification,
                                                               object: fixture.table, queue: nil) { _ in observed += 1 }
         defer { NotificationCenter.default.removeObserver(observer) }
@@ -1517,7 +1524,8 @@ struct NGTableViewCompatibilityTests {
         let table = fixture.table
         let recorder = ColumnRecorder()
         table.delegate = recorder
-        var posted = 0
+        // (Posted on the main thread, where the test reads it.)
+        nonisolated(unsafe) var posted = 0
         let observer = NotificationCenter.default.addObserver(forName: NGTableView.columnDidResizeNotification,
                                                               object: table, queue: nil) { _ in posted += 1 }
         defer { NotificationCenter.default.removeObserver(observer) }
@@ -1539,10 +1547,13 @@ struct NGTableViewCompatibilityTests {
 
         // A click on a title, sortable or not, is reported after its sort.
         func headerEvent(_ type: NSEvent.EventType, x: CGFloat) throws -> NSEvent {
-            try #require(NSEvent.mouseEvent(
+            // (Optional in older SDKs, not in newer ones, where `#require` warns.)
+            let event: NSEvent? = NSEvent.mouseEvent(
                 with: type, location: NSPoint(x: x, y: table.bounds.height - table.headerRowHeight / 2), modifierFlags: [],
                 timestamp: 0, windowNumber: fixture.window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1
-            ))
+            )
+            guard let event else { throw NoEvent() }
+            return event
         }
         // "c" is now first, at the leading edge.
         table.headerMouseDown(try headerEvent(.leftMouseDown, x: 60), in: table.headerView)
@@ -1572,10 +1583,13 @@ struct NGTableViewCompatibilityTests {
         let gate = Gate()
         table.delegate = gate
         func headerEvent(_ type: NSEvent.EventType, x: CGFloat) throws -> NSEvent {
-            try #require(NSEvent.mouseEvent(
+            // (Optional in older SDKs, not in newer ones, where `#require` warns.)
+            let event: NSEvent? = NSEvent.mouseEvent(
                 with: type, location: NSPoint(x: x, y: table.bounds.height - table.headerRowHeight / 2), modifierFlags: [],
                 timestamp: 0, windowNumber: fixture.window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1
-            ))
+            )
+            guard let event else { throw NoEvent() }
+            return event
         }
         func drag(from start: CGFloat, to end: CGFloat) throws {
             table.headerMouseDown(try headerEvent(.leftMouseDown, x: start), in: table.headerView)
@@ -1609,10 +1623,13 @@ struct NGTableViewCompatibilityTests {
         let recorder = Recorder()
         table.delegate = recorder
         func headerEvent(_ type: NSEvent.EventType, x: CGFloat) throws -> NSEvent {
-            try #require(NSEvent.mouseEvent(
+            // (Optional in older SDKs, not in newer ones, where `#require` warns.)
+            let event: NSEvent? = NSEvent.mouseEvent(
                 with: type, location: NSPoint(x: x, y: table.bounds.height - table.headerRowHeight / 2), modifierFlags: [],
                 timestamp: 0, windowNumber: fixture.window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1
-            ))
+            )
+            guard let event else { throw NoEvent() }
+            return event
         }
         let edge = table.rect(ofColumn: 0).maxX - 1
         table.headerMouseDown(try headerEvent(.leftMouseDown, x: edge), in: table.headerView)
