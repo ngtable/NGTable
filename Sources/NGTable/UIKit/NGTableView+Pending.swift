@@ -46,9 +46,6 @@ extension NGTableView {
     func layoutScrollers(_ metrics: LayoutMetrics) {}
     func updateScrollers() {}
 
-    // Touches (NGTableView+UIKit.swift sets them up).
-    func setUpTouch() {}
-
     // The updating veil (`updatingData`).
     func beginDataUpdate() {}
     func endDataUpdate() {}

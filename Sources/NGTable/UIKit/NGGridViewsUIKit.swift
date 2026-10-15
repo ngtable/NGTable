@@ -68,6 +68,12 @@ final class NGGridHeaderView: UIView {
         super.setNeedsDisplay()
         owner?.setNeedsChromeFrame(self)
     }
+
+    /// Its Metal layer covers it at its new size.
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        owner?.layoutChromeSurface(of: self)
+    }
 }
 
 /// The summary row at the bottom, over the rows scrolling under it.
@@ -106,6 +112,11 @@ final class NGSummaryContentView: UIView {
     override var needsDisplay: Bool {
         get { false }
         set { if newValue { owner?.setNeedsChromeFrame(self) } }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        owner?.layoutChromeSurface(of: self)
     }
 }
 
