@@ -63,6 +63,10 @@ extension NGTableView {
         touchScrollView.panGestureRecognizer.require(toFail: rowSwipe)
         addGestureRecognizer(UIHoverGestureRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.hovered(_:))))
         addInteraction(UIPointerInteraction(delegate: delegate))
+        let drag = UIDragInteraction(delegate: delegate)
+        drag.isEnabled = true
+        addInteraction(drag)
+        addInteraction(UIDropInteraction(delegate: delegate))
     }
 
     /// Over the rows (under the header and the summary row), as large as the
@@ -110,6 +114,8 @@ final class NGTouchScrollDelegate: NSObject, UIScrollViewDelegate {
     weak var table: NGTableView?
     /// Where the open context menu was asked for (its preview is cut there).
     var menuLocation: CGPoint?
+    /// The display row each lifted drag item is of (its preview).
+    var dragItemRows: [ObjectIdentifier: Int] = [:]
 
     init(table: NGTableView) {
         self.table = table

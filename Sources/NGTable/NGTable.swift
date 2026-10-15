@@ -108,6 +108,21 @@ public protocol NGTableViewDataSource: AnyObject {
     /// A drag entered the table, like NSTableView's: the items' images may
     /// change for it (`enumerateDraggingItems`).
     func tableView(_ tableView: NGTableView, updateDraggingItemsForDrag draggingInfo: any NSDraggingInfo)
+    #else
+    /// The items a long press and a drag lift from a row, like
+    /// `UITableViewDragDelegate`'s: the row's record as an item provider.
+    /// Several selected rows drag together when the pressed one is among
+    /// them (each asked). No items (the default): the row doesn't drag.
+    func tableView(_ tableView: NGTableView, itemsForBeginning session: any UIDragSession, row: Int) -> [UIDragItem]
+    /// Whether a drag over the rows could drop there, and how, like
+    /// `UITableViewDropDelegate`'s `dropSessionDidUpdate`: above a row or
+    /// onto it (retarget with `setDropRow(_:dropOperation:)`). `.forbidden`
+    /// by default.
+    func tableView(_ tableView: NGTableView, dropSessionDidUpdate session: any UIDropSession, proposedRow row: Int,
+                   proposedDropOperation dropOperation: NSTableView.DropOperation) -> UIDropOperation
+    /// The drop, where the last update put it; whether it was taken.
+    func tableView(_ tableView: NGTableView, performDrop session: any UIDropSession, row: Int,
+                   dropOperation: NSTableView.DropOperation) -> Bool
     #endif
 }
 
@@ -135,6 +150,12 @@ public extension NGTableViewDataSource {
     func tableView(_ tableView: NGTableView, draggingSession session: NSDraggingSession, endedAt screenPoint: NSPoint,
                    operation: NSDragOperation) {}
     func tableView(_ tableView: NGTableView, updateDraggingItemsForDrag draggingInfo: any NSDraggingInfo) {}
+    #else
+    func tableView(_ tableView: NGTableView, itemsForBeginning session: any UIDragSession, row: Int) -> [UIDragItem] { [] }
+    func tableView(_ tableView: NGTableView, dropSessionDidUpdate session: any UIDropSession, proposedRow row: Int,
+                   proposedDropOperation dropOperation: NSTableView.DropOperation) -> UIDropOperation { .forbidden }
+    func tableView(_ tableView: NGTableView, performDrop session: any UIDropSession, row: Int,
+                   dropOperation: NSTableView.DropOperation) -> Bool { false }
     #endif
     func tableView(_ tableView: NGTableView, sortValueFor column: NGTableColumn, row: Int) -> NGCellValue {
         self.tableView(tableView, valueFor: column, row: row)

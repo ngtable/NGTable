@@ -5,8 +5,9 @@ import UIKit
 // The app: one screen with the table (NGTableView, a UIKit view, inside
 // SwiftUI only to start the app). Names, the On check boxes and statuses
 // (a pop-up) are editable; a long press opens menus, a swipe across a row
-// its actions; Export shares the rows as a workbook or CSV, Reload shows
-// the veil of an update.
+// its actions; rows drag out as text and text drops in as campaigns;
+// Export shares the rows as a workbook or CSV, Reload shows the veil of an
+// update.
 
 @main
 struct NGTableIPadApp: App {
@@ -61,6 +62,32 @@ final class Campaigns: NGTableViewDataSource {
     static func status(_ status: String) -> NGCellValue {
         let color: NGNamedColor = status == "Active" ? .green : status == "Paused" ? .orange : .gray
         return .tags([NGTag(status, color: color)])
+    }
+
+    /// A row drags out as its name (into Notes, say).
+    func tableView(_ tableView: NGTableView, itemsForBeginning session: any UIDragSession, row: Int) -> [UIDragItem] {
+        [UIDragItem(itemProvider: NSItemProvider(object: campaigns[row].name as NSString))]
+    }
+
+    /// Text from another app drops between rows as new campaigns.
+    func tableView(_ tableView: NGTableView, dropSessionDidUpdate session: any UIDropSession, proposedRow row: Int,
+                   proposedDropOperation dropOperation: NSTableView.DropOperation) -> UIDropOperation {
+        guard session.localDragSession == nil, session.canLoadObjects(ofClass: NSString.self) else { return .forbidden }
+        if dropOperation == .on { tableView.setDropRow(row, dropOperation: .above) }
+        return .copy
+    }
+
+    func tableView(_ tableView: NGTableView, performDrop session: any UIDropSession, row: Int,
+                   dropOperation: NSTableView.DropOperation) -> Bool {
+        _ = session.loadObjects(ofClass: NSString.self) { [weak self, weak tableView] strings in
+            guard let self, let tableView else { return }
+            let names = strings.compactMap { $0 as? String }.flatMap { $0.split(whereSeparator: \.isNewline).map(String.init) }
+            let at = min(row, self.campaigns.count)
+            let new = names.map { Campaign(name: $0, network: "Search", status: "Active", isOn: true, clicks: 0, spend: 0, revenue: 0, created: Date()) }
+            self.campaigns.insert(contentsOf: new, at: at)
+            tableView.insertRows(at: IndexSet(at..<(at + new.count)))
+        }
+        return true
     }
 
     func tableView(_ tableView: NGTableView, setValue value: NGCellValue, for column: NGTableColumn, row: Int) {

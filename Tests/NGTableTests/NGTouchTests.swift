@@ -663,5 +663,84 @@ struct NGTouchTests {
         #expect(lines.first?.hasSuffix("Name,Value") == true)
         #expect(lines.count == 1 + 200 + 1)
     }
+
+    // MARK: Drag and drop
+
+    @Test func rowsDragOutAndDropsLandBetweenRows() {
+        final class Reorder: NSObject, NGTableViewDataSource {
+            var names = (0..<30).map { "Row \($0)" }
+            var dropped: (row: Int, operation: NSTableView.DropOperation)?
+            func numberOfRows(in tableView: NGTableView) -> Int { names.count }
+            func tableView(_ tableView: NGTableView, valueFor column: NGTableColumn, row: Int) -> NGCellValue { .text(names[row]) }
+            func tableView(_ tableView: NGTableView, itemsForBeginning session: any UIDragSession, row: Int) -> [UIDragItem] {
+                row == 0 ? [] : [UIDragItem(itemProvider: NSItemProvider(object: names[row] as NSString))]
+            }
+            func tableView(_ tableView: NGTableView, dropSessionDidUpdate session: any UIDropSession, proposedRow row: Int,
+                           proposedDropOperation dropOperation: NSTableView.DropOperation) -> UIDropOperation {
+                // Reordering only: between rows.
+                if dropOperation == .on { tableView.setDropRow(row, dropOperation: .above) }
+                return .move
+            }
+            func tableView(_ tableView: NGTableView, performDrop session: any UIDropSession, row: Int,
+                           dropOperation: NSTableView.DropOperation) -> Bool {
+                dropped = (row, dropOperation)
+                return true
+            }
+        }
+        let reorder = Reorder()
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 600, height: 800))
+        let table = NGTableView(frame: window.bounds)
+        defer { withExtendedLifetime((window, reorder)) {} }
+        table.columns = [.column(NGTableColumn("name", title: "Name", width: 150))]
+        table.dataSource = reorder
+        table.allowsMultipleSelection = true
+        window.addSubview(table)
+        window.isHidden = false
+        table.layoutIfNeeded()
+        let session = FakeDragSession()
+        // Row 0 doesn't drag; row 3 does, with the selected row 5 when it's selected too.
+        #expect(table.dragItems(at: point(ofRow: 0, in: table), session: session).isEmpty)
+        #expect(table.dragItems(at: point(ofRow: 3, in: table), session: session).count == 1)
+        #expect(table.draggedRowIndexes == [3])
+        table.selectRowIndexes([3, 5], byExtendingSelection: false)
+        #expect(table.dragItems(at: point(ofRow: 3, in: table), session: session).map(\.displayRow) == [3, 5])
+        #expect(table.draggedRowIndexes == [3, 5])
+        // (The lifted preview is a snapshot: UIKit makes none off screen; seen on the simulator.)
+        // Over the middle of row 8: retargeted above it; the line shows.
+        let drop = FakeDropSession()
+        #expect(table.updateDrop(drop, at: point(ofRow: 8, in: table)) == .move)
+        #expect(table.dropIndicatorRow == 8)
+        #expect(table.dropIndicatorOperation == .above)
+        #expect(table.performDrop(drop, at: point(ofRow: 8, in: table)))
+        #expect(reorder.dropped?.row == 8)
+        #expect(table.dropIndicatorRow == nil)
+    }
+}
+
+/// A drag session for the tests (UIKit makes real ones only for a finger).
+nonisolated private final class FakeDragSession: NSObject, UIDragSession, @unchecked Sendable {
+    var localContext: Any?
+    var items: [UIDragItem] = []
+    var allowsMoveOperation: Bool { true }
+    var isRestrictedToDraggingApplication: Bool { false }
+    func location(in view: UIView) -> CGPoint { .zero }
+    func hasItemsConforming(toTypeIdentifiers typeIdentifiers: [String]) -> Bool { false }
+    func canLoadObjects(ofClass aClass: any NSItemProviderReading.Type) -> Bool { false }
+}
+
+/// A drop session for the tests.
+nonisolated private final class FakeDropSession: NSObject, UIDropSession, @unchecked Sendable {
+    var localDragSession: (any UIDragSession)? { nil }
+    var progressIndicatorStyle: UIDropSessionProgressIndicatorStyle = .default
+    var progress: Progress { Progress() }
+    var items: [UIDragItem] = []
+    var allowsMoveOperation: Bool { true }
+    var isRestrictedToDraggingApplication: Bool { false }
+    func location(in view: UIView) -> CGPoint { .zero }
+    func hasItemsConforming(toTypeIdentifiers typeIdentifiers: [String]) -> Bool { false }
+    func canLoadObjects(ofClass aClass: any NSItemProviderReading.Type) -> Bool { false }
+    func loadObjects(ofClass aClass: any NSItemProviderReading.Type, completion: @escaping ([any NSItemProviderReading]) -> Void) -> Progress {
+        Progress()
+    }
 }
 #endif

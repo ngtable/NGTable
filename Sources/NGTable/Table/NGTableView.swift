@@ -249,6 +249,11 @@ public final class NGTableView: NGPlatformView {
     var dropRetarget: (row: Int, operation: NSTableView.DropOperation)?
     /// Scrolls while a drag stays near the top or bottom of the rows.
     var dropScrollLink: CADisplayLink?
+    #if os(iOS)
+    /// The drop session over the rows, and where (window coordinates), while it scrolls them.
+    var dropScrollSession: (any UIDropSession)?
+    var dropScrollPoint: CGPoint?
+    #endif
     #if os(macOS)
     var dropScrollInfo: (any NSDraggingInfo)?
     var draggingSourceOperationMaskWithinApplication: NSDragOperation = .every
