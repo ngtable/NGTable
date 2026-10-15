@@ -17,7 +17,7 @@ struct NGNumberTemplateTests {
             case .number(let digits): FloatingPointFormatStyle<Double>(locale: locale).precision(.fractionLength(digits)).format(number)
             case .currency(let code): FloatingPointFormatStyle<Double>.Currency(code: code, locale: locale).format(number)
             case .percent(let digits): FloatingPointFormatStyle<Double>.Percent(locale: locale).precision(.fractionLength(digits)).format(number)
-            case .automatic, .date: FloatingPointFormatStyle<Double>(locale: locale).format(number)
+            case .automatic, .date, .time: FloatingPointFormatStyle<Double>(locale: locale).format(number)
             }
         }
         let text = formatted(number)

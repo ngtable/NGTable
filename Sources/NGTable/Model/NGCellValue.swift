@@ -260,6 +260,13 @@ public enum NGCellValue: Sendable, Hashable {
     /// `tableView(_:setValue:for:row:)`. Sorts and sums as the number.
     case rating(Int, maximum: Int = 5)
 
+    /// What summaries take of a value: its number, or a date's seconds
+    /// since 1970 (a count, the earliest, the latest, the mean of dates).
+    var summaryNumber: Double? {
+        if case .date(let date) = self { return date.timeIntervalSince1970 }
+        return numericValue
+    }
+
     /// The value used by summary calculations. Only numbers participate.
     public var numericValue: Double? {
         switch self {
@@ -419,13 +426,42 @@ public enum NGValueFormat: Sendable, Hashable {
     /// `0.25` is displayed as `25%`.
     case percent(fractionDigits: Int)
     case date(includesTime: Bool)
+    /// Dates by their time with seconds, and `fractionDigits` digits of a
+    /// second (`08:01:23.456`, hours of two digits so times line up),
+    /// optionally after the date: for logs and events. Sorts, filters and
+    /// exports as a date.
+    case time(includesDate: Bool = false, fractionDigits: Int = 0)
 
     /// Whether the format is for numbers (their columns align to the trailing
     /// edge with `.automatic` alignment).
     public var isNumeric: Bool {
         switch self {
         case .number, .currency, .percent: true
-        case .automatic, .date: false
+        case .automatic, .date, .time: false
+        }
+    }
+
+    /// Whether the format is for dates (`.date`, `.time`).
+    public var isDate: Bool {
+        switch self {
+        case .date, .time: true
+        default: false
+        }
+    }
+
+    /// How a date format writes dates in a locale.
+    func dateStyle(locale: Locale) -> Date.FormatStyle {
+        switch self {
+        case .time(let includesDate, let fractionDigits):
+            // Hours of two digits, so times line up (`08:01:23`, as logs show them).
+            var style = Date.FormatStyle(date: includesDate ? .abbreviated : .omitted, time: .omitted, locale: locale)
+                .hour(.twoDigits(amPM: .abbreviated)).minute(.twoDigits).second(.twoDigits)
+            if fractionDigits > 0 { style = style.secondFraction(.fractional(min(fractionDigits, 9))) }
+            return style
+        case .date(let includesTime):
+            return Date.FormatStyle(date: .abbreviated, time: includesTime ? .shortened : .omitted, locale: locale)
+        default:
+            return Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale)
         }
     }
 
@@ -441,9 +477,7 @@ public enum NGValueFormat: Sendable, Hashable {
         case .bool(let flag):
             return flag ? "✓" : ""
         case .date(let date):
-            let includesTime = if case .date(let time) = self { time } else { false }
-            let style = Date.FormatStyle(date: .abbreviated, time: includesTime ? .shortened : .omitted)
-            return date.formatted(style.locale(locale))
+            return date.formatted(dateStyle(locale: locale))
         case .tags(let tags):
             return tags.map(\.title).joined(separator: ", ")
         case .mark(let mark):
@@ -467,9 +501,15 @@ public enum NGValueFormat: Sendable, Hashable {
         }
     }
 
-    /// The text for a number, e.g. a summary value.
+    /// The text for a number, e.g. a summary value. With a date format the
+    /// number is a date's seconds since 1970 (a summary of dates, such as
+    /// the earliest).
     public func string(for number: Double, locale: Locale = .current) -> String {
-        NGNumberStyle(self, locale: locale).string(for: number)
+        if isDate {
+            guard number.isFinite else { return "" }
+            return Date(timeIntervalSince1970: number).formatted(dateStyle(locale: locale))
+        }
+        return NGNumberStyle(self, locale: locale).string(for: number)
     }
 }
 
@@ -490,7 +530,7 @@ struct NGNumberStyle: Sendable {
             case .number(let digits): .number(FloatingPointFormatStyle<Double>(locale: locale).precision(.fractionLength(digits)))
             case .currency(let code): .currency(FloatingPointFormatStyle<Double>.Currency(code: code, locale: locale))
             case .percent(let digits): .percent(FloatingPointFormatStyle<Double>.Percent(locale: locale).precision(.fractionLength(digits)))
-            case .automatic, .date: .number(FloatingPointFormatStyle<Double>(locale: locale))
+            case .automatic, .date, .time: .number(FloatingPointFormatStyle<Double>(locale: locale))
             }
         }
 
@@ -514,7 +554,7 @@ struct NGNumberStyle: Sendable {
         self.locale = locale
         template = NGNumberTemplate.template(for: format, locale: locale) {
             let style = Style(format, locale: locale)
-            let fixed = if case .automatic = format { false } else if case .date = format { false } else { true }
+            let fixed = if case .automatic = format { false } else { !format.isDate }
             let scale = if case .percent = format { 2 } else { 0 }
             return NGNumberTemplate(fixedFraction: fixed, scale: scale, locale: locale, format: style.format)
         }

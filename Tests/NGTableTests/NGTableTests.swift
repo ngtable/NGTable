@@ -755,7 +755,7 @@ struct NGCalculatorRangeTests {
                 case .number(let digits): number.formatted(.number.precision(.fractionLength(digits)).locale(locale))
                 case .currency(let code): number.formatted(.currency(code: code).locale(locale))
                 case .percent(let digits): number.formatted(.percent.precision(.fractionLength(digits)).locale(locale))
-                case .automatic, .date: number.formatted(.number.locale(locale))
+                case .automatic, .date, .time: number.formatted(.number.locale(locale))
                 }
                 #expect(style.string(for: number) == expected, "\(identifier) \(format) \(number)")
             }

@@ -1118,7 +1118,7 @@ extension NGTableView {
                 }
                 for (position, handle) in dirtyRows.enumerated() {
                     let new = readAtOnce ? read[position] : treeExcludesFromSummaries(handle: handle) ? .nan
-                        : dataSource.tableView(self, valueFor: column, row: rowsOfDirty[position]).numericValue ?? .nan
+                        : dataSource.tableView(self, valueFor: column, row: rowsOfDirty[position]).summaryNumber ?? .nan
                     // A new row (maybe a reused handle) had no value.
                     olds.append(!isNew.isEmpty && isNew[position] ? .nan : values[handle])
                     values[handle] = new

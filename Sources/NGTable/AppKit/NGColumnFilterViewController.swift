@@ -93,8 +93,7 @@ final class NGColumnFilterViewController: NSViewController, NSTextFieldDelegate,
         let clear = NSButton(title: String(localized: "Clear Filter", bundle: .module, comment: "Column filter: shows every row again."),
                              target: self, action: #selector(clearFilter(_:)))
         clear.bezelStyle = .rounded
-        let isDate = if case .date = column.format { true } else { false }
-        let body = isDate ? makeDateBody() : column.isNumeric ? makeNumberBody() : makeValuesBody()
+        let body = column.format.isDate ? makeDateBody() : column.isNumeric ? makeNumberBody() : makeValuesBody()
         let stack = NSStackView(views: [title, body, clear])
         stack.orientation = .vertical
         stack.alignment = .leading
