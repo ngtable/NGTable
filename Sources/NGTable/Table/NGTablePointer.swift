@@ -96,7 +96,7 @@ extension NGTableView {
 
     /// Finds the cell under the pointer on the next run loop turn (in any
     /// mode, nested loops too).
-    private func scheduleHoverUpdate() {
+    func scheduleHoverUpdate() {
         guard !isHoverUpdateScheduled else { return }
         isHoverUpdateScheduled = true
         RunLoop.main.perform(inModes: [.common]) { [weak self] in

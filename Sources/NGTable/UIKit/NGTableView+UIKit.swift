@@ -55,6 +55,8 @@ extension NGTableView {
         headerPan.delegate = delegate
         headerPan.maximumNumberOfTouches = 1
         addGestureRecognizer(headerPan)
+        addGestureRecognizer(UIHoverGestureRecognizer(target: delegate, action: #selector(NGTouchScrollDelegate.hovered(_:))))
+        addInteraction(UIPointerInteraction(delegate: delegate))
     }
 
     /// Over the rows (under the header and the summary row), as large as the

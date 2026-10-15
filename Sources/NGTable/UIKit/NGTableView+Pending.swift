@@ -26,8 +26,6 @@ extension NGTableView {
     func updateHeaderPointerAreas() {}
 
     // The pointer over cells.
-    func updateHoveredCellFromPointer() {}
-    func syncControlUnderPointer() {}
 
     // Scroll bars: the iPad's scroll view shows its own.
     func layoutScrollers(_ metrics: LayoutMetrics) {}

@@ -423,5 +423,33 @@ struct NGTouchTests {
         #expect(table.handleKey(.keyboardReturnOrEnter))
         #expect(table.editedRow == 1)
     }
+
+    // MARK: A pointer
+
+    @Test func thePointerFindsTheCellUnderIt() {
+        final class Hover: NGTableViewDelegate {
+            var entered: [Int] = []
+            func tableView(_ tableView: NGTableView, pointerDidEnterRow row: Int, column: NGTableColumn) { entered.append(row) }
+        }
+        let data = Numbers()
+        let (table, window) = makeTable(data)
+        let hover = Hover()
+        defer { withExtendedLifetime((window, hover)) {} }
+        table.delegate = hover
+        table.pointerMoved(to: point(ofRow: 2, in: table))
+        #expect(table.hoveredCell == NGCellPosition(row: 2, columnID: "name"))
+        // The rows scroll under the resting pointer: another row is under it.
+        table.scrollRowToVisible(100)
+        table.layoutIfNeeded()
+        table.updateHoveredCellFromPointer()
+        #expect(table.hoveredCell?.row != 2)
+        #expect(hover.entered.count == 2)
+        table.pointerMoved(to: nil)
+        #expect(table.hoveredCell == nil)
+        // Over a column's edge: the beam's region.
+        let edge = table.resizeHandles().first?.edgeX ?? 0
+        #expect(table.pointerRegion(at: CGPoint(x: edge + 3, y: 5)) != nil)
+        #expect(table.pointerRegion(at: CGPoint(x: 60, y: 5)) == nil)
+    }
 }
 #endif
